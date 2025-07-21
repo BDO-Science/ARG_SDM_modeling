@@ -120,7 +120,7 @@ ui <- navbarPage("Salmon Life Cycle Simulator",
                               ),
                               selectInput("tdm_variant", "TDM Variant:",
                                           choices = names(base_P_list)),
-                              selectInput("alternative", "Alternative (env):",
+                              selectInput("alternative", "Alternative:",
                                           choices = unique(egg_summary$env)),
                               actionButton("run_sim", "Run Simulation"),
                               width = 3
@@ -400,7 +400,7 @@ server <- function(input, output, session) {
       expand_limits(y = 0) +
       { if (input$show_points) geom_point(size = 1) } +
       { if (input$show_grid)  theme(panel.grid.minor = element_line()) } +
-      labs(title = "Comparison: Spawners over Time", color = "Env") +
+      labs(title = "Comparison: Spawners over Time", color = "Alt") +
       theme_minimal()
   })
   
