@@ -1,4 +1,6 @@
 library(dataRetrieval) # for readNWISdata()
+library(tidyverse)
+library(readxl)
 
 # 1) PARAMETERS
 obs_start   <- as.Date("2011-09-01")
@@ -8,7 +10,7 @@ sim_end     <- as.Date(sprintf("%04d-08-31", last_wy + 1))
 
 # 2) GET OBSERVED GAUGE TEMPS (Daily avg)
 stations   <- c("11446980","11446500")
-param_cd   <- "00010"
+param_cd   <- c("00010")
 
 amer_obs <- map_df(stations, function(stn) {
   readNWISdata(
@@ -149,3 +151,113 @@ map_df(alts, function(alt_nm) {
 
 saveRDS(env_ext_list, "env_ext_list.rds")
 saveRDS(df_all, "df_all.rds")
+
+# 1. Filter to Oct–Feb and observed period
+obs_temp <- amer_obs %>%
+  filter(Date >= as.Date("2011-10-01") & Date <= as.Date("2024-02-29")) %>%
+  filter(month(Date) %in% c(10, 11, 12, 1, 2)) %>%
+  mutate(month_day = format(Date, "%m-%d"))
+
+# 2. Create dummy reference date from 2023-10-01 to 2024-02-29
+ref_dates <- tibble(
+  dummy_date = seq(as.Date("2023-10-01"), as.Date("2024-02-29"), by = "1 day")
+) %>%
+  mutate(month_day = format(dummy_date, "%m-%d"))
+
+obs_temp <- obs_temp %>%
+  left_join(ref_dates, by = "month_day")
+
+# 3. Summarize percentiles
+obs_summary <- obs_temp %>%
+  group_by(site, dummy_date) %>%
+  summarise(
+    p10    = quantile(temp, 0.10, na.rm = TRUE),
+    median = median(temp, na.rm = TRUE),
+    p90    = quantile(temp, 0.90, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# 4. Plot
+ggplot(obs_summary, aes(x = dummy_date)) +
+  geom_ribbon(aes(ymin = p10, ymax = p90, fill = site), alpha = 0.4) +
+  geom_line(aes(y = median, color = site), size = 0.9) +
+  scale_color_viridis_d(option = "D", begin = 0.2, end = 0.9) +
+  scale_fill_viridis_d(option = "D", begin = 0.2, end = 0.9) +
+  scale_x_date(date_breaks = "2 weeks", date_labels = "%b %d") +
+  scale_y_continuous(name = "Temperature (°C)", breaks = seq(0, 25, 2)) +
+  labs(x = NULL, y = "Temperature (°C)", color = "Site", fill = "Site") +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title   = element_blank(),
+    axis.title.x = element_text(face = "bold", size = 14),
+    axis.title.y = element_text(face = "bold", size = 14),
+    axis.text    = element_text(face = "bold", size = 12),
+    legend.title = element_text(face = "bold")
+  )
+
+# Filter df_all for future prediction window: Oct 18 – Dec 31, 2024
+future_temp <- df_all %>%
+  filter(site != "AveFol") %>%
+  filter(Date >= as.Date("2024-10-18") & Date <= as.Date("2024-12-31"))
+
+future_temp <- future_temp %>%
+  mutate(env = factor(env, levels = as.character(1:10)))  # ensures 10 is last
+
+# Plot with lines per site, faceted by alternative
+ggplot(future_temp, aes(x = Date, y = temp, color = site)) +
+  geom_line(size = 1) +
+  scale_color_viridis_d(option = "D", begin = 0.2, end = 0.9) +
+  scale_x_date(date_breaks = "2 weeks", date_labels = "%b %d") +
+  scale_y_continuous(name = "Temperature (°C)", breaks = seq(0, 25, 2)) +
+  labs(x = NULL, y = "Temperature (°C)", color = "Site") +
+  facet_wrap(~ env, ncol = 2) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title   = element_blank(),
+    axis.title.x = element_text(face = "bold", size = 14),
+    axis.title.y = element_text(face = "bold", size = 14),
+    axis.text    = element_text(face = "bold", size = 12),
+    legend.title = element_text(face = "bold")
+  )
+
+# Assume clim14 is the climatology table by doy and site
+future_anomaly <- future_temp %>%
+  mutate(doy = yday(Date)) %>%
+  left_join(clim14, by = c("site", "doy")) %>%
+  mutate(temp_anomaly = temp - clim_temp)
+
+ggplot(future_anomaly, aes(x = Date, y = temp_anomaly, color = site)) +
+  geom_line() +
+  facet_wrap(~ env, ncol = 2) +
+  labs(x = "Date", y = "Temp Anomaly (°C)", color = "Site") +
+  scale_color_viridis_d() +
+  theme_minimal(base_size = 14)
+
+ddays <- future_temp %>%
+  mutate(thresh_temp = pmax(temp - 0, 0)) %>%
+  group_by(env, site) %>%
+  summarise(degree_days = sum(thresh_temp), .groups = "drop")
+
+ggplot(ddays, aes(x = site, y = degree_days, fill = env)) +
+  geom_col(position = position_dodge()) +
+  labs(y = "Cumulative Degree Days > 0°C", x = "Site", fill = "Alt") +
+  scale_fill_viridis_d() +
+  theme_minimal(base_size = 14)
+
+ggplot(future_temp, aes(x = env, y = temp, fill = site)) +
+  geom_boxplot(outlier.shape = NA) +
+  labs(x = "Alternative", y = "Daily Temperature (°C)", fill = "Site") +
+  scale_fill_viridis_d() +
+  theme_minimal(base_size = 14)
+
+threshold_summary <- future_temp %>%
+  mutate(thresh_exceed = temp > 12.8) %>%
+  group_by(env, site) %>%
+  summarise(n_exceed_days = sum(thresh_exceed), .groups = "drop")
+
+ggplot(threshold_summary, aes(x = site, y = n_exceed_days, fill = env)) +
+  geom_col(position = "dodge") +
+  labs(y = "# Days > 12.8°C", x = "Site", fill = "Alt") +
+  scale_fill_viridis_d() +
+  theme_minimal(base_size = 14)
+

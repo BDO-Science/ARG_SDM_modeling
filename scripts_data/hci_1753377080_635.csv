@@ -1,0 +1,68 @@
+WY,Basin,Index,Code,Classification,Type
+2024,Sacramento Valley,8.44,AN,Above Normal,Official
+2023,Sacramento Valley,9.4,W,Wet,Official
+2022,Sacramento Valley,4.5,C,Critical,Official
+2021,Sacramento Valley,4,C,Critical,Official
+2020,Sacramento Valley,6,D,Dry,Official
+2019,Sacramento Valley,10.2,W,Wet,Official
+2018,Sacramento Valley,7.2,BN,Below Normal,Official
+2017,Sacramento Valley,14.9,W,Wet,Official
+2016,Sacramento Valley,7.1,BN,Below Normal,Official
+2015,Sacramento Valley,4,C,Critical,Official
+2014,Sacramento Valley,4,C,Critical,Official
+2013,Sacramento Valley,5.8,D,Dry,Official
+2012,Sacramento Valley,6.9,BN,Below Normal,Official
+2011,Sacramento Valley,10,W,Wet,Official
+2010,Sacramento Valley,6.9,BN,Below Normal,Official
+2009,Sacramento Valley,5.5,D,Dry,Official
+2008,Sacramento Valley,5.4,C,Critical,Official
+2007,Sacramento Valley,6.2,D,Dry,Official
+2006,Sacramento Valley,13,W,Wet,Official
+2005,Sacramento Valley,7.4,BN,Below Normal,Official
+2004,Sacramento Valley,7.7,BN,Below Normal,Official
+2003,Sacramento Valley,8,AN,Above Normal,Official
+2002,Sacramento Valley,6.5,D,Dry,Official
+2001,Sacramento Valley,5.9,D,Dry,Official
+2000,Sacramento Valley,9.2,W,Wet,Official
+1999,Sacramento Valley,10,W,Wet,Official
+1998,Sacramento Valley,12.4,W,Wet,Official
+1997,Sacramento Valley,11,W,Wet,Official
+1996,Sacramento Valley,9.7,W,Wet,Official
+1995,Sacramento Valley,12.4,W,Wet,Official
+2024,San Joaquin Valley,3.41,AN,Above Normal,Official
+2023,San Joaquin Valley,6.5,W,Wet,Official
+2022,San Joaquin Valley,1.5,C,Critical,Official
+2021,San Joaquin Valley,1.3,C,Critical,Official
+2020,San Joaquin Valley,2.2,D,Dry,Official
+2019,San Joaquin Valley,4.2,W,Wet,Official
+2018,San Joaquin Valley,3,BN,Below Normal,Official
+2017,San Joaquin Valley,6.2,W,Wet,Official
+2016,San Joaquin Valley,2.4,D,Dry,Official
+2015,San Joaquin Valley,0.7,C,Critical,Official
+2014,San Joaquin Valley,1.1,C,Critical,Official
+2013,San Joaquin Valley,1.6,C,Critical,Official
+2012,San Joaquin Valley,2.2,D,Dry,Official
+2011,San Joaquin Valley,5.1,W,Wet,Official
+2010,San Joaquin Valley,3.5,AN,Above Normal,Official
+2009,San Joaquin Valley,2.4,D,Dry,Official
+2008,San Joaquin Valley,2.1,C,Critical,Official
+2007,San Joaquin Valley,1.9,C,Critical,Official
+2006,San Joaquin Valley,5.5,W,Wet,Official
+2005,San Joaquin Valley,4.2,W,Wet,Official
+2004,San Joaquin Valley,2.2,D,Dry,Official
+2003,San Joaquin Valley,2.7,BN,Below Normal,Official
+2002,San Joaquin Valley,2.3,D,Dry,Official
+2001,San Joaquin Valley,2.3,D,Dry,Official
+2000,San Joaquin Valley,3.3,AN,Above Normal,Official
+1999,San Joaquin Valley,3.4,AN,Above Normal,Official
+1998,San Joaquin Valley,4.9,W,Wet,Official
+1997,San Joaquin Valley,4.2,W,Wet,Official
+1996,San Joaquin Valley,3.9,W,Wet,Official
+1995,San Joaquin Valley,5.5,W,Wet,Official
+"Notes:"
+"Water Year Hydrologic Classification Indices (HCI)"
+"Generated 24 Jul 2025 10:11:20 PDT."
+"Data Courtesy of <a href='https://cdec.water.ca.gov/water_supply.html'>Water Supply Information</a>, CDEC"
+"Official Year classifications based on May 1 Runoff Forecasts."
+"Citation: Columbia Basin Research, University of Washington. (2025). SacPAS Water Year Hydrologic Classification Indices (HCI). Available from www.cbr.washington.edu/sacramento/data/query_hci.html."
+

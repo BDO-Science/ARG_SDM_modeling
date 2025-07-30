@@ -1,19 +1,15 @@
 rm(list=ls())
-# precompute_data.R
 
 # ─── Libraries ────────────────────────────────────────────────────────────────
-library(tidyverse); library(lubridate); library(furrr); library(data.table)
+library(tidyverse); library(lubridate); library(furrr); library(data.table); library(compiler)
 source("SalmonCountR/functions.R")
-# (plus any others needed for the heavy loops)
 
-# ─── 1) Read in raw inputs ────────────────────────────────────────────────────
-env_ext_list     <- readRDS("env_ext_list.rds")   # or read from CSV, NWIS, etc.
-df_all           <- readRDS("df_all.rds")
-carcass_raw      <- read.csv("SalmonCountR/carcassdet_1752789274_15.csv")
-
-# LOAD OBSERVED ESCAPEMENT --------------------------------------------------
+# Read data inputs ────────────────────────────────────────────────────
+env_ext_list     <- readRDS("SalmonCountR/app_data/env_ext_list.rds")   # or read from CSV, NWIS, etc.
+df_all           <- readRDS("SalmonCountR/app_data/df_all.rds")
+carcass_raw      <- read.csv("SalmonCountR/app_data/carcassdet_1752789274_15.csv")
 esc_obs <- read_csv(
-  "SalmonCountR/grandtab_1752793045_337.csv",
+  "SalmonCountR/app_data/grandtab_1752793045_337.csv", # OBSERVED ESCAPEMENT 
   col_types = cols(`End Year of Monitoring Period` = col_character(),
                    `Population Estimate`           = col_double())
 ) %>%
@@ -42,10 +38,6 @@ plan(multisession, workers = n_workers)
 
 # and for data.table’s own internal C threading:
 setDTthreads(n_workers)
-
-# ─── 2) Build sim_redds & run the TDM simulations (results_obs_fast, egg_summary)  
-#     *This is your ~2 min chunk*  
-#     (all of the code up through building egg_summary)
 
 # Define TDM variants to run: exponential with two calibrations, and linear
 tdm_defs <- tribble(
@@ -122,11 +114,31 @@ sim_redds <- sim_redds %>%
     section %in% c("3")    ~ "AveWatt"
   ))
 
+# after you build sim_years_vec <- 2011:2060 and your real median dates:
+spawn_dates_real <- sim_redds %>%
+  arrange(sim_year) %>%
+  group_by(sim_year) %>%
+  summarize(spawn_dt = median(spawn_dt), .groups="drop") %>%
+  pull(spawn_dt)
+
+# repeat those month‐day pairs out to length n_sim:
+spawn_dm <- rep(spawn_dates_real, length.out = n_sim)
+
+# force each to the correct year
+sim_years_vec   <- (real_years[1] + seq_len(n_sim) - 1)
+spawn_dates_vec <- as.Date(sprintf(
+  "%04d-%02d-%02d",
+  sim_years_vec,
+  month(spawn_dm),
+  day(spawn_dm)
+))
+
+
 # ───────────────────────────────────────────────────────────────────────────────
 # 3) Plug into your TDM loop exactly as before, but now sim_year is brood_year
 # ───────────────────────────────────────────────────────────────────────────────
 
-# 1) compile the “hot” functions
+# compile the “hot” functions
 egg_model_c   <- cmpfun(egg_model)
 hatch_model_c <- cmpfun(hatch_model)
 tdm_exp_c     <- cmpfun(tdm_exp)
@@ -382,8 +394,9 @@ results_full_altvar <- map_dfr(names(surv_lookup_full), function(key) {
 
 
 # ─── 4) Save the results for Shiny to load
-saveRDS(egg_summary,      "SalmonCountR/egg_summary.rds")
-saveRDS(surv_lookup_full, "SalmonCountR/surv_lookup_full.rds")
-saveRDS(base_P_list,      "SalmonCountR/base_P_list.rds")
-saveRDS(S_seed,           "SalmonCountR/S_seed.rds")
-saveRDS(stoch_SAR_opts,   "SalmonCountR/stoch_SAR_opts.rds")
+saveRDS(egg_summary,      "SalmonCountR/app_data/egg_summary.rds")
+saveRDS(surv_lookup_full, "SalmonCountR/app_data/surv_lookup_full.rds")
+saveRDS(base_P_list,      "SalmonCountR/app_data/base_P_list.rds")
+saveRDS(S_seed,           "SalmonCountR/app_data/S_seed.rds")
+saveRDS(stoch_SAR_opts,   "SalmonCountR/app_data/stoch_SAR_opts.rds")
+saveRDS(spawn_dates_vec,        "SalmonCountR/app_data/spawn_dates_vec.rds")

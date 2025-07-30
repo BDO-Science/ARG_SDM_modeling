@@ -1,4 +1,5 @@
 library(tidyverse)
+library(janitor)
 
 # 1) Read the data in (you can paste in your block of text)
 dat <- read_csv(
@@ -86,7 +87,46 @@ sar_df %>%
   )
 
 
+# Filter SAR data to 2011–2021
+sar_filtered <- sar_df %>%
+  filter(Brood >= 2011 & Brood <= 2021)
 
+# Calculate mean, Q1, and Q3 SAR for this range
+sar_stats <- sar_filtered %>%
+  summarise(
+    mean_SAR = mean(SAR, na.rm = TRUE),
+    Q1_SAR   = quantile(SAR, 0.25, na.rm = TRUE),
+    Q3_SAR   = quantile(SAR, 0.75, na.rm = TRUE)
+  )
+
+index_df <- read_csv("scripts_data/hci_1753379372_198.csv") %>%
+  clean_names() %>%   # standardizes to e.g., wy, code
+  mutate(brood = as.numeric(wy)) %>%
+  select(brood, code) %>%
+  distinct(brood, .keep_all = TRUE)  # ensure only one row per brood year
+
+sar_labeled <- sar_df %>%
+  filter(Brood >= 2011, Brood <= 2021) %>%
+  left_join(index_df, by = c("Brood" = "brood"))
+
+# Plot
+ggplot(sar_labeled, aes(x = Brood, y = SAR)) +
+  geom_line(color = "steelblue", linewidth = 1) +
+  geom_point(color = "steelblue", size = 2) +
+  geom_errorbar(aes(ymin = SAR - Standard_Error, ymax = SAR + Standard_Error),
+                width = 0.5, color = "gray30") +
+  geom_hline(yintercept = mean(sar_labeled$SAR), color = "black", linetype = "solid", linewidth = 0.8) +
+  geom_hline(yintercept = quantile(sar_labeled$SAR, 0.25), color = "gray40", linetype = "dashed") +
+  geom_hline(yintercept = quantile(sar_labeled$SAR, 0.75), color = "gray40", linetype = "dashed") +
+  geom_text(aes(label = code), vjust = -1.2, size = 3.5, fontface = "bold") +
+  scale_x_continuous(breaks = 2011:2021) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) +
+  labs(x = "Brood Year", y = "SAR (%)") +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text  = element_text(face = "bold")
+  )
 
 
 

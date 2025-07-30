@@ -5,7 +5,7 @@ account: e7ywmx-alex-vaisvil
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 15106184
-bundleId: 10652325
+bundleId: 10664376
 url: https://e7ywmx-alex-vaisvil.shinyapps.io/SalmonCountR/
 version: 1
 asMultiple: FALSE
