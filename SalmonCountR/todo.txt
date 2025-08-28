@@ -1,2 +1,30 @@
-prespawn mortality?
-plot colors?
+SARs (hatchery vs. natural)- hatchery for now because we are concerned with both hatchery and natural in river spawners
+Escapement (natural only?)- both for now but consider getting numbers from constant fractional marking program report documents?
+
+Update comments and review code again
+maybe a calculation of spawning potential ratio to determine how much is lost when comparing alternatives using the no pwer bypass alkts as reference?
+other metrics for adults? include some value for the commercial fishery
+add new habitat estimates
+
+get real fraction of each age returning
+
+
+Have the intercept but have now removed all these outmigration probability predictions
+
+#’ -----------------------------------------------------------------------------
+#’ Predict fry-to-smolt out-migration probability
+#’
+#’ @description
+#’ Computes the probability that fry from a given redd out-migrate (survive to smolt),
+#’ using a logistic model with both categorical (habitat treatment) and scaled continuous covariates.
+#’
+#’ @param hab_treat    Numeric (0/1).  Habitat treatment indicator (0 = control, 1 = treated).
+#’ @param N_adults     Numeric.  Number of adult female spawners this brood year.
+#’ @param fork_length  Numeric vector.  Female fork lengths (mm) for each redd.
+#’ @param spawn_DOY    Numeric vector.  Day-of-year of spawning for each redd.
+#’ @param mean_temp    Numeric vector.  Mean incubation temperature (°C) for each redd.
+
+
+intercept????
+
+continue incorporating spawn date timing model
