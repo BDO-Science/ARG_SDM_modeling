@@ -128,5 +128,26 @@ ggplot(sar_labeled, aes(x = Brood, y = SAR)) +
     axis.text  = element_text(face = "bold")
   )
 
+###
+sars <- readxl::read_excel("SalmonCountR/app_data/SAR LAR releases.xlsx") |>
+  clean_names()
 
+sars_lar <- sars |>
+  filter(str_detect(release_location, "AMERICAN"))
 
+sars_lar_summary <- sars_lar %>%
+  summarise(across(
+    sar,
+    list(
+      mean   = ~mean(.x,   na.rm = TRUE),
+      median = ~median(.x, na.rm = TRUE),
+      sd     = ~sd(.x,     na.rm = TRUE),
+      min    = ~min(.x,    na.rm = TRUE),
+      max    = ~max(.x,    na.rm = TRUE),
+      iqr    = ~IQR(.x,    na.rm = TRUE)
+    )
+  ))
+
+sars_lar_summary
+  
+  
