@@ -5,9 +5,7 @@ Escapement (natural only?)- both for now but consider getting numbers from const
 
 **1. other metrics for adults? include some value for the commercial fishery- maybe a calculation of spawning potential ratio to determine how much is lost when comparing alternatives using the no power bypass alts as reference?**
 
-**2. add new habitat estimates**
-
-**3. add age-2 fish and proportion mature**
+**2. add age-2 fish and proportion mature**
 
 
 1. file structure in GitHub
