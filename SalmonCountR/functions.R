@@ -159,8 +159,6 @@ tdm_exp <- function(temps,
 }
 
 
-
-
 #' Linear threshold TDM (Martin et al. 2017)
 #'
 #' Cumulative survival:
@@ -181,53 +179,6 @@ tdm_lin_martin <- function(temps, α = 0.026, β = 12.14) {
   exp(-α * sum(pmax(temps - β, 0)))
 }
 
-#' Compute egg→fry survival for a single redd (TDM)
-#'
-#' Given a redd date and site, looks up daily temperatures via prebuilt
-#' date→index and site→temperature vectors, and evaluates either exponential
-#' or linear-threshold TDM across the full incubation (egg + emergence).
-#'
-#' @details
-#' This is a constant-T approximation: window length is computed from the
-#' temperature on the redd day. Prefer \code{compute_surv_by_atu()} for
-#' ATU-precise windows.
-#'
-#' @param rdr Date, redd (spawn) date.
-#' @param site Character, site key present in `date_idx_env` and `temps_env`.
-#' @param date_idx_env Named list: for each site, a named integer vector
-#'   mapping `YYYY-mm-dd` to positions inside `temps_env[[site]]`.
-#' @param temps_env Named list: for each site, numeric vector of daily
-#'   temperatures ordered to match `date_idx_env`.
-#' @param model Character, `"exp"` or `"lin_martin"`.
-#' @param calib Character or `NA`. If `model="exp"`, one of
-#'   `"WaterForum2020"` or `"SALMOD2006"`; ignored otherwise.
-#'
-#' @return Numeric survival in [0, 1]; `NA_real_` if inputs are missing
-#'   or the incubation window cannot be evaluated.
-#' @examples
-#' # compute_surv(as.Date("2015-10-01"), "SiteA", date_idx_env, temps_env, "exp", "WaterForum2020")
-#' @export
-
-compute_surv <- function(rdr, site, date_idx_env, temps_env, model, calib) {
-  pos <- date_idx_env[[site]][as.character(rdr)]
-  if (is.na(pos) || pos < 1) return(NA_real_)
-  T0 <- temps_env[[site]][pos]
-  if (is.na(T0) || T0 <= 0) return(NA_real_)
-  td <- ceiling(hatch_model(T0) + emergence_model(T0))
-  slice <- temps_env[[site]][ pos + seq_len(td) - 1L ]
-  if (model == "exp") tdm_exp(slice, calib)
-  else                tdm_lin_martin(slice)
-}
-
-# March forward through realized daily temps until crossing ATU thresholds
-.slice_by_atu <- function(temps, egg_atu = egg_ATU, total_atu = total_ATU) {
-  if (!length(temps)) return(integer())
-  atu <- cumsum(pmax(temps, 0))
-  i_end <- which(atu >= total_atu)[1]
-  if (is.na(i_end)) i_end <- length(temps)
-  seq_len(i_end)
-}
-
 #' Compute egg→fry survival using ATU-precise incubation window
 #'
 #' Unlike \code{compute_surv()}, this function marches forward through realized
@@ -242,6 +193,16 @@ compute_surv <- function(rdr, site, date_idx_env, temps_env, model, calib) {
 #'   the series cannot be evaluated.
 #' @seealso \code{\link{compute_surv}} for the constant-T window approximation.
 #' @export
+
+# March forward through realized daily temps until crossing ATU thresholds
+.slice_by_atu <- function(temps, egg_atu = egg_ATU, total_atu = total_ATU) {
+  if (!length(temps)) return(integer())
+  atu <- cumsum(pmax(temps, 0))
+  i_end <- which(atu >= total_atu)[1]
+  if (is.na(i_end)) i_end <- length(temps)
+  seq_len(i_end)
+}
+
 compute_surv_by_atu <- function(rdr, site, date_idx_env, temps_env, model, calib, max_days = 300L) {
   pos <- date_idx_env[[site]][as.character(rdr)]
   if (is.na(pos) || pos < 1) return(NA_real_)
@@ -272,6 +233,57 @@ surv_adult_prespawn <- function(deg_day,
                                 beta      = -0.00067) {
   # plogis(x) == exp(x)/(1+exp(x))
   plogis(intercept + beta * deg_day)
+}
+
+# Season-anchored timestamp (e.g., hydrologic year anchored at Oct-01)
+# - x: Date or POSIXct
+# - anchor_mmdd: "MM-DD", c(MM,DD), or a Date (month/day used; year ignored)
+# - tz: output timezone if returning POSIXct
+season_posix <- function(x, anchor_mmdd = c(10, 1), tz = "UTC") {
+  stopifnot(inherits(x, "Date") || inherits(x, "POSIXct") || inherits(x, "POSIXt"))
+  # parse anchor
+  if (is.character(anchor_mmdd) && length(anchor_mmdd) == 1L) {
+    mmdd <- strsplit(anchor_mmdd, "[-/\\.]")[[1]]
+    mm <- as.integer(mmdd[1]); dd <- as.integer(mmdd[2])
+  } else if (inherits(anchor_mmdd, "Date")) {
+    mm <- lubridate::month(anchor_mmdd); dd <- lubridate::day(anchor_mmdd)
+  } else if (is.numeric(anchor_mmdd) && length(anchor_mmdd) >= 2L) {
+    mm <- as.integer(anchor_mmdd[1]); dd <- as.integer(anchor_mmdd[2])
+  } else {
+    stop("anchor_mmdd must be 'MM-DD', c(MM,DD), or a Date.")
+  }
+  if (anyNA(c(mm, dd))) stop("Could not parse anchor_mmdd.")
+  
+  # normalize input to POSIXct for comparison; remember original class
+  is_date   <- inherits(x, "Date")
+  is_posix  <- inherits(x, "POSIXct") || inherits(x, "POSIXt")
+  x_posix   <- if (is_date) as.POSIXct(x) else as.POSIXct(x)
+  yrs       <- lubridate::year(x_posix)
+  
+  # anchor date in the SAME calendar year as the timestamp
+  anchor_this_year <- lubridate::make_datetime(year = yrs, month = mm, day = dd, tz = tz)
+  
+  # season year: if timestamp is before the anchor in that calendar year, season_year = year - 1
+  season_year <- ifelse(x_posix >= anchor_this_year, yrs, yrs - 1L)
+  
+  # rebuild a POSIXct keeping the original month/day/time but replacing the year with season_year
+  out <- lubridate::make_datetime(
+    year  = season_year,
+    month = lubridate::month(x_posix),
+    day   = lubridate::mday(x_posix),
+    hour  = lubridate::hour(x_posix),
+    min   = lubridate::minute(x_posix),
+    sec   = lubridate::second(x_posix),
+    tz    = tz
+  )
+  
+  # always return POSIXct (as the name suggests)
+  out
+}
+
+# (Optional) Just the season year as an integer, same anchor rules
+season_year <- function(x, anchor_mmdd = c(10, 1)) {
+  as.integer(lubridate::year(season_posix(x, anchor_mmdd)))
 }
 
 #' Build an env-specific spawn date vector aligned to simulation years
@@ -416,6 +428,69 @@ compute_deg_day_adult <- function(
   }, numeric(1))
 }
 
+# helper: adult degree-days for a given env across calibration years
+deg_day_cal_for <- function(env_nm) {
+  # spawn_dates_by_env[[env_nm]] is a Date vector indexed by sim_years
+  sd_env <- spawn_dates_by_env[[env_nm]]
+  stopifnot(length(sd_env) >= length(sim_years))
+  # align to real calibration years
+  sd_cal <- sd_env[match(real_years, sim_years)]
+  compute_deg_day_adult(
+    env_nm       = env_nm,
+    sim_years    = real_years,
+    spawn_dates  = sd_cal,
+    env_ext_list = env_ext_list
+  )
+}
+
+# ---- 2) Helper to get probabilities from CLM (optionally with i.i.d. offset)
+predict_clm_probs <- function(beta, zeta, newdata, offset = 0) {
+  X  <- as.matrix(newdata[, names(beta), drop = FALSE])
+  xb <- as.vector(X %*% beta) + as.numeric(offset)
+  t(vapply(xb, function(xi) {
+    cp <- plogis(zeta - xi)      # cumulative logits → cum probs
+    p  <- c(cp, 1) - c(0, cp)    # category probs
+    p / sum(p)
+  }, numeric(length(zeta) + 1)))
+}
+
+# 1) Build forecast_temps (env × sim_year = forecast_years)
+build_forecast_temps <- function(env_ext_list, yrs_forecast, sc) {
+  raw <- purrr::imap_dfr(env_ext_list, function(df_env, env_nm) {
+    df_env %>%
+      dplyr::filter(lubridate::month(Date) %in% c(10, 11)) %>%
+      dplyr::mutate(
+        env   = as.character(env_nm),
+        year  = lubridate::year(Date),
+        month = lubridate::month(Date)
+      ) %>%
+      dplyr::group_by(env, year, month) %>%
+      dplyr::summarise(mean_temp = mean(temp, na.rm = TRUE), .groups = "drop") %>%
+      tidyr::pivot_wider(names_from = month, values_from = mean_temp, names_prefix = "m_") %>%
+      dplyr::rename(Oct = m_10, Nov = m_11)
+  })
+  
+  # Carry forward last available Oct/Nov if a forecast year isn't in the series
+  purrr::map_dfr(split(raw, raw$env), function(d) {
+    if (!nrow(d)) return(tibble(env = unique(d$env), sim_year = yrs_forecast, Oct = NA_real_, Nov = NA_real_))
+    want <- tibble(sim_year = yrs_forecast)
+    have <- d %>% dplyr::rename(sim_year = year) %>% dplyr::select(env, sim_year, Oct, Nov)
+    
+    # for any missing (env, year), fill with last available year for that env
+    missing_years <- setdiff(yrs_forecast, have$sim_year)
+    cf_rows <- if (length(missing_years)) {
+      last_row <- d %>% dplyr::arrange(dplyr::desc(year)) %>% dplyr::slice(1) %>% dplyr::transmute(env = unique(env), Oct, Nov)
+      tidyr::crossing(last_row, sim_year = missing_years)
+    } else tibble()
+    
+    dplyr::bind_rows(have, cf_rows) %>%
+      dplyr::arrange(sim_year)
+  }) %>%
+    dplyr::mutate(
+      Oct_std = (Oct - sc$o_m) / sc$o_s,
+      Nov_std = (Nov - sc$n_m) / sc$n_s
+    )
+}
 
 #' SSE objective for joint calibration of SAR_mean and rear_surv (modular)
 #'
@@ -430,102 +505,26 @@ compute_deg_day_adult <- function(
 #' @return Numeric scalar SSE.
 #' @export
 
-# Joint optimization of SAR and rear_surv (modular)
-modular_sse <- function(par, alt, variant) {
-  # par[1] = SAR_mean, par[2] = rear_surv
+# objective: SSE between predicted and observed spawners
+modular_sse <- function(par, variant) {
   P_tmp <- base_P
   P_tmp$SAR_mean  <- par[1]
   P_tmp$rear_surv <- par[2]
   
-  # 14-year calibration horizon
-  years_cal <- length(real_years)
-  
-  # env/variant-specific egg→fry survival (calibration slice)
-  surv_vec_cal <- surv_lookup_by_variant[[variant]][1:years_cal]
-  
-  # degree-days for calibration years for this alt
-  deg_day_cal <- compute_deg_day_adult(
-    env_nm       = alt,
-    sim_years    = real_years,
-    spawn_dates  = spawn_dates_vec,   # your padded vector of dates
-    env_ext_list = env_ext_list
-  )
-  
-  # K and SAR vectors (length = years_cal)
-  K_vec   <- rep(P_tmp$K_spawners, years_cal)
-  SAR_vec <- rep(par[1], years_cal)
-  
   out <- simulate_variant(
-    surv_vec       = surv_vec_cal,
+    surv_vec       = surv_lookup_by_variant[[variant]][1:n_calib],
     P              = P_tmp,
-    years          = years_cal,
+    years          = n_calib,
     S_init         = S_seed_calib,
-    SAR_vec        = SAR_vec,
-    K_spawners_vec = K_vec,
-    deg_day_adult  = deg_day_cal,
+    SAR_vec        = rep(P_tmp$SAR_mean,  n_calib),
+    K_spawners_vec = rep(P_tmp$K_spawners, n_calib),
+    deg_day_adult  = deg_day_cal_ref,      # <-- KEY FIX: real degree-days, not zeros
     sim_years_vec  = real_years
   )
   
   preds <- out$spawners[fit_idx]
   if (!all(is.finite(preds))) return(.Machine$double.xmax)
-  sse <- sum((preds - obs_spawners[fit_idx])^2)
-  if (!is.finite(sse)) sse <- .Machine$double.xmax
-  sse
-}
-
-
-#' Calibrate SAR_mean and rear_surv for one (alt, variant) via L-BFGS-B
-#'
-#' @param alt Character(1), environment key.
-#' @param variant Character(1), TDM variant key.
-#' @param init_SAR Numeric, initial SAR_mean (default 0.0025).
-#' @param init_rear Numeric, initial rear_surv (default 0.8).
-#'
-#' @return Tibble with columns:
-#'   `year, observed, predicted, SAR_mean, rear_surv, sse`.
-#' @export
-
-run_modular_calibration <- function(alt, variant, init_SAR=0.0025, init_rear=0.8) {
-  if (is.null(surv_lookup_by_variant[[variant]]))
-    stop("No survival vector found for variant '", variant, "' in surv_lookup_by_variant.")
-  if (!exists("obs_spawners", inherits = TRUE))
-    stop("obs_spawners not found; load it in global.R.")
-  if (!exists("fit_idx", inherits = TRUE))
-    stop("fit_idx not found; define it in global.R.")
-  
-  opt <- optim(
-    par    = c(init_SAR, init_rear),
-    fn     = function(par) modular_sse(par, alt, variant),
-    method = "L-BFGS-B",
-    lower  = c(0, 0),
-    upper  = c(1, 1)
-  )
-  
-  SAR_fit   <- opt$par[1]
-  rear_fit  <- opt$par[2]
-  P_tmp     <- base_P_list[[variant]][[alt]]
-  P_tmp$SAR_mean  <- SAR_fit
-  P_tmp$rear_surv <- rear_fit
-  
-  sim_out <- simulate_variant(
-    surv_vec       = surv_lookup_by_variant[[variant]][1:n_calib],
-    P              = P_tmp,
-    years          = n_calib,
-    S_init         = S_seed_calib,
-    SAR_vec        = rep(SAR_fit, n_calib),
-    K_spawners_vec = rep(P_tmp$K_spawners, n_calib),
-    deg_day_adult  = rep(0, n_calib),
-    sim_years_vec  = real_years
-  )
-  
-  return(tibble::tibble(
-    year      = real_years,
-    observed  = obs_spawners,
-    predicted = sim_out$spawners,
-    SAR_mean  = SAR_fit,
-    rear_surv = rear_fit,
-    sse       = sum((sim_out$spawners[fit_idx] - obs_spawners[fit_idx])^2)
-  ))
+  sum((preds - obs_spawners[fit_idx])^2)
 }
 
 #' Build a forecast simulator for one (variant, environment)

@@ -5,44 +5,21 @@ library(tidyverse); library(lubridate); library(furrr); library(data.table); lib
 library(here); library(ggrepel); library(MASS); library(ordinal); library(ggridges)
 source(here("SalmonCountR", "functions.R"))
 
-set.seed(123)  # Fix RNG seed for reproducibility
+set.seed(123)
 
-real_years <- 2011:2024 # Historical calibration years
-n_calib <- length(real_years) # Number of calibration years (14)
-max_forecast <- 100 # Forecast horizon in years
-n_sim <- n_calib + max_forecast # Total years simulated (114)
-sim_years <- real_years[1] + seq(0, n_sim-1) # Sequence of simulated years, starting at first real year
-forecast_years <- (max(real_years)+1):(max(sim_years)) # Forecast years only (2025–2124)
-
-# ── Data inputs overview ──────────────────────────────
-# env_ext_list.rds:
-#   • A master list of tibbles/data.frames, one per environment/alternative.
-#   • Each element contains water temperature extracted by site and time.
-#   • Expected columns include:
-#       - site
-#       - time index (Date)
-#       - covariates (numeric: temp)
-#   • Used to map environment → sites and to assemble df_all for analysis.
-#
-# df_all.rds:
-#   • A table containing observed water temperature across
-#     alternatives, sites, and dates.
-#
-# carcassdet_*.csv:
-#   • Raw carcass detection records (survey-level/individual fish info).
-#   • Includes fields such as survey date, reach, sex, fork length, tag status, etc.
-#
-# grandtab_*.csv:
-#   • Slice of CDFW GrandTab escapement estimates.
-#   • Key columns: End Year of Monitoring Period, Population Estimate (renamed spawners).
-#   • Filtered to years 2011–2024 for this project.
+real_years <- 2011:2024 
+n_calib <- length(real_years) # 14 
+max_forecast <- 100 
+n_sim <- n_calib + max_forecast # 114 
+sim_years <- real_years[1] + seq(0, n_sim-1)
+forecast_years <- (max(real_years)+1):(max(sim_years))
 
 # ── Read data inputs ──────────────────────────────────
 env_ext_list <- readRDS(
   here("SalmonCountR", "app_data", "env_ext_list.rds")
 )
 
-#NOTE: env refers to the alternatives
+#NOTE: env refers to the alternatives, ChatGPT stuck that name on and I have rolled with it
 # --- env -> site map ---------------------------------------------------- 
 env_sites <- purrr::imap_dfr(env_ext_list, ~ {
   tibble(env = as.character(.y), site = unique(.x$site))
@@ -920,7 +897,7 @@ base_P <- list(
   female_fraction = 0.5, fec = 5522, S0 = 0.347,
   K_spawners = 12493,
   SAR_mean = NA_real_, SAR_sd = 0.00237,
-  lag_probs = c(`3` = 0.828982, `4` = 0.168885, `5` = 0.002105), #CWT data retreived from RMIS for 2011-2024
+  lag_probs = c(`3` = 0.75, `4` = 0.249, `5` = 0.001),
   rear_surv = NA_real_
 )
 
@@ -948,7 +925,7 @@ calib_results <- furrr::future_map_dfr(
   variant_names,
   function(v) {
     opt <- optim(
-      par    = c(0.0025, 0.5419), #O’Farrell et. al (2018) for Sacramento River fish
+      par    = c(0.0025, 0.8),
       fn     = modular_sse,
       variant= v,
       method = "L-BFGS-B",
