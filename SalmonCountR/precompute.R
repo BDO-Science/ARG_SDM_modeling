@@ -1113,6 +1113,7 @@ saveRDS(results_full,          here("SalmonCountR","app_data","results_full.rds"
 saveRDS(egg_summary,           here("SalmonCountR","app_data","egg_summary.rds"))
 saveRDS(surv_lookup_full,      here("SalmonCountR","app_data","surv_lookup_full.rds"))
 saveRDS(base_P_list,           here("SalmonCountR","app_data","base_P_list.rds"))
+saveRDS(base_P,              here("SalmonCountR","app_data","base_P.rds"))
 saveRDS(S_seed_calib,          here("SalmonCountR","app_data","S_seed_calib.rds"))
 saveRDS(S_seed_fore_list,      here("SalmonCountR","app_data","S_seed_fore_list.rds"))
 saveRDS(stoch_SAR_opts,        here("SalmonCountR","app_data","stoch_SAR_opts.rds"))
