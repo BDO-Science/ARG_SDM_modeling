@@ -5,6 +5,7 @@ format:
     theme: cosmo
     toc: true
     toc-depth: 3
+    embed-resources: true
   pdf: default
   docx: default
 ---
@@ -15,51 +16,26 @@ This document summarizes the **modeling framework** used in the Shiny applicatio
 
 Key components:
 
-- **Spawn timing**: Ordinal cumulative logit model (CLMM) with October/November mean temperatures and a year random effect (forecasted via AR(1)).  
-- **Egg → fry survival**: Temperature-dependent mortality (TDM), exponential or linear-threshold, across incubation windows defined by ATUs.  
-- **Pre-spawn adult survival**: Logistic function of cumulative pre-spawn degree-days.  
-- **Density dependence & rear survival**: Fry production capped via Beverton–Holt term; constant fry→smolt survival.  
-- **Smolt-to-adult returns (SAR)**: Deterministic or stochastic SAR with ages 3–5.  
-- **Calibration**: Joint optimization of mean SAR and rear survival against observed escapement (2011–2024).  
-- **Forecasting**: Projected spawner abundance trajectories under scenarios.
-
----
-
-## Notation & Parameter Map
-
-| Code | Meaning | Math symbol |
-|---|---|---|
-| `S_y` | Modeled spawners at brood year \(y\) | \(S_y\) |
-| `f` | Female fraction of spawners | \(f\) |
-| `F` | Eggs per female (fecundity) | \(F\) |
-| `S_pre` | Pre-spawn survival | \(S_{\mathrm{pre},y}\) |
-| `S_egg` | Egg→fry survival (TDM) | \(S_{\mathrm{egg},y}\) |
-| `dd` | Density-dependence factor | \(dd_y\) |
-| `S_rear` | Rear survival (fry→smolt) | \(S_{\mathrm{rear}}\) |
-| `SAR_y` | Smolt-to-adult return ratio | \(\mathrm{SAR}_y\) |
-| `lag_probs` | Age return probabilities (3,4,5) | \(P(\mathrm{age}=a)\) |
-| `K_spawners` | Spawner carrying capacity | \(K_y\) |
-| `S0` | Beverton–Holt intercept | \(S_0\) |
-| `deg_day` | Pre-spawn degree-days | \(\mathrm{DD}_y\) |
-| `Oct_std`, `Nov_std` | Std. Oct/Nov temps | \(\overline{T}_{y,\text{Oct}}^\*, \overline{T}_{y,\text{Nov}}^\*\) |
-| `beta` | CLMM slopes | \(\beta_{\text{Oct}}, \beta_{\text{Nov}}\) |
-| `zeta` | CLMM thresholds | \(\{\zeta_k\}\) |
-| `u_y` | Year random effect | \(u_y\) |
-| `phi, sigma` | AR(1) parameters | \(\phi, \sigma\) |
+- **Spawn timing**: An ordinal cumulative logit model (CLM) predicts spawn timing based on October/November mean temperatures.
+- **Egg → fry survival**: Temperature-dependent mortality (TDM) is calculated using three different models (two exponential, one linear-threshold) across incubation windows defined by Accumulated Thermal Units (ATUs).
+- **Pre-spawn adult survival**: A logistic function of cumulative pre-spawn degree-days.
+- **Density dependence & rear survival**: Fry production is capped via a Beverton–Holt term, followed by a constant fry-to-smolt survival rate.
+- **Smolt-to-adult returns (SAR)**: Calibrated smolt-to-adult return rates are applied to smolt production to determine adult returns at ages 3–5.
+- **Calibration**: The model jointly optimizes mean SAR and rearing survival against observed escapement data from 2011–2024.
 
 ---
 
 ## Master Life-Cycle Recursion
 
-Spawner abundance in future years is updated recursively:
+Spawner abundance in a future year \\(y+a\\) is the sum of returning adults from multiple brood years. The contribution from a single brood year \\(y\\) is given by the master equation:
 
 $$
 S_{y+a} \;\leftarrow\; S_{y+a} +
-S_y \cdot f \cdot S_{\mathrm{pre},y} \cdot F \cdot S_{\mathrm{egg},y} \cdot dd_y \cdot S_{\mathrm{rear}} \cdot \mathrm{SAR}_y \cdot P(\mathrm{age}=a),
+\underbrace{S_y \cdot f \cdot S_{\mathrm{pre},y} \cdot F}_{\text{Total Eggs}} \cdot \underbrace{S_{\mathrm{egg},y} \cdot dd_y}_{\text{Effective Egg Survival}} \cdot \underbrace{S_{\mathrm{rear}}}_{\text{Rearing Survival}} \cdot \underbrace{\mathrm{SAR}_y \cdot P(\mathrm{age}=a)}_{\text{Ocean Survival & Return}},
 \quad a \in \{3,4,5\}.
 $$
 
-This recursion integrates all biological processes: pre-spawn mortality, incubation survival, density dependence, rearing survival, SAR, and age structure.
+This recursion integrates all key biological processes.
 
 ---
 
@@ -69,33 +45,22 @@ This recursion integrates all biological processes: pre-spawn mortality, incubat
 
 Spawning is distributed across 11 fixed 10-day bins from October–January.  
 
-- **Model**: ordinal cumulative logit mixed model (CLMM):
+- **Model**: An ordinal cumulative logit model (CLM) predicts the probability of spawning in a given bin:
 
   $$
-  \Pr(B \le k \mid y) = \operatorname{logit}^{-1}(\zeta_k - \eta_y),
+  \Pr(\text{Bin} \le k \mid y) = \operatorname{logit}^{-1}(\zeta_k - \eta_y),
   $$
 
   $$
   \eta_y = \beta_{\text{Oct}} \overline{T}^{\*}_{y,\text{Oct}} +
-           \beta_{\text{Nov}} \overline{T}^{\*}_{y,\text{Nov}} +
-           u_y,
+           \beta_{\text{Nov}} \overline{T}^{\*}_{y,\text{Nov}},
   $$
 
-  with thresholds \(\zeta_k\), fixed temperature slopes, and year random effect \(u_y\).
-
-- **Forecasting**: \(u_y\) evolves via AR(1):  
-  \(u_y = \phi u_{y-1} + \varepsilon_y, \;\varepsilon_y \sim \mathcal{N}(0,\sigma^2)\).
-
-- **Simulation**: For each redd, a bin is drawn from probabilities \(p_{y,b}\), then a uniform date is sampled within the bin’s calendar window.  
-
-Outcome: **year-to-year variability in spawn dates** reflecting temperature covariates and persistent random effects.  
-No flow covariates are included.
-
----
+  with thresholds \\(\zeta_k\\) and fixed effects \\(\beta\\) for standardized October and November temperatures.
 
 ### 2. Pre-Spawn Survival
 
-Adults accumulate thermal stress prior to spawning. Survival is logistic in cumulative degree-days:
+Adults accumulate thermal stress prior to spawning. Survival is a logistic function of cumulative degree-days (DD):
 
 $$
 S_{\mathrm{pre},y} = \operatorname{logit}^{-1}(\theta_0 + \theta_1 \cdot \mathrm{DD}_y),
@@ -108,115 +73,54 @@ $$
 - Low degree-days → high survival.  
 - High degree-days → survival declines steeply.
 
----
-
 ### 3. Egg → Fry Survival (TDM)
 
-Incubation window length is set by **accumulated thermal units (ATUs):**
-
-$$
-D_{\text{egg}} = \frac{958}{T}, \qquad D_{\text{fry}} = \frac{417}{T}.
-$$
-
-Survival is computed as:
+The incubation window is determined by **Accumulated Thermal Units (ATUs)**. Survival over this period is computed as:
 
 $$
 S_{\mathrm{egg},y} = \exp(-H_y),
 $$
 
-where \(H_y\) is the cumulative hazard across incubation days.
+where \\(H_y\\) is the cumulative hazard across all incubation days.
 
-- **Exponential TDM (WaterForum 2020, SALMOD 2006):**
+- **Exponential TDM (WaterForum 2020, SALMOD 2006):** The daily hazard rate increases exponentially with temperature.
 
   $$
   H_y = \sum_i \alpha \, e^{\beta T_i}.
   $$
 
-- **Linear-threshold TDM (Martin et al. 2017):**
+- **Linear-threshold TDM (Martin et al. 2017):** The daily hazard rate increases linearly, but only for temperatures above a specific threshold.
 
   $$
   H_y = \alpha \sum_i \max(T_i - \beta, 0).
   $$
 
-> Exponentiation converts **additive daily hazards** into **multiplicative survival**, capturing how even small daily risks accumulate into nonlinear survival losses.
+### 4. Density Dependence & Rearing Survival
 
----
-
-### 4. Density Dependence & Rear Survival
-
-Eggs surviving incubation and degree-day effects face fry density dependence:
+The number of surviving fry is limited by habitat capacity, modeled with a Beverton-Holt relationship.
 
 $$
-\text{redds}_y = S_y \cdot f \cdot S_{\mathrm{pre},y}, \qquad
-\text{eggs}_y = \text{redds}_y \cdot F,
+\text{Redds}_y = S_y \cdot f \cdot S_{\mathrm{pre},y}
 $$
 
 $$
-dd_y = \frac{S_0}{1 + \text{redds}_y / K_y}, \qquad
-\text{fry\_dd}_y = \text{eggs}_y \cdot S_{\mathrm{egg},y} \cdot dd_y,
+dd_y = \frac{S_0}{1 + \text{Redds}_y / K_y}
 $$
 
+The number of smolts produced is then:
 $$
-\text{reared}_y = \text{fry\_dd}_y \cdot S_{\mathrm{rear}}, \qquad
-S_{\mathrm{eff},y} = S_{\mathrm{egg},y} \cdot dd_y.
+\text{Smolts}_y = (\text{Redds}_y \cdot F \cdot S_{\mathrm{egg},y} \cdot dd_y) \cdot S_{\mathrm{rear}}
 $$
 
----
+where \\(S_{\mathrm{eff},y} = S_{\mathrm{egg},y} \cdot dd_y\\) is the effective egg-to-fry survival.
 
 ### 5. Smolt → Adult Returns (SAR)
 
-Reared smolts return as adults after age-structured delays:
+Reared smolts return as adults after age-structured delays, governed by the smolt-to-adult return (SAR) rate. The number of returning adults from brood year \\(y\\) that contribute to the spawner population in year \\(y+a\\) is:
 
 $$
-S_{y+a} \leftarrow S_{y+a} + \text{reared}_y \cdot \mathrm{SAR}_y \cdot P(\mathrm{age}=a),
+\text{Returns}_{y \to y+a} = \text{Smolts}_y \cdot \mathrm{SAR}_y \cdot P(\mathrm{age}=a),
 \quad a \in \{3,4,5\}.
 $$
-
-- **Deterministic SAR**: constant \(\mathrm{SAR}_y = \mathrm{SAR}_{\text{mean}}\).  
-- **Stochastic SAR**: drawn from Normal, Lognormal, Beta, or Gamma distributions, with optional timing filters:  
-  - all years stochastic,  
-  - block years stochastic,  
-  - or pulse years with shocks.
-
----
-
-## Calibration & Forecasting
-
-### Calibration (2011–2024)
-
-- **Targets**: observed escapement.  
-- **Seeds**: first 3 years fixed from observations.  
-- **Fit window**: years 4–14.  
-- **Objective**: minimize SSE between observed and predicted spawners:
-
-  $$
-  \min_{\mathrm{SAR}_{\text{mean}}, S_{\mathrm{rear}}} 
-  \sum_{y \in \text{fit}} \big(\widehat{S}_y - S^{\mathrm{obs}}_y\big)^2.
-  $$
-
-- **Method**: `optim(..., method="L-BFGS-B")`.
-
-### Forecasting
-
-1. Spawn dates simulated from CLMM + AR(1).  
-2. Degree-days computed per brood year.  
-3. Egg→fry survival from TDM.  
-4. Fry capped by density dependence.  
-5. SAR applied deterministically or stochastically.  
-
-Forecasts yield **modeled spawner abundance trajectories** by environment and TDM variant.
-
----
-
-## Compact Equation List
-
-1. Egg development: \(D_{\text{egg}} = 958/T\).  
-2. Fry emergence: \(D_{\text{fry}} = 417/T\).  
-3. Exponential TDM: \(S_{\mathrm{egg},y} = \exp(-\sum \alpha e^{\beta T_i})\).  
-4. Linear-threshold TDM: \(S_{\mathrm{egg},y} = \exp(-\alpha \sum \max(T_i-\beta,0))\).  
-5. Pre-spawn survival: \(S_{\mathrm{pre},y} = \operatorname{logit}^{-1}(\theta_0+\theta_1 \mathrm{DD}_y)\).  
-6. Degree-days: \(\mathrm{DD}_y=\sum \max(T-T_{\text{base}},0)\).  
-7. Density dependence: \(dd_y=\tfrac{S_0}{1+\text{redds}_y/K_y}\).  
-8. Recruitment recursion: see Master Equation above.
 
 ---

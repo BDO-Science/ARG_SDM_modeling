@@ -9,13 +9,14 @@
 # - Date/time utilities for spawn timing
 # ═══════════════════════════════════════════════════════════════════════════════
 
-#' @importFrom stats plogis rnorm rbeta rgamma rlnorm
+#' @importFrom stats plogis rnorm rbeta rgamma rlnorm runif
 #' @importFrom lubridate month day mday make_date year hour minute second make_datetime
-#' @importFrom dplyr group_by summarize mutate transmute filter arrange desc slice
+#' @importFrom dplyr group_by summarize mutate transmute filter arrange desc slice select bind_rows
 #' @importFrom tibble tibble
 #' @importFrom purrr map imap_dfr map_dfr
 #' @importFrom tidyr pivot_wider crossing
 #' @importFrom utils modifyList tail
+#' @importFrom data.table is.data.table setDT setkey data.table fifelse rbindlist setkeyv
 NULL
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -346,8 +347,7 @@ compute_surv_by_atu <- function(rdr, site, date_idx_env, temps_env,
 #'
 #' @return Numeric vector of survival probabilities in (0, 1).
 #' @references Colvin et al. (2018). Identifying optimal water temperature 
-#'   and flow regimes for anadromous fish. *River Research and Applications* 
-#'   34(6):621–632.
+#'   and flow regimes for anadromous fish. *River Research and Applications* #'   34(6):621–632.
 #' @examples
 #' surv_adult_prespawn(0)         # ~95% survival at 0 degree-days
 #' surv_adult_prespawn(seq(0, 2000, 500))  # Declining survival curve
@@ -634,7 +634,7 @@ compute_deg_day_adult <- function(
 #' @keywords internal
 deg_day_cal_for <- function(env_nm) {
   # Get spawn dates for this environment
-  sd_env <- spawn_dates_by_env[[env_nm]]
+  sd_env <- spawn_dates_by_alt[[env_nm]]
   stopifnot(length(sd_env) >= length(sim_years))
   
   # Align to calibration years
@@ -846,7 +846,7 @@ modular_sse <- function(par, variant) {
 #' @param env_nm Character, environment/alternative name.
 #' @param flow_cfs Numeric or NULL. If provided, adjusts carrying capacity.
 #' @param S_seed Numeric vector, initial spawner abundances.
-#' @param spawn_dates_by_env Named list, env -> Date vector aligned to sim_years.
+#' @param spawn_dates_by_alt Named list, env -> Date vector aligned to sim_years.
 #'
 #' @return Zero-argument function that returns a tibble with columns:
 #'   year, spawners, deg_day, pre_spawn, dd, fry_dd, egg_surv, eff_surv,
@@ -856,56 +856,40 @@ sim_forecast_fn <- function(var_nm,
                             env_nm,
                             flow_cfs = NULL,
                             S_seed,
-                            spawn_dates_by_env) {
+                            spawn_dates_by_alt,
+                            P_override = NULL,
+                            surv_vec_override = NULL) {
   # Force evaluation of arguments in parent scope
-  force(var_nm); force(env_nm); force(flow_cfs); force(S_seed); force(spawn_dates_by_env)
+  force(var_nm); force(env_nm); force(flow_cfs); force(S_seed); 
+  force(spawn_dates_by_alt); force(P_override); force(surv_vec_override)
   
   # Return closure that captures these values
   function() {
-    # Get parameters for this variant-environment
-    P_tmp <- base_P_list[[var_nm]][[env_nm]]
+    # Get parameters for this variant-environment, with override option
+    P_tmp <- if (!is.null(P_override)) P_override else base_P_list[[var_nm]][[env_nm]]
     if (!is.null(flow_cfs)) P_tmp$K_spawners <- get_K_spawners(flow_cfs)
     
-    # Get survival vector for this combination
-    surv_vec <- surv_lookup_full[[paste(env_nm, var_nm, sep = "_")]]
+    # Get survival vector for this combination, with override option
+    surv_vec <- if (!is.null(surv_vec_override)) surv_vec_override else surv_lookup_full[[paste(env_nm, var_nm, sep = "_")]]
     
     # Get environment-specific spawn dates
-    if (is.null(spawn_dates_by_env[[env_nm]])) {
-      stop("spawn_dates_by_env[[", env_nm, "]] is NULL.")
-    }
-    spawn_dates_env <- spawn_dates_by_env[[env_nm]]
-    if (length(spawn_dates_env) < length(sim_years)) {
-      stop("spawn_dates_by_env[[", env_nm, "]] length < sim_years length.")
-    }
+    if (is.null(spawn_dates_by_alt[[env_nm]])) { stop("spawn_dates_by_alt[[", env_nm, "]] is NULL.") }
+    spawn_dates_env <- spawn_dates_by_alt[[env_nm]]
+    if (length(spawn_dates_env) < length(sim_years)) { stop("spawn_dates_by_alt[[", env_nm, "]] length < sim_years length.") }
     
     # Calculate pre-spawn degree-days
-    deg_day_vec <- compute_deg_day_adult(
-      env_nm       = env_nm,
-      sim_years    = sim_years,
-      spawn_dates  = spawn_dates_env,
-      env_ext_list = env_ext_list
-    )
+    deg_day_vec <- compute_deg_day_adult(env_nm = env_nm, sim_years = sim_years, spawn_dates = spawn_dates_env, env_ext_list = env_ext_list)
     
     # Set up carrying capacity and SAR vectors
     K_vec   <- rep(P_tmp$K_spawners, length(sim_years))
-    SAR_vec <- if (use_stochastic_SAR) {
-      generate_SAR_vec(length(sim_years), 
-                       modifyList(stoch_SAR_opts, list(mean = P_tmp$SAR_mean)))
+    SAR_vec <- if (exists("use_stochastic_SAR", inherits = TRUE) && use_stochastic_SAR) {
+      generate_SAR_vec(length(sim_years), modifyList(stoch_SAR_opts, list(mean = P_tmp$SAR_mean)))
     } else {
       rep(P_tmp$SAR_mean, length(sim_years))
     }
     
     # Run simulation
-    sim_out <- simulate_variant(
-      surv_vec       = surv_vec,
-      P              = P_tmp,
-      years          = length(sim_years),
-      S_init         = S_seed,
-      SAR_vec        = SAR_vec,
-      K_spawners_vec = K_vec,
-      deg_day_adult  = deg_day_vec,
-      sim_years_vec  = sim_years
-    )
+    sim_out <- simulate_variant(surv_vec = surv_vec, P = P_tmp, years = length(sim_years), S_init = S_seed, SAR_vec = SAR_vec, K_spawners_vec = K_vec, deg_day_adult = deg_day_vec, sim_years_vec = sim_years)
     
     # Add environment and variant labels
     dplyr::mutate(sim_out, env = env_nm, variant = var_nm)
@@ -1143,6 +1127,243 @@ generate_SAR_vec <- function(n_years, opts) {
   
   # Ensure non-negative (SARs cannot be negative)
   pmax(vec, 0)
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 12: FUNCTIONS MOVED FROM PRECOMPUTE.R
+# ═══════════════════════════════════════════════════════════════════════════════
+
+#' Trim trailing empty rows from a data frame
+#'
+#' @description This utility function identifies and removes empty rows from the
+#' bottom of a data frame, which often occur when reading poorly formatted CSV files.
+#' It determines a row is empty if all its numeric columns are NA.
+#'
+#' @param df A data frame.
+#'
+#' @return A data frame with trailing empty rows removed.
+#' @keywords internal
+trim_trailing_text <- function(df) {
+  # Removes trailing empty rows from CSV exports
+  nnum <- df %>% mutate(.nn = rowSums(across(where(is.numeric), ~ !is.na(.)))) %>% pull(.nn)
+  last <- suppressWarnings(max(which(nnum > 0), na.rm = TRUE))
+  if (!is.finite(last)) return(df)
+  df[seq_len(last), , drop = FALSE]
+}
+
+#' Assign a date to a pre-defined 10-day period
+#'
+#' @description Calculates which 10-day bin a given date falls into, based on a
+#' seasonal anchor date. Used for modeling spawn timing.
+#'
+#' @param dates A vector of Date objects.
+#' @param anchor_mmdd Character, the "MM-DD" anchor for the start of the season.
+#' @param bin_width Integer, the width of each period in days (e.g., 10).
+#' @param n_bins Integer, the total number of bins in the season.
+#'
+#' @return An ordered factor vector indicating the period for each date.
+#' @keywords internal
+assign_period <- function(dates, anchor_mmdd, bin_width, n_bins) {
+  md <- format(dates, "%m-%d")
+  season_year  <- year(dates) - (md < anchor_mmdd)
+  season_start <- as.Date(paste0(season_year, "-", anchor_mmdd))
+  season_day   <- as.integer(dates - season_start)
+  # Calculate bin index (1-based, capped at n_bins)
+  bin_idx <- pmax(1L, pmin(floor(season_day / bin_width) + 1L, n_bins))
+  # Return as ordered factor
+  factor(paste0("p", bin_idx), levels = paste0("p", seq_len(n_bins)), ordered = TRUE)
+}
+
+#' Efficiently sample random dates within 10-day spawn periods
+#'
+#' @description Given a vector of period names (e.g., "p1", "p2") and a year, this
+#' function quickly samples a random date for each period within that year. It
+#' correctly handles spawn seasons that cross calendar years.
+#'
+#' @param bins_chr Character vector of period names corresponding to rows in `bin_defs`.
+#' @param year_int Integer, the brood year for which to sample dates.
+#' @param bin_defs A data frame defining the spawn periods. Must contain `period`,
+#'   `start` (Date), and `end` (Date) columns.
+#'
+#' @return A vector of Date objects, one for each input period.
+#' @keywords internal
+sample_dates_fast <- function(bins_chr, year_int, bin_defs) {
+  # Match the sampled bin names to the definitions to get start/end dates
+  idx <- match(bins_chr, bin_defs$period)
+  
+  start_dates_ref <- bin_defs$start[idx]
+  end_dates_ref   <- bin_defs$end[idx]
+  
+  # Determine the correct calendar year for each date.
+  # Spawning season starts in one calendar year and can end in the next.
+  # If a bin's start month is before September (e.g., January), it belongs to the *next*
+  # calendar year relative to the brood year.
+  start_year <- year_int + ifelse(lubridate::month(start_dates_ref) < 9, 1L, 0L)
+  end_year   <- year_int + ifelse(lubridate::month(end_dates_ref) < 9, 1L, 0L)
+  
+  # Construct the actual start and end dates for the given brood year
+  start <- lubridate::make_date(
+    year = start_year, 
+    month = lubridate::month(start_dates_ref), 
+    day = lubridate::day(start_dates_ref)
+  )
+  end <- lubridate::make_date(
+    year = end_year, 
+    month = lubridate::month(end_dates_ref), 
+    day = lubridate::day(end_dates_ref)
+  )
+  
+  # Calculate the number of days in each bin and sample a random offset
+  len <- as.integer(end - start) + 1L
+  len[len <= 0 | is.na(len)] <- 1L # Handle potential errors gracefully
+  off <- if (length(len)) floor(runif(length(len), min = 0, max = pmax(1L, len))) else integer()
+  
+  # Return the final sampled dates
+  start + off
+}
+
+
+#' Calculate a safe numeric range with a fallback
+#'
+#' @description Computes the `range()` of a numeric vector after removing non-finite
+#' values. If no finite values exist, it returns a default fallback range.
+#'
+#' @param x A numeric vector.
+#' @param fallback A numeric vector of length 2 to return if `x` has no finite values.
+#'
+#' @return A numeric vector of length 2 containing the min and max.
+#' @keywords internal
+safe_range <- function(x, fallback = c(-2, 2)) {
+  x <- x[is.finite(x)]
+  if (length(x)) range(x) else fallback
+}
+
+
+#' Vectorized wrapper for memoized survival calculation
+#'
+#' @description Applies the memoized `memo_surv` function to vectors of inputs,
+#' allowing for efficient calculation of survival for many redds at once.
+#'
+#' @param env_nm Character, environment name.
+#' @param site Character vector of site names.
+#' @param rdr Vector of redd dates (IDate format).
+#' @param model Character vector of model names ("exp" or "lin_martin").
+#' @param calib Character vector of calibration names.
+#'
+#' @return A numeric vector of survival probabilities.
+#' @keywords internal
+compute_surv_vec <- function(env_nm, site, rdr, model, calib) {
+  vapply(
+    seq_along(site),
+    function(i) memo_surv(env_nm, site[i], rdr[i], model, calib),
+    numeric(1)
+  )
+}
+
+#' Memoized survival calculation function
+#'
+#' @description Caches the results of `compute_surv_by_atu` to avoid re-calculating
+#' survival for the same combination of inputs (environment, site, date, model).
+#' This provides a significant speed-up during parallel processing.
+#'
+#' @param env_nm Character, environment name.
+#' @param site Character, site name.
+#' @param rdr Redd date (IDate format).
+#' @param model Character, model name.
+#' @param calib Character, calibration name.
+#'
+#' @return A numeric survival probability.
+#' @keywords internal
+memo_surv <- function(env_nm, site, rdr, model, calib) {
+  k <- paste(env_nm, site, as.integer(rdr), model, calib, sep = "|")
+  hit <- .mem_env[[k]]
+  if (!is.null(hit)) return(hit)
+  
+  ec <- env_cache[[env_nm]]
+  out <- compute_surv_by_atu(
+    rdr = rdr, site = site, date_idx_env = ec$date_idx_alt,
+    temps_env = ec$temps_alt, model = model, calib = calib
+  )
+  .mem_env[[k]] <- out
+  out
+}
+
+
+#' Prepare redd data for a single environment-year combination
+#'
+#' @description Aggregates redds by site and date for a given year and environment,
+#' and joins them with pre-computed temperature data lookups for fast access.
+#'
+#' @param red_this A data.table of redds for a single year (`spawn_dt`, `site`).
+#' @param sim_yr Integer, the simulation year.
+#' @param env_nm Character, the environment name.
+#'
+#' @return A data.table with `site`, `rdr` (redd date), `pos` (position in
+#'   temp array), and `N` (number of redds). Returns `NULL` if no valid redds.
+#' @keywords internal
+pairs_for_env_year <- function(red_this, sim_yr, env_nm) {
+  lk <- env_lookup[[env_nm]]
+  if (is.null(lk) || !nrow(lk)) return(NULL)
+  
+  mm  <- data.table::month(red_this$spawn_dt)
+  dd  <- lubridate::day(red_this$spawn_dt)
+  yy  <- fifelse(mm >= 9L, sim_yr, sim_yr + 1L)
+  rdr <- as.IDate(lubridate::make_date(yy, mm, dd))
+  
+  pairs <- data.table(site = red_this$site, rdr = rdr)[ , .N, by = .(site, rdr)]
+  if (!nrow(pairs)) return(NULL)
+  
+  setkeyv(pairs, c("site", "rdr"))
+  pairs <- lk[pairs, nomatch = 0L]
+  if (!nrow(pairs)) return(NULL)
+  
+  pairs[]
+}
+
+
+#' Evaluate TDM survival for one year across all variants
+#'
+#' @description Orchestrates the TDM calculation for a single simulation year by
+#' iterating through all management alternatives and all defined TDM model variants.
+#' It calculates the weighted mean survival for each combination.
+#'
+#' @param sim_yr Integer, the simulation year to evaluate.
+#' @param sim_redds_split A list of redd data.tables, split by year.
+#' @param env_cache A cached list of environment-specific assets.
+#' @param tdm_defs A data frame defining the TDM model variants.
+#'
+#' @return A data.table summarizing the mean cumulative survival for the year
+#'   across all alternatives and variants.
+#' @keywords internal
+eval_year <- function(sim_yr, sim_redds_split, env_cache, tdm_defs) {
+  red_this <- sim_redds_split[[as.character(sim_yr)]]
+  if (is.null(red_this) || !nrow(red_this)) return(data.table())
+  
+  env_names <- names(env_cache)
+  
+  env_tables <- lapply(env_names, function(env_nm) {
+    pairs <- pairs_for_env_year(red_this, sim_yr, env_nm)
+    if (is.null(pairs) || !nrow(pairs)) return(NULL)
+    
+    rbindlist(lapply(seq_len(nrow(tdm_defs)), function(i) {
+      survs <- compute_surv_vec(
+        env_nm = env_nm, site = pairs$site, rdr = pairs$rdr,
+        model  = tdm_defs$model[i], calib  = tdm_defs$calib[i]
+      )
+      data.table(
+        sim_year = sim_yr, mgt_alt = env_nm, variant = tdm_defs$variant[i],
+        method = "observed_spawn_dist",
+        mean_cum_surv = {
+          wsum <- sum(pairs$N)
+          if (!is.finite(wsum) || wsum <= 0) NA_real_ else sum(survs * pairs$N, na.rm = TRUE) / wsum
+        }
+      )
+    }), use.names = TRUE, fill = TRUE)
+  })
+  
+  env_tables <- Filter(Negate(is.null), env_tables)
+  if (!length(env_tables)) return(data.table())
+  rbindlist(env_tables, use.names = TRUE, fill = TRUE)
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
