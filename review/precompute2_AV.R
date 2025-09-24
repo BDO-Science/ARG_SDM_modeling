@@ -66,7 +66,15 @@ df_all <- readRDS(
   here("SalmonCountR", "app_data", "df_all.rds")
 )
 
-
+# ---- 3.3 Utility Functions ----
+# Define utility functions that will be moved to functions.R in production
+trim_trailing_text <- function(df) {
+  # Removes trailing empty rows from CSV exports
+  nnum <- df %>% mutate(.nn = rowSums(across(where(is.numeric), ~ !is.na(.)))) %>% pull(.nn)
+  last <- suppressWarnings(max(which(nnum > 0), na.rm = TRUE))
+  if (!is.finite(last)) return(df)
+  df[seq_len(last), , drop = FALSE]
+}
 
 # ---- 4. CARCASS SURVEY DATA ----
 # Load raw carcass detection data from American River field surveys
@@ -110,16 +118,6 @@ tdm_defs <- tribble(
   "exp",        "SALMOD2006",     "exp_SM",      # Exponential with 2006 parameters  
   "lin_martin", NA,               "lin_Martin"   # Linear threshold model
 )
-
-# ---- 7.1 TDM MODEL WEIGHTS ----
-# Define weights for combining the TDM model variants into an ensemble average
-tdm_weights <- tribble(
-  ~variant,     ~weight,
-  "exp_WF",     0.51,  # Water Forum
-  "exp_SM",     0.24,  # SALMOD
-  "lin_Martin", 0.25   # Martin
-)
-stopifnot(sum(tdm_weights$weight) == 1.0) # Ensure weights sum to 1
 
 # ---- 8. TEMPERATURE LOOKUPS ----
 # Create optimized lookup structures for fast temperature data access
@@ -209,11 +207,23 @@ season_day   <- as.integer(carcass_df$spawn_dt - season_start)
 needed_bins  <- ceiling((max(season_day, na.rm = TRUE) + 1) / bin_width)
 n_bins <- max(12L, needed_bins)  # Ensure at least 12 bins
 
+# ---- 10.3 Create Period Assignment Function ----
+assign_period <- function(dates, anchor_mmdd, bin_width, n_bins) {
+  md <- format(dates, "%m-%d")
+  season_year  <- year(dates) - (md < anchor_mmdd)
+  season_start <- as.Date(paste0(season_year, "-", anchor_mmdd))
+  season_day   <- as.integer(dates - season_start)
+  # Calculate bin index (1-based, capped at n_bins)
+  bin_idx <- pmax(1L, pmin(floor(season_day / bin_width) + 1L, n_bins))
+  # Return as ordered factor
+  factor(paste0("p", bin_idx), levels = paste0("p", seq_len(n_bins)), ordered = TRUE)
+}
+
 # Assign period to each observation
 carcass_df <- carcass_df %>%
   mutate(period = assign_period(spawn_dt, anchor_mmdd, bin_width, n_bins))
 
-# ---- 10.3 Create Bin Definitions ----
+# ---- 10.4 Create Bin Definitions ----
 # Define the 10-day spawning period bins for the season
 bin_defs <- tibble(period = paste0("p", seq_len(n_bins))) %>%
   mutate(
@@ -324,8 +334,8 @@ if (!exists("sc")) {
   sc <- carcass_df2 %>%
     filter(brood_year %in% yrs) %>%
     summarise(
-      o_m = mean(Oct, na.rm=TRUE), o_s = sd(Oct, na.rm=TRUE),
-      n_m = mean(Nov, na.rm=TRUE), n_s = sd(Nov, na.rm=TRUE)
+      o_m = mean(Oct, na.rm = TRUE), o_s = sd(Oct, na.rm = TRUE),
+      n_m = mean(Nov, na.rm = TRUE), n_s = sd(Nov, na.rm = TRUE)
     )
 }
 
@@ -385,7 +395,46 @@ ft_joined <- forecast_temps %>%
   left_join(mgt_alt_nredd, by = c("env" = "mgt_alt")) %>%
   left_join(mgt_alt_pools, by = c("env" = "mgt_alt"))
 
-# ---- 17. SIMULATE FUTURE SPAWNING DATA ----
+# ---- 17. DATE SAMPLING FUNCTION ----
+# Function to efficiently sample spawn dates within 10-day bins
+
+if (!exists("sample_dates_fast")) {
+  # Pre-compute bin date components for fast sampling
+  bin_tbl <- bin_defs %>%
+    transmute(
+      period,
+      start_m = lubridate::month(start), 
+      start_d = lubridate::mday(start), 
+      start_yoff = ifelse(start_m >= 10, 0L, 1L),  # Year offset for Oct+ vs Jan
+      end_m   = lubridate::month(end),   
+      end_d   = lubridate::mday(end),   
+      end_yoff   = ifelse(end_m >= 10, 0L, 1L)
+    )
+  
+  # Function to sample random dates within specified 10-day spawning bins
+  sample_dates_fast <- function(bins_chr, year_int) {
+    # Match bins to pre-computed table
+    idx <- match(bins_chr, bin_tbl$period)
+    
+    # Extract date components
+    sm  <- bin_tbl$start_m[idx]; sd <- bin_tbl$start_d[idx]; sy <- year_int + bin_tbl$start_yoff[idx]
+    em  <- bin_tbl$end_m[idx];   ed <- bin_tbl$end_d[idx];   ey <- year_int + bin_tbl$end_yoff[idx]
+    
+    # Construct start and end dates
+    start <- as.Date(sprintf("%04d-%02d-%02d", sy, sm, sd))
+    end   <- as.Date(sprintf("%04d-%02d-%02d", ey, em, ed))
+    
+    # Calculate days in each 10-day bin and sample random offsets
+    len <- as.integer(end - start) + 1L
+    len[len <= 0 | is.na(len)] <- 1L
+    off <- if (length(len)) floor(runif(length(len), min = 0, max = pmax(1L, len))) else integer()
+    
+    # Return sampled dates
+    start + off
+  }
+}
+
+# ---- 18. SIMULATE FUTURE SPAWNING DATA ----
 # Generate synthetic spawning observations for future water years
 # These simulated observations are used to calculate TDM survival rates
 
@@ -403,8 +452,7 @@ for (i in seq_len(nrow(ft_joined))) {
   bins_i  <- sample(present_bins, n_i, replace = TRUE, prob = p_i)
   
   # Sample specific dates within selected 10-day bins
-  # FIX: Pass the bin_defs data frame to the function
-  dates_i <- sample_dates_fast(bins_i, yr_i, bin_defs = bin_defs)
+  dates_i <- sample_dates_fast(bins_i, yr_i)
   
   # Get sampling pools for this management alternative
   # Pool of carcass survey sections
@@ -436,7 +484,7 @@ for (i in seq_len(nrow(ft_joined))) {
 # Combine all simulated data for future water years
 sim_future <- dplyr::bind_rows(out_list)
 
-# ---- 18. VISUALIZE CLM PREDICTIONS ----
+# ---- 19. VISUALIZE CLM PREDICTIONS ----
 # Create plots showing how temperature affects spawning timing probabilities
 
 # ---- 19.1 Prepare Prediction Data ----
@@ -447,6 +495,11 @@ pretty_labels <- paste0(
   format(bin_defs$start[idx], "%b %d"), "–", format(bin_defs$end[idx], "%b %d")
 )
 
+# Define safe temperature ranges from training data
+safe_range <- function(x, fallback = c(-2, 2)) {
+  x <- x[is.finite(x)]
+  if (length(x)) range(x) else fallback
+}
 rng_oct <- safe_range(obs_fit$Oct_std)
 rng_nov <- safe_range(obs_fit$Nov_std)
 
@@ -550,6 +603,16 @@ beta <- cf[c("Oct_std","Nov_std")]
 zeta <- unname(cf[!(names(cf) %in% names(beta))])
 bins <- levels(spawn_clm$model$spawn_bin)
 
+# Define prediction function for CLM probabilities
+predict_clm_probs <- function(beta, zeta, newdata) {
+  xb <- as.matrix(newdata[, names(beta), drop=FALSE]) %*% beta
+  t(vapply(as.vector(xb), function(xi) {
+    cp <- plogis(zeta - xi)
+    p <- c(cp,1) - c(0,cp)
+    p/sum(p)
+  }, numeric(length(zeta)+1)))
+}
+
 # Calculate spawn timing probabilities for empirical years
 probs_hist <- predict_clm_probs(beta, zeta, hist_temps[, c("Oct_std","Nov_std")])
 colnames(probs_hist) <- bins
@@ -575,7 +638,7 @@ sim_pred <- lapply(seq_len(nrow(hist_temps)), function(i){
   # Sample dates within selected bins
   tibble(
     sim_year = yr, 
-    spawn_dt = sample_dates_fast(b, yr, bin_defs = bin_defs), 
+    spawn_dt = sample_dates_fast(b, yr), 
     source = "Modeled"
   )
 }) %>% bind_rows()
@@ -605,9 +668,18 @@ if (!length(anchor_mmdd) || is.na(anchor_mmdd)) anchor_mmdd <- "10-05"
 
 anchor_base <- as.Date(paste0("2000-", anchor_mmdd))
 
+# Function to convert dates to spawning-year-aligned dates
+# The spawning year runs Sept-Aug, similar to a water year
+season_posix <- function(d, mmdd){
+  md <- format(d, "%m-%d")
+  y0 <- year(d) - (md < mmdd)  # Adjust year if before anchor
+  anchor <- as.Date(paste0(y0, "-", mmdd))
+  anchor_base + as.integer(d - anchor)
+}
+
 # Combine observed and modeled data with season alignment
 comp_df <- bind_rows(sim_actual, sim_pred) %>%
-  mutate(season_date = as.Date(season_posix(spawn_dt, anchor_mmdd)))
+  mutate(season_date = season_posix(spawn_dt, anchor_mmdd))
 
 # Set up x-axis breaks
 rng <- range(comp_df$season_date, na.rm=TRUE)
@@ -644,6 +716,9 @@ print(p_box)
 
 # ---- 23. BUILD FINAL SIMULATION DATASETS ----
 # Combine observed and simulated data for Temperature-Dependent Mortality modeling
+
+# Rename 'env' column to 'mgt_alt' for clarity
+sim_future <- sim_future %>% rename(mgt_alt = mgt_alt)
 
 # Combine observed (historical) and simulated (future) spawning data
 sim_redds <- bind_rows(
@@ -864,7 +939,125 @@ env_lookup <- lapply(env_cache, function(ec) {
 # Create a dedicated environment to act as a cache
 .mem_env <- new.env(parent = emptyenv())
 
-# ---- 30. OPTIMIZE AND EXECUTE TDM CALCULATIONS IN PARALLEL ----
+# Define a memoized survival calculation function
+memo_surv <- function(env_nm, site, rdr, model, calib) {
+  # Create a unique key for this specific set of inputs
+  k <- paste(env_nm, site, as.integer(rdr), model, calib, sep = "|")
+  
+  # Check the cache for a pre-computed result
+  hit <- .mem_env[[k]]
+  if (!is.null(hit)) return(hit) # Return cached result if it exists
+  
+  # If not in cache, perform the calculation
+  ec <- env_cache[[env_nm]]
+  # 'compute_surv_by_atu' is assumed to be defined in functions.R
+  out <- compute_surv_by_atu(
+    rdr          = rdr,
+    site         = site,
+    date_idx_env = ec$date_idx_alt,
+    temps_env    = ec$temps_alt,
+    model        = model,
+    calib        = calib
+  )
+  
+  # Store the new result in the cache before returning it
+  .mem_env[[k]] <- out
+  out
+}
+
+# Create a vectorized wrapper for the memoized function for easier application
+compute_surv_vec <- function(env_nm, site, rdr, model, calib) {
+  vapply(
+    seq_along(site),
+    function(i) memo_surv(env_nm, site[i], rdr[i], model, calib),
+    numeric(1)
+  )
+}
+
+# ---- 30. PREPARE REDD DATA FOR ONE ENVIRONMENT-YEAR ----
+# Helper function to process redds for a single year under a single management alternative.
+# It aggregates redds by site/date and joins them with temperature data position lookups.
+
+pairs_for_env_year <- function(red_this, sim_yr, env_nm) {
+  # Get the lookup table for this management alternative
+  lk <- env_lookup[[env_nm]]
+  if (is.null(lk) || !nrow(lk)) return(NULL)
+  
+  # The "redd date" must align with the calendar year of the temperature data.
+  # A fish from brood year `sim_yr` spawning in Jan spawns in calendar year `sim_yr + 1`.
+  mm  <- data.table::month(red_this$spawn_dt)
+  dd  <- lubridate::day(red_this$spawn_dt)
+  yy  <- fifelse(mm >= 9L, sim_yr, sim_yr + 1L)
+  rdr <- as.IDate(lubridate::make_date(yy, mm, dd))
+  
+  # Aggregate redds by site and date, counting occurrences
+  pairs <- data.table(site = red_this$site, rdr = rdr)[
+    , .N, by = .(site, rdr) # Efficiently count redds per site/date
+  ]
+  if (!nrow(pairs)) return(NULL)
+  
+  # Join with the lookup table; this also filters for valid site/date pairs
+  setkeyv(pairs, c("site", "rdr"))
+  pairs <- lk[pairs, nomatch = 0L]
+  if (!nrow(pairs)) return(NULL)
+  
+  # Return final data.table with columns: site, rdr, pos, N
+  pairs[]
+}
+
+# ---- 31. EVALUATE TDM FOR ONE YEAR ACROSS ALL VARIANTS ----
+# This function orchestrates the TDM calculation for a single simulation year,
+# iterating through all management alternatives and TDM model variants.
+
+eval_year <- function(sim_yr, sim_redds_split, env_cache, tdm_defs) {
+  # Get the simulated redd data for this year
+  red_this <- sim_redds_split[[as.character(sim_yr)]]
+  if (is.null(red_this) || !nrow(red_this)) return(data.table()) # Skip if no redds
+  
+  env_names <- names(env_cache)
+  
+  # Process each management alternative
+  env_tables <- lapply(env_names, function(env_nm) {
+    # Get prepared site-redd pairs for this alternative-year
+    pairs <- pairs_for_env_year(red_this, sim_yr, env_nm)
+    if (is.null(pairs) || !nrow(pairs)) return(NULL)
+    
+    # Calculate survival for each TDM variant
+    rbindlist(lapply(seq_len(nrow(tdm_defs)), function(i) {
+      # Use the vectorized/memoized function to compute survivals
+      survs <- compute_surv_vec(
+        env_nm = env_nm,
+        site   = pairs$site,
+        rdr    = pairs$rdr,
+        model  = tdm_defs$model[i],
+        calib  = tdm_defs$calib[i]
+      )
+      # Calculate the weighted mean survival for this year/alt/variant
+      data.table(
+        sim_year      = sim_yr,
+        mgt_alt       = env_nm,
+        variant       = tdm_defs$variant[i],
+        method        = "observed_spawn_dist", # Clarify method
+        mean_cum_surv = {
+          wsum <- sum(pairs$N) # Total number of redds
+          if (!is.finite(wsum) || wsum <= 0) {
+            NA_real_
+          } else {
+            # Weighted average of survival, weighted by number of redds (N)
+            sum(survs * pairs$N, na.rm = TRUE) / wsum
+          }
+        }
+      )
+    }), use.names = TRUE, fill = TRUE)
+  })
+  
+  # Filter out NULL results and combine
+  env_tables <- Filter(Negate(is.null), env_tables)
+  if (!length(env_tables)) return(data.table())
+  rbindlist(env_tables, use.names = TRUE, fill = TRUE)
+}
+
+# ---- 32. OPTIMIZE AND EXECUTE TDM CALCULATIONS IN PARALLEL ----
 # Run the main TDM calculation loop in parallel for maximum speed.
 
 # Byte-compile hot-path functions for a potential speed boost
@@ -888,41 +1081,26 @@ results_obs_fast <- furrr::future_map_dfr(
 )
 # Result contains: sim_year, mgt_alt, variant, method, mean_cum_surv
 
-# ---- 31. LIFE CYCLE MODEL CALIBRATION AND FORECASTING ----
+# ---- 33. LIFE CYCLE MODEL CALIBRATION AND FORECASTING ----
 # Prepare for and run the full life-cycle model, using the TDM survival rates
 # calculated above as a key input.
 
 # Select a reference management alternative for calibration
 ref_env <- names(env_ext_list)[1]
 
-# ---- 31.1 Summarize TDM Survival Results ----
+# ---- 33.1 Summarize TDM Survival Results ----
 egg_summary <- results_obs_fast %>%
   rename(env = mgt_alt) %>% # Rename for consistency with downstream code
   arrange(env, variant, sim_year) %>%
   group_by(env, variant, sim_year) %>%
   summarise(mean_cum_surv = mean(mean_cum_surv, na.rm = TRUE), .groups = "drop")
 
-# Calculate weighted average survival across variants
-egg_summary_weighted <- egg_summary %>%
-  left_join(tdm_weights, by = "variant") %>%
-  # Ensure only variants with weights are included
-  filter(!is.na(weight)) %>%
-  group_by(env, sim_year) %>%
-  summarise(
-    mean_cum_surv = sum(mean_cum_surv * weight, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  mutate(variant = "weighted_avg") # Assign new variant name
-
-# Combine original and weighted results
-egg_summary <- bind_rows(egg_summary, egg_summary_weighted)
-
 variant_names <- egg_summary %>% pull(variant) %>% unique() %>% sort()
 
-# ---- 31.2 Create Survival Lookup Structures ----
+# ---- 33.2 Create Survival Lookup Structures ----
 # For reference environment (used for calibration)
-surv_lookup_by_variant <- egg_summary %>%
-  filter(env == ref_env, sim_year %in% real_years) %>%
+surv_lookup_by_variant <- results_obs_fast %>%
+  filter(mgt_alt == ref_env, sim_year %in% real_years) %>%
   arrange(variant, sim_year) %>%
   group_by(variant) %>%
   summarise(surv_vec = list(mean_cum_surv), .groups = "drop") %>%
@@ -937,7 +1115,7 @@ surv_lookup_full <- egg_summary %>%
   dplyr::select(key, surv_vec) %>%
   tibble::deframe() # Converts to a named list: "env_variant" -> survival vector
 
-# ---- 31.3 Define Base Life-Cycle Parameters ----
+# ---- 33.3 Define Base Life-Cycle Parameters ----
 base_P <- list(
   female_fraction = 0.5,
   fec = 5522,               # Fecundity: eggs per female
@@ -949,29 +1127,37 @@ base_P <- list(
   rear_surv = NA_real_      # Rearing survival (to be calibrated)
 )
 
-# ---- 31.4 Set Up Calibration Data ----
+# ---- 33.4 Set Up Calibration Data ----
 obs_spawners  <- esc_obs$spawners
 S_seed_calib  <- obs_spawners[1:3]        # Seed population (first 3 years)
 n_calib       <- length(obs_spawners)
 fit_idx       <- (length(S_seed_calib) + 1):n_calib # Years to fit model (yr 4-14)
 
-# ---- 32. CALIBRATE LIFE-CYCLE PARAMETERS ----
+# ---- 34. CALIBRATE LIFE-CYCLE PARAMETERS ----
+# Use optimization to find parameters (SAR_mean, rear_surv) that cause the
+# life cycle model to best reproduce the observed historical spawner abundances.
+
 # Calculate degree-days for adult spawners for calibration
-ref_env <- names(env_ext_list)[1]
 deg_day_cal_ref <- deg_day_cal_for(ref_env)
-stopifnot(length(deg_day_cal_ref) == length(real_years))
+stopifnot(
+  length(deg_day_cal_ref) == length(real_years),
+  all(is.finite(deg_day_cal_ref))
+)
 
 # Run calibration in parallel for each TDM variant
 calib_results <- furrr::future_map_dfr(
-  variant_names, # This will be c("exp_SM", "exp_WF", "lin_Martin")
+  variant_names,
   function(v) {
+    # `optim` finds parameters that minimize the objective function (`modular_sse`)
     opt <- optim(
-      par    = c(0.0025, 0.5419),
-      fn     = modular_sse,
+      par    = c(0.0025, 0.5419),  # Initial guess for SAR_mean and rear_surv
+      fn     = modular_sse,         # Objective function: sum of squared errors
       variant= v,
-      method = "L-BFGS-B",
-      lower  = c(0, 0), upper  = c(1, 1)
+      method = "L-BFGS-B",          # Bounded optimization algorithm
+      lower  = c(0, 0),
+      upper  = c(1, 1)
     )
+    # Return calibrated parameters and final error score
     tibble::tibble(
       variant   = v,
       SAR_mean  = opt$par[1],
@@ -988,6 +1174,7 @@ base_P_list <- calib_results %>%
   purrr::map(function(df_v) {
     SARv  <- df_v$SAR_mean[1]
     rearv <- df_v$rear_surv[1]
+    # Create a parameter set for each management alternative
     rlang::set_names(
       lapply(names(env_ext_list), function(env_nm) {
         P <- base_P
@@ -999,18 +1186,16 @@ base_P_list <- calib_results %>%
     )
   })
 
-# ---- 33. GENERATE CALIBRATION PREDICTIONS FOR VALIDATION ----
+# ---- 35. GENERATE CALIBRATION PREDICTIONS FOR VALIDATION ----
 # Run the model over the historical period using the calibrated parameters
 # to visualize how well the model fits the observed data.
 
 calib_pred_by_variant <- rlang::set_names(
   lapply(variant_names, function(v) {
     P0 <- base_P_list[[v]][[ref_env]]
-    # Get the correct survival vector (now includes weighted_avg)
-    surv_vec <- surv_lookup_by_variant[[v]][1:n_calib]
     # Run simulation for the calibration period
     out <- simulate_variant(
-      surv_vec       = surv_vec,
+      surv_vec       = surv_lookup_by_variant[[v]][1:n_calib],
       P              = P0,
       years          = n_calib,
       S_init         = S_seed_calib,
@@ -1032,7 +1217,7 @@ calib_pred_by_variant <- rlang::set_names(
   variant_names
 )
 
-# ---- 34. PREPARE SEED POPULATIONS FOR FORECASTING ----
+# ---- 36. PREPARE SEED POPULATIONS FOR FORECASTING ----
 # Use the last 3 years of the calibrated simulation run as the initial "seed"
 # population for the forecasts to ensure a smooth transition.
 
@@ -1066,7 +1251,7 @@ S_seed_fore_list <- rlang::set_names(
   calib_results$variant
 )
 
-# ---- 35. RUN POPULATION FORECASTS ----
+# ---- 37. RUN POPULATION FORECASTS ----
 # Project populations 100 years forward for every combination of management
 # alternative and TDM model variant.
 
@@ -1103,7 +1288,7 @@ results_full <- purrr::map_dfr(keys, function(key) {
   )()
 })
 
-# ---- 36. SAVE ALL OUTPUTS FOR SHINY APPLICATION ----
+# ---- 38. SAVE ALL OUTPUTS FOR SHINY APPLICATION ----
 # Save all processed data frames and model objects as .rds files. These files
 # will be loaded directly by the Shiny dashboard for fast startup.
 

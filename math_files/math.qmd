@@ -1,76 +1,49 @@
 ---
-title: "Derivation of the Exponential TDM Survival Formula"
-format: html
+title: "Derivation of TDM Survival Formulas"
+format:
+  html:
+    embed-resources: true
 ---
 
-We wish to derive the formula
+## Derivation of the Exponential TDM Survival Formula
+
+This section derives the formula for cumulative egg-to-fry survival (S) over \\(n\\) days under the **exponential TDM model**.
 
 $$
 S \;=\;\exp\!\Bigl(-\sum_{i=1}^{n}\alpha\,e^{\beta\,T_i}\Bigr)
 $$
 
-which gives the cumulative egg-to-fry survival (S) over (n) days, each at temperature (T_i).
+#### 1. Instantaneous Mortality (Hazard) Rate
 
-## 1. Instantaneous Mortality (Hazard) Rate
-
-Assume that at water temperature (T) (in °C), the instantaneous daily mortality rate (hazard) is
+Assume that at water temperature \\(T\\) (in °C), the instantaneous daily mortality rate (hazard) is an exponential function of temperature:
 
 $$
 h(T) \;=\; \alpha \, e^{\beta\,T},
 $$
 
-where - (\alpha \> 0) is a baseline mortality coefficient,\
-- (\beta) controls how sharply mortality increases with temperature.
+where:
+- \\(\alpha > 0\\) is a baseline mortality coefficient.
+- \\(\beta\\) controls how sharply mortality increases with temperature.
 
-## 2. Survival over a Small Interval
+#### 2. Survival over a Small Interval
 
-In continuous‐time hazard theory, the probability of surviving a small time interval (\Delta t) when the hazard is (h) is
-
-$$
-\exp\!\bigl(-\,h\,\Delta t\bigr).
-$$
-
-Taking (\Delta t = 1) day, daily survival at temperature (T) becomes
+In continuous-time hazard theory, the probability of surviving a small time interval \\(\Delta t\\) when the hazard is \\(h\\) is \\( \exp(-h \cdot \Delta t) \\). Taking \\(\Delta t = 1\\) day, daily survival at temperature \\(T\\) becomes:
 
 $$
-\exp\!\bigl(-\,h(T)\times1\bigr)
-\;=\;
-\exp\!\bigl(-\,\alpha\,e^{\beta\,T}\bigr).
+\exp\bigl(-h(T)\bigr) \;=\; \exp\bigl(-\alpha\,e^{\beta\,T}\bigr).
 $$
 
-## 3. Discrete Day-by-Day Survival
+#### 3. Survival Over Multiple Days
 
-If each day (i=1,\dots,n) has temperature (T_i), and survival across days multiplies, then
-
-$$
-S
-\;=\;
-\prod_{i=1}^{n}
-  \exp\!\bigl(-\,\alpha\,e^{\beta\,T_i}\bigr).
-$$
-
-## 4. Collapse the Product into a Single Exponential
-
-Use the identity
+If each day \\(i=1, \dots, n\\) has temperature \\(T_i\\), and survival across days is independent, the total survival is the product of daily survivals:
 
 $$
-\prod_{i=1}^n e^{x_i}
-\;=\;
-e^{\sum_{i=1}^n x_i}.
+S \;=\; \prod_{i=1}^{n} \exp\bigl(-\alpha\,e^{\beta\,T_i}\bigr).
 $$
 
-Here (x_i = -\alpha,e\^{\beta T_i}), so
+#### 4. Final Form
 
-$$
-\prod_{i=1}^n
-  \exp\!\bigl(-\,\alpha\,e^{\beta\,T_i}\bigr)
-=
-\exp\!\Bigl(\sum_{i=1}^n -\,\alpha\,e^{\beta\,T_i}\Bigr)
-=
-\exp\!\Bigl(-\sum_{i=1}^n \alpha\,e^{\beta\,T_i}\Bigr).
-$$
-
-Hence the final result:
+Using the identity \\(\prod e^{x_i} = e^{\sum x_i}\\), with \\(x_i = -\alpha e^{\beta T_i}\\), the product collapses into a single exponential of the summed hazards:
 
 $$
 \boxed{
@@ -78,83 +51,48 @@ S \;=\;\exp\!\Bigl(-\sum_{i=1}^{n}\alpha\,e^{\beta\,T_i}\Bigr)
 }.
 $$
 
-------------------------------------------------------------------------
-
-### Intuitive Summary
-
--   **Hazard** (h(T)=\alpha e\^{\beta T}) means hotter days (larger (T)) exponentially increase daily mortality.\
--   **Daily survival** is (\exp(-h)).\
--   **Cumulative survival** is the product of daily survivals, which algebraically collapses to one exponential of the summed hazards.
+---
 
 ## Derivation of the Linear Threshold TDM Survival Formula
 
-We wish to derive the formula
+This section derives the formula for cumulative survival (S) under the **linear threshold TDM model**.
 
 $$
 S \;=\;\exp\!\Bigl(-\alpha \sum_{i=1}^{n} \max(T_i - \beta,\,0)\Bigr)
 $$
 
-which gives cumulative egg-to-fry survival (S) over (n) days with daily temperatures (T_i), using a linear threshold mortality model with parameters (\alpha) and (\beta).
+#### 1. Define the Daily Hazard Rate
 
-------------------------------------------------------------------------
-
-### 1. Define the daily hazard (mortality) rate
-
-Under the linear threshold model, on day (i) with temperature (T_i):
-
-1.  Compute the daily "excess" above threshold (\beta): $$
-    E_i \;=\;\max\bigl(T_i - \beta,\,0\bigr)\,.
-    $$
-2.  Assume hazard (mortality rate) on day (i) is proportional to this excess: $$
-    h_i = \alpha \,E_i
-         = \alpha \,\max(T_i - \beta,\,0),
-    $$ where (\alpha) (units: day(^{-1})·°C(^{-1})) scales how strongly excess temperature drives mortality.
-
-------------------------------------------------------------------------
-
-### 2. Survival over one day
-
-When the daily hazard is (h_i), the probability of surviving that day is
+Under this model, mortality only occurs above a thermal threshold \\(\beta\\). The hazard rate on day \\(i\\) is proportional to the "excess" temperature above this threshold:
 
 $$
-\exp(-h_i\times1)
-\;=\;
-\exp\!\bigl(-\alpha\,E_i\bigr)
-\;=\;
-\exp\!\bigl(-\alpha\;\max(T_i - \beta,0)\bigr).
+h_i = \alpha \cdot \max(T_i - \beta,\,0)
 $$
 
-------------------------------------------------------------------------
+where \\(\alpha\\) scales how strongly excess temperature drives mortality. If \\(T_i \le \beta\\), the hazard is 0.
 
-### 3. Multiplying over all days
+#### 2. Survival Over One Day
 
-Assuming independence, survival over (n) days is the product of daily survivals:
+The probability of surviving a single day with hazard \\(h_i\\) is:
 
 $$
-S
-\;=\;
-\prod_{i=1}^n
-  \exp\!\bigl(-\alpha\,\max(T_i - \beta,0)\bigr)
-\;=\;
-\exp\!\Bigl(\sum_{i=1}^n -\,\alpha\,\max(T_i - \beta,0)\Bigr).
+\exp(-h_i) \;=\; \exp\bigl(-\alpha \cdot \max(T_i - \beta, 0)\bigr).
 $$
 
-------------------------------------------------------------------------
+#### 3. Multiplying Over All Days
 
-### 4. Final closed‐form
+Assuming independence, survival over \\(n\\) days is the product of daily survivals:
 
-Pulling the minus sign outside,
+$$
+S \;=\; \prod_{i=1}^n \exp\bigl(-\alpha\,\max(T_i - \beta,0)\bigr)
+$$
+
+#### 4. Final Form
+
+Again, using the identity \\(\prod e^{x_i} = e^{\sum x_i}\\), the final closed-form expression is the exponential of the summed daily hazards:
 
 $$
 \boxed{
 S \;=\;\exp\!\Bigl(-\alpha \sum_{i=1}^{n}\max(T_i - \beta,\,0)\Bigr)
 }.
 $$
-
-------------------------------------------------------------------------
-
-#### Intuition
-
--   **Threshold** (\beta) means no mortality when (T_i \le \beta).\
--   **Excess** (E_i = \max(T_i-\beta,0)) drives hazard linearly.\
--   **Survival** is the exponential of minus the cumulative hazard (\sum\_i \alpha E_i).
