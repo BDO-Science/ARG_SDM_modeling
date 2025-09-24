@@ -16,7 +16,7 @@ S_seed_calib       <- readRDS(here("SalmonCountR", "app_data", "S_seed_calib.rds
 S_seed_fore_list   <- readRDS(here("SalmonCountR", "app_data", "S_seed_fore_list.rds"))
 stoch_SAR_opts     <- readRDS(here("SalmonCountR", "app_data", "stoch_SAR_opts.rds"))
 sim_years          <- readRDS(here("SalmonCountR", "app_data", "sim_years.rds"))
-spawn_dates_by_env <- readRDS(here("SalmonCountR", "app_data","spawn_dates_by_env.rds"))
+spawn_dates_by_alt <- readRDS(here("SalmonCountR", "app_data","spawn_dates_by_alt.rds"))
 instream <- readRDS(here("SalmonCountR", "app_data","american_river_instream.rds"))
 
 real_years <- 2011:2024 
