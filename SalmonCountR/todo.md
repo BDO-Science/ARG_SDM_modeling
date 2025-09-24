@@ -8,5 +8,5 @@ Escapement (natural only?)- both for now but consider getting numbers from const
 **2. add age-2 fish and proportion mature**
 
 
-1. file structure in GitHub
-2. make sure data structure good to go in GitHub, may have extra?
+3. remove age-2 fish issue?
+4. move rest of functions to functions script
