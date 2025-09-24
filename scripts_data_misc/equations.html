@@ -35,7 +35,16 @@ ul.task-list li input[type="checkbox"] {
 <link href="equations_files/libs/bootstrap/bootstrap-32162a2fca7cb0439643f2faaab1edf3.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 
   <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+  
+  <script>
+    (function () {
+      var script = document.createElement("script");
+      script.type = "text/javascript";
+      script.src  = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js";
+      document.getElementsByTagName("head")[0].appendChild(script);
+    })();
+  </script>
+
 
 <script type="text/javascript">
 const typesetMath = (el) => {
@@ -75,22 +84,15 @@ window.Quarto = {
    
   <ul>
   <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
-  <li><a href="#notation-parameter-map" id="toc-notation-parameter-map" class="nav-link" data-scroll-target="#notation-parameter-map">Notation &amp; Parameter Map</a></li>
   <li><a href="#master-life-cycle-recursion" id="toc-master-life-cycle-recursion" class="nav-link" data-scroll-target="#master-life-cycle-recursion">Master Life-Cycle Recursion</a></li>
   <li><a href="#process-modules" id="toc-process-modules" class="nav-link" data-scroll-target="#process-modules">Process Modules</a>
   <ul class="collapse">
   <li><a href="#spawn-timing" id="toc-spawn-timing" class="nav-link" data-scroll-target="#spawn-timing">1. Spawn Timing</a></li>
   <li><a href="#pre-spawn-survival" id="toc-pre-spawn-survival" class="nav-link" data-scroll-target="#pre-spawn-survival">2. Pre-Spawn Survival</a></li>
   <li><a href="#egg-fry-survival-tdm" id="toc-egg-fry-survival-tdm" class="nav-link" data-scroll-target="#egg-fry-survival-tdm">3. Egg → Fry Survival (TDM)</a></li>
-  <li><a href="#density-dependence-rear-survival" id="toc-density-dependence-rear-survival" class="nav-link" data-scroll-target="#density-dependence-rear-survival">4. Density Dependence &amp; Rear Survival</a></li>
+  <li><a href="#density-dependence-rearing-survival" id="toc-density-dependence-rearing-survival" class="nav-link" data-scroll-target="#density-dependence-rearing-survival">4. Density Dependence &amp; Rearing Survival</a></li>
   <li><a href="#smolt-adult-returns-sar" id="toc-smolt-adult-returns-sar" class="nav-link" data-scroll-target="#smolt-adult-returns-sar">5. Smolt → Adult Returns (SAR)</a></li>
   </ul></li>
-  <li><a href="#calibration-forecasting" id="toc-calibration-forecasting" class="nav-link" data-scroll-target="#calibration-forecasting">Calibration &amp; Forecasting</a>
-  <ul class="collapse">
-  <li><a href="#calibration-20112024" id="toc-calibration-20112024" class="nav-link" data-scroll-target="#calibration-20112024">Calibration (2011–2024)</a></li>
-  <li><a href="#forecasting" id="toc-forecasting" class="nav-link" data-scroll-target="#forecasting">Forecasting</a></li>
-  </ul></li>
-  <li><a href="#compact-equation-list" id="toc-compact-equation-list" class="nav-link" data-scroll-target="#compact-equation-list">Compact Equation List</a></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="equations.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li><li><a href="equations.docx"><i class="bi bi-file-word"></i>MS Word</a></li></ul></div></nav>
 </div>
@@ -120,136 +122,24 @@ window.Quarto = {
 <p>This document summarizes the <strong>modeling framework</strong> used in the Shiny application and precompute script. The model simulates the salmon life cycle from spawners to age-structured returns under alternative flow and temperature scenarios.</p>
 <p>Key components:</p>
 <ul>
-<li><strong>Spawn timing</strong>: Ordinal cumulative logit model (CLMM) with October/November mean temperatures and a year random effect (forecasted via AR(1)).<br>
-</li>
-<li><strong>Egg → fry survival</strong>: Temperature-dependent mortality (TDM), exponential or linear-threshold, across incubation windows defined by ATUs.<br>
-</li>
-<li><strong>Pre-spawn adult survival</strong>: Logistic function of cumulative pre-spawn degree-days.<br>
-</li>
-<li><strong>Density dependence &amp; rear survival</strong>: Fry production capped via Beverton–Holt term; constant fry→smolt survival.<br>
-</li>
-<li><strong>Smolt-to-adult returns (SAR)</strong>: Deterministic or stochastic SAR with ages 3–5.<br>
-</li>
-<li><strong>Calibration</strong>: Joint optimization of mean SAR and rear survival against observed escapement (2011–2024).<br>
-</li>
-<li><strong>Forecasting</strong>: Projected spawner abundance trajectories under scenarios.</li>
+<li><strong>Spawn timing</strong>: An ordinal cumulative logit model (CLM) predicts spawn timing based on October/November mean temperatures.</li>
+<li><strong>Egg → fry survival</strong>: Temperature-dependent mortality (TDM) is calculated using three different models (two exponential, one linear-threshold) across incubation windows defined by Accumulated Thermal Units (ATUs).</li>
+<li><strong>Pre-spawn adult survival</strong>: A logistic function of cumulative pre-spawn degree-days.</li>
+<li><strong>Density dependence &amp; rear survival</strong>: Fry production is capped via a Beverton–Holt term, followed by a constant fry-to-smolt survival rate.</li>
+<li><strong>Smolt-to-adult returns (SAR)</strong>: Calibrated smolt-to-adult return rates are applied to smolt production to determine adult returns at ages 3–5.</li>
+<li><strong>Calibration</strong>: The model jointly optimizes mean SAR and rearing survival against observed escapement data from 2011–2024.</li>
 </ul>
-<hr>
-</section>
-<section id="notation-parameter-map" class="level2">
-<h2 class="anchored" data-anchor-id="notation-parameter-map">Notation &amp; Parameter Map</h2>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 33%">
-<col style="width: 33%">
-<col style="width: 33%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Code</th>
-<th>Meaning</th>
-<th>Math symbol</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>S_y</code></td>
-<td>Modeled spawners at brood year (y)</td>
-<td>(S_y)</td>
-</tr>
-<tr class="even">
-<td><code>f</code></td>
-<td>Female fraction of spawners</td>
-<td>(f)</td>
-</tr>
-<tr class="odd">
-<td><code>F</code></td>
-<td>Eggs per female (fecundity)</td>
-<td>(F)</td>
-</tr>
-<tr class="even">
-<td><code>S_pre</code></td>
-<td>Pre-spawn survival</td>
-<td>(S_{,y})</td>
-</tr>
-<tr class="odd">
-<td><code>S_egg</code></td>
-<td>Egg→fry survival (TDM)</td>
-<td>(S_{,y})</td>
-</tr>
-<tr class="even">
-<td><code>dd</code></td>
-<td>Density-dependence factor</td>
-<td>(dd_y)</td>
-</tr>
-<tr class="odd">
-<td><code>S_rear</code></td>
-<td>Rear survival (fry→smolt)</td>
-<td>(S_{})</td>
-</tr>
-<tr class="even">
-<td><code>SAR_y</code></td>
-<td>Smolt-to-adult return ratio</td>
-<td>(_y)</td>
-</tr>
-<tr class="odd">
-<td><code>lag_probs</code></td>
-<td>Age return probabilities (3,4,5)</td>
-<td>(P(=a))</td>
-</tr>
-<tr class="even">
-<td><code>K_spawners</code></td>
-<td>Spawner carrying capacity</td>
-<td>(K_y)</td>
-</tr>
-<tr class="odd">
-<td><code>S0</code></td>
-<td>Beverton–Holt intercept</td>
-<td>(S_0)</td>
-</tr>
-<tr class="even">
-<td><code>deg_day</code></td>
-<td>Pre-spawn degree-days</td>
-<td>(_y)</td>
-</tr>
-<tr class="odd">
-<td><code>Oct_std</code>, <code>Nov_std</code></td>
-<td>Std. Oct/Nov temps</td>
-<td>(<em>{y,}^*, </em>{y,}^*)</td>
-</tr>
-<tr class="even">
-<td><code>beta</code></td>
-<td>CLMM slopes</td>
-<td>(<em>{}, </em>{})</td>
-</tr>
-<tr class="odd">
-<td><code>zeta</code></td>
-<td>CLMM thresholds</td>
-<td>({_k})</td>
-</tr>
-<tr class="even">
-<td><code>u_y</code></td>
-<td>Year random effect</td>
-<td>(u_y)</td>
-</tr>
-<tr class="odd">
-<td><code>phi, sigma</code></td>
-<td>AR(1) parameters</td>
-<td>(, )</td>
-</tr>
-</tbody>
-</table>
 <hr>
 </section>
 <section id="master-life-cycle-recursion" class="level2">
 <h2 class="anchored" data-anchor-id="master-life-cycle-recursion">Master Life-Cycle Recursion</h2>
-<p>Spawner abundance in future years is updated recursively:</p>
+<p>Spawner abundance in a future year \(y+a\) is the sum of returning adults from multiple brood years. The contribution from a single brood year \(y\) is given by the master equation:</p>
 <p><span class="math display">\[
 S_{y+a} \;\leftarrow\; S_{y+a} +
-S_y \cdot f \cdot S_{\mathrm{pre},y} \cdot F \cdot S_{\mathrm{egg},y} \cdot dd_y \cdot S_{\mathrm{rear}} \cdot \mathrm{SAR}_y \cdot P(\mathrm{age}=a),
+\underbrace{S_y \cdot f \cdot S_{\mathrm{pre},y} \cdot F}_{\text{Total Eggs}} \cdot \underbrace{S_{\mathrm{egg},y} \cdot dd_y}_{\text{Effective Egg Survival}} \cdot \underbrace{S_{\mathrm{rear}}}_{\text{Rearing Survival}} \cdot \underbrace{\mathrm{SAR}_y \cdot P(\mathrm{age}=a)}_{\text{Ocean Survival &amp; Return}},
 \quad a \in \{3,4,5\}.
 \]</span></p>
-<p>This recursion integrates all biological processes: pre-spawn mortality, incubation survival, density dependence, rearing survival, SAR, and age structure.</p>
+<p>This recursion integrates all key biological processes.</p>
 <hr>
 </section>
 <section id="process-modules" class="level2">
@@ -258,27 +148,20 @@ S_y \cdot f \cdot S_{\mathrm{pre},y} \cdot F \cdot S_{\mathrm{egg},y} \cdot dd_y
 <h3 class="anchored" data-anchor-id="spawn-timing">1. Spawn Timing</h3>
 <p>Spawning is distributed across 11 fixed 10-day bins from October–January.</p>
 <ul>
-<li><p><strong>Model</strong>: ordinal cumulative logit mixed model (CLMM):</p>
+<li><p><strong>Model</strong>: An ordinal cumulative logit model (CLM) predicts the probability of spawning in a given bin:</p>
 <p><span class="math display">\[
-\Pr(B \le k \mid y) = \operatorname{logit}^{-1}(\zeta_k - \eta_y),
+\Pr(\text{Bin} \le k \mid y) = \operatorname{logit}^{-1}(\zeta_k - \eta_y),
 \]</span></p>
 <p><span class="math display">\[
 \eta_y = \beta_{\text{Oct}} \overline{T}^{\*}_{y,\text{Oct}} +
-         \beta_{\text{Nov}} \overline{T}^{\*}_{y,\text{Nov}} +
-         u_y,
+         \beta_{\text{Nov}} \overline{T}^{\*}_{y,\text{Nov}},
 \]</span></p>
-<p>with thresholds (_k), fixed temperature slopes, and year random effect (u_y).</p></li>
-<li><p><strong>Forecasting</strong>: (u_y) evolves via AR(1):<br>
-(u_y = u_{y-1} + _y, ;_y (0,^2)).</p></li>
-<li><p><strong>Simulation</strong>: For each redd, a bin is drawn from probabilities (p_{y,b}), then a uniform date is sampled within the bin’s calendar window.</p></li>
+<p>with thresholds \(_k\) and fixed effects \(\) for standardized October and November temperatures.</p></li>
 </ul>
-<p>Outcome: <strong>year-to-year variability in spawn dates</strong> reflecting temperature covariates and persistent random effects.<br>
-No flow covariates are included.</p>
-<hr>
 </section>
 <section id="pre-spawn-survival" class="level3">
 <h3 class="anchored" data-anchor-id="pre-spawn-survival">2. Pre-Spawn Survival</h3>
-<p>Adults accumulate thermal stress prior to spawning. Survival is logistic in cumulative degree-days:</p>
+<p>Adults accumulate thermal stress prior to spawning. Survival is a logistic function of cumulative degree-days (DD):</p>
 <p><span class="math display">\[
 S_{\mathrm{pre},y} = \operatorname{logit}^{-1}(\theta_0 + \theta_1 \cdot \mathrm{DD}_y),
 \]</span></p>
@@ -290,129 +173,48 @@ S_{\mathrm{pre},y} = \operatorname{logit}^{-1}(\theta_0 + \theta_1 \cdot \mathrm
 </li>
 <li>High degree-days → survival declines steeply.</li>
 </ul>
-<hr>
 </section>
 <section id="egg-fry-survival-tdm" class="level3">
 <h3 class="anchored" data-anchor-id="egg-fry-survival-tdm">3. Egg → Fry Survival (TDM)</h3>
-<p>Incubation window length is set by <strong>accumulated thermal units (ATUs):</strong></p>
-<p><span class="math display">\[
-D_{\text{egg}} = \frac{958}{T}, \qquad D_{\text{fry}} = \frac{417}{T}.
-\]</span></p>
-<p>Survival is computed as:</p>
+<p>The incubation window is determined by <strong>Accumulated Thermal Units (ATUs)</strong>. Survival over this period is computed as:</p>
 <p><span class="math display">\[
 S_{\mathrm{egg},y} = \exp(-H_y),
 \]</span></p>
-<p>where (H_y) is the cumulative hazard across incubation days.</p>
+<p>where \(H_y\) is the cumulative hazard across all incubation days.</p>
 <ul>
-<li><p><strong>Exponential TDM (WaterForum 2020, SALMOD 2006):</strong></p>
+<li><p><strong>Exponential TDM (WaterForum 2020, SALMOD 2006):</strong> The daily hazard rate increases exponentially with temperature.</p>
 <p><span class="math display">\[
 H_y = \sum_i \alpha \, e^{\beta T_i}.
 \]</span></p></li>
-<li><p><strong>Linear-threshold TDM (Martin et al.&nbsp;2017):</strong></p>
+<li><p><strong>Linear-threshold TDM (Martin et al.&nbsp;2017):</strong> The daily hazard rate increases linearly, but only for temperatures above a specific threshold.</p>
 <p><span class="math display">\[
 H_y = \alpha \sum_i \max(T_i - \beta, 0).
 \]</span></p></li>
 </ul>
-<blockquote class="blockquote">
-<p>Exponentiation converts <strong>additive daily hazards</strong> into <strong>multiplicative survival</strong>, capturing how even small daily risks accumulate into nonlinear survival losses.</p>
-</blockquote>
-<hr>
 </section>
-<section id="density-dependence-rear-survival" class="level3">
-<h3 class="anchored" data-anchor-id="density-dependence-rear-survival">4. Density Dependence &amp; Rear Survival</h3>
-<p>Eggs surviving incubation and degree-day effects face fry density dependence:</p>
+<section id="density-dependence-rearing-survival" class="level3">
+<h3 class="anchored" data-anchor-id="density-dependence-rearing-survival">4. Density Dependence &amp; Rearing Survival</h3>
+<p>The number of surviving fry is limited by habitat capacity, modeled with a Beverton-Holt relationship.</p>
 <p><span class="math display">\[
-\text{redds}_y = S_y \cdot f \cdot S_{\mathrm{pre},y}, \qquad
-\text{eggs}_y = \text{redds}_y \cdot F,
+\text{Redds}_y = S_y \cdot f \cdot S_{\mathrm{pre},y}
 \]</span></p>
 <p><span class="math display">\[
-dd_y = \frac{S_0}{1 + \text{redds}_y / K_y}, \qquad
-\text{fry\_dd}_y = \text{eggs}_y \cdot S_{\mathrm{egg},y} \cdot dd_y,
+dd_y = \frac{S_0}{1 + \text{Redds}_y / K_y}
 \]</span></p>
-<p><span class="math display">\[
-\text{reared}_y = \text{fry\_dd}_y \cdot S_{\mathrm{rear}}, \qquad
-S_{\mathrm{eff},y} = S_{\mathrm{egg},y} \cdot dd_y.
+<p>The number of smolts produced is then: <span class="math display">\[
+\text{Smolts}_y = (\text{Redds}_y \cdot F \cdot S_{\mathrm{egg},y} \cdot dd_y) \cdot S_{\mathrm{rear}}
 \]</span></p>
-<hr>
+<p>where \(S_{,y} = S_{,y} dd_y\) is the effective egg-to-fry survival.</p>
 </section>
 <section id="smolt-adult-returns-sar" class="level3">
 <h3 class="anchored" data-anchor-id="smolt-adult-returns-sar">5. Smolt → Adult Returns (SAR)</h3>
-<p>Reared smolts return as adults after age-structured delays:</p>
+<p>Reared smolts return as adults after age-structured delays, governed by the smolt-to-adult return (SAR) rate. The number of returning adults from brood year \(y\) that contribute to the spawner population in year \(y+a\) is:</p>
 <p><span class="math display">\[
-S_{y+a} \leftarrow S_{y+a} + \text{reared}_y \cdot \mathrm{SAR}_y \cdot P(\mathrm{age}=a),
+\text{Returns}_{y \to y+a} = \text{Smolts}_y \cdot \mathrm{SAR}_y \cdot P(\mathrm{age}=a),
 \quad a \in \{3,4,5\}.
 \]</span></p>
-<ul>
-<li><strong>Deterministic SAR</strong>: constant (<em>y = </em>{}).<br>
-</li>
-<li><strong>Stochastic SAR</strong>: drawn from Normal, Lognormal, Beta, or Gamma distributions, with optional timing filters:
-<ul>
-<li>all years stochastic,<br>
-</li>
-<li>block years stochastic,<br>
-</li>
-<li>or pulse years with shocks.</li>
-</ul></li>
-</ul>
 <hr>
 </section>
-</section>
-<section id="calibration-forecasting" class="level2">
-<h2 class="anchored" data-anchor-id="calibration-forecasting">Calibration &amp; Forecasting</h2>
-<section id="calibration-20112024" class="level3">
-<h3 class="anchored" data-anchor-id="calibration-20112024">Calibration (2011–2024)</h3>
-<ul>
-<li><p><strong>Targets</strong>: observed escapement.<br>
-</p></li>
-<li><p><strong>Seeds</strong>: first 3 years fixed from observations.<br>
-</p></li>
-<li><p><strong>Fit window</strong>: years 4–14.<br>
-</p></li>
-<li><p><strong>Objective</strong>: minimize SSE between observed and predicted spawners:</p>
-<p><span class="math display">\[
-\min_{\mathrm{SAR}_{\text{mean}}, S_{\mathrm{rear}}}
-\sum_{y \in \text{fit}} \big(\widehat{S}_y - S^{\mathrm{obs}}_y\big)^2.
-\]</span></p></li>
-<li><p><strong>Method</strong>: <code>optim(..., method="L-BFGS-B")</code>.</p></li>
-</ul>
-</section>
-<section id="forecasting" class="level3">
-<h3 class="anchored" data-anchor-id="forecasting">Forecasting</h3>
-<ol type="1">
-<li>Spawn dates simulated from CLMM + AR(1).<br>
-</li>
-<li>Degree-days computed per brood year.<br>
-</li>
-<li>Egg→fry survival from TDM.<br>
-</li>
-<li>Fry capped by density dependence.<br>
-</li>
-<li>SAR applied deterministically or stochastically.</li>
-</ol>
-<p>Forecasts yield <strong>modeled spawner abundance trajectories</strong> by environment and TDM variant.</p>
-<hr>
-</section>
-</section>
-<section id="compact-equation-list" class="level2">
-<h2 class="anchored" data-anchor-id="compact-equation-list">Compact Equation List</h2>
-<ol type="1">
-<li>Egg development: (D_{} = 958/T).<br>
-</li>
-<li>Fry emergence: (D_{} = 417/T).<br>
-</li>
-<li>Exponential TDM: (S_{,y} = (-e^{T_i})).<br>
-</li>
-<li>Linear-threshold TDM: (S_{,y} = (-(T_i-,0))).<br>
-</li>
-<li>Pre-spawn survival: (S_{,y} = ^{-1}(_0+_1 _y)).<br>
-</li>
-<li>Degree-days: (<em>y=(T-T</em>{},0)).<br>
-</li>
-<li>Density dependence: (dd_y=).<br>
-</li>
-<li>Recruitment recursion: see Master Equation above.</li>
-</ol>
-<hr>
 </section>
 
 </main>
