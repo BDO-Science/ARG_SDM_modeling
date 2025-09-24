@@ -7,6 +7,4 @@ Escapement (natural only?)- both for now but consider getting numbers from const
 
 **2. add age-2 fish and proportion mature**
 
-
 3. remove age-2 fish issue?
-4. move rest of functions to functions script
