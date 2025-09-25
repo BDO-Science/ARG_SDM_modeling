@@ -62,6 +62,17 @@ ui <- navbarPage("Fall-run Chinook Power Bypass Simulator",
                                      tags$li("Projects age-structured returns (ages 3-5) with calibrated smolt-to-adult return (SAR) rates"),
                                      tags$li("Supports dynamic weighting of both hydrological conditions and TDM models.")
                                    ),
+                                   h3("Alternative Actions"),
+                                   p("The following are the alternatives to be evaluated by this process:"),
+                                   tags$ul(
+                                     tags$li("1. No Folsom power bypass"),
+                                     tags$li("2. 125 cfs bypass starting Oct 15th, 250 cfs starting Oct 28th, reduce to 125 cfs on Nov 7th, end bypass on Nov 14th"),
+                                     tags$li("3. 250 cfs bypass starting Oct 15th, 500 cfs starting Oct 28th, reduce to 250 cfs on Nov 14th, end bypass on Nov 30th"),
+                                     tags$li("4. 250 cfs bypass starting Oct 21st, 500 cfs starting Oct 28th, reduce to 250 cfs on Nov 7th, end bypass on Nov 14th"),
+                                     tags$li("5. 250 cfs bypass starting Oct 21st, 500 cfs starting Oct 28th, reduce to 250 cfs on Nov 7th, end bypass on Nov 21st "),
+                                     tags$li("6. 500 cfs bypass starting Oct 28th, reduce to 250 on Nov 7th, end bypass on Nov 21st"),
+                                     tags$li("7. 100 cfs Oct 1, 200 cfs Oct 8th, 300 cfs Oct 15, 400 cfs Oct 22nd, 500 cfs Nov 1, ending Nov 14th"),
+                                   ),
                                    h3("Model Components"),
                                    h4("1. Spawn Timing Model"),
                                    p("A cumulative link model (CLM) predicts the probability of spawning in each 10-day bin based on standardized October and November water temperatures. The model divides the spawning season (October-January) into temporal bins, with spawn dates randomly sampled within bins according to temperature-driven probabilities. This 10-day resolution was chosen to balance model complexity with the temporal patterns observed in carcass survey data."),
@@ -208,7 +219,7 @@ ui <- navbarPage("Fall-run Chinook Power Bypass Simulator",
                               p("Adjust sliders to reflect the relative importance of each objective. Weights will always sum to 100%."),
                               sliderInput("w_chinook", "Fall-run Chinook Salmon", min = 0, max = 1, value = 0.4, step = 0.05),
                               sliderInput("w_steelhead", "American River Steelhead", min = 0, max = 1, value = 0.3, step = 0.05),
-                              sliderInput("w_hydro", "Hydropower Generation", min = 0, max = 1, value = 0.15, step = 0.05),
+                              sliderInput("w_hydro", "Hydropower Generation", min = 0, max = 1, value = 0.3, step = 0.05),
                               width = 3
                             ),
                             mainPanel(
@@ -228,7 +239,10 @@ server <- function(input, output, session) {
   
   # --- Reactive Values ---
   calib_data <- reactiveVal(NULL); sim_data <- reactiveVal(NULL); cmp_data <- reactiveVal(NULL)
-  performance_scores <- reactiveVal(tibble(alternative = as.character(1:5), Chinook = rep(NA_real_, 5), Steelhead = normalize_scores_max(c(55,59,61,61,61)), Hydropower = normalize_scores_min(c(0,10000,370000,400000,399000))))
+  steelhead_data <-  reactive({objective_steelhead() %>% mutate(hydrology_weight = case_when(Hydrology == 2017 ~ input$cmp_weight_hydro_2017,
+                                                                                Hydrology == 2020 ~ input$cmp_weight_hydro_2017)) %>%
+    mutate(weighted_score = hydrology_weight*Steelhead) %>% group_by(Alternative) %>% summarise(Steelhead=sum(weighted_score))})
+  performance_scores <- reactiveVal(tibble(alternative = as.character(1:5), Chinook = rep(NA_real_, 5), Steelhead = normalize_scores_max(otherobjectives$Steelhead), Hydropower = normalize_scores_min(otherobjectives$Hydropower)))
   
   # --- Helper Functions ---
   run_weighted_simulation <- function(selected_alt, hydro_weights, tdm_weights, sim_params) {
