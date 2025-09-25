@@ -17,12 +17,19 @@ normalize_weights <- function(weights) {
   setNames(rep(1 / length(weights), length(weights)), names(weights))
 }
 
-# Helper for min-max normalization (scales results to 0-100)
-normalize_scores <- function(scores) {
+# Helper for min-max normalization (scales results to 0-1), one for objectives we're maximizing and another for ones we're minimizing
+normalize_scores_max <- function(scores) {
   min_s <- min(scores, na.rm = TRUE)
   max_s <- max(scores, na.rm = TRUE)
-  if (max_s == min_s) return(rep(100, length(scores))) # Return 100 if all values are the same
-  (scores - min_s) / (max_s - min_s) * 100 
+  if (max_s == min_s) return(rep(100, length(scores))) # Return 1 if all values are the same
+  (scores - min_s) / (max_s - min_s)
+}
+
+normalize_scores_min <- function(scores) {
+  min_s <- min(scores, na.rm = TRUE)
+  max_s <- max(scores, na.rm = TRUE)
+  if (max_s == min_s) return(rep(100, length(scores))) # Return 1 if all values are the same
+  (max_s - scores) / (max_s - min_s)
 }
 
 
@@ -222,7 +229,7 @@ server <- function(input, output, session) {
   
   # --- Reactive Values ---
   calib_data <- reactiveVal(NULL); sim_data <- reactiveVal(NULL); cmp_data <- reactiveVal(NULL)
-  performance_scores <- reactiveVal(tibble(alternative = as.character(1:5), Chinook = rep(NA_real_, 5), Steelhead = rep(50, 5), Hydropower = rep(50, 5), Hatchery = rep(50, 5)))
+  performance_scores <- reactiveVal(tibble(alternative = as.character(1:5), Chinook = rep(NA_real_, 5), Steelhead = normalize_scores_max(other_objectives$Steelhead), Hydropower = rep(50, 5), Hatchery = rep(50, 5)))
   
   # --- Helper Functions ---
   run_weighted_simulation <- function(selected_alt, hydro_weights, tdm_weights, sim_params) {
@@ -313,7 +320,7 @@ server <- function(input, output, session) {
     comparison_results<-bind_rows(results_list);cmp_data(comparison_results)
     if(nrow(comparison_results)>0){
       median_summary<-comparison_results%>%group_by(alternative)%>%summarise(Median=median(spawners,na.rm=TRUE),.groups="drop")
-      chinook_scores<-normalize_scores(median_summary$Median)
+      chinook_scores<-normalize_scores_max(median_summary$Median)
       current_scores<-performance_scores();current_scores$Chinook<-NA_real_
       match_idx<-match(median_summary$alternative,current_scores$alternative)
       current_scores$Chinook[match_idx]<-chinook_scores
