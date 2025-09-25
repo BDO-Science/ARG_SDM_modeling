@@ -18,6 +18,8 @@ stoch_SAR_opts     <- readRDS(here("SalmonCountR", "app_data", "stoch_SAR_opts.r
 sim_years          <- readRDS(here("SalmonCountR", "app_data", "sim_years.rds"))
 spawn_dates_by_alt <- readRDS(here("SalmonCountR", "app_data","spawn_dates_by_alt.rds"))
 instream <- readRDS(here("SalmonCountR", "app_data","american_river_instream.rds"))
+# read csv data for non-salmon objectives
+otherobjectives <- read_csv(here::here("SalmonCountR", "app_data","nonsalmon_objectives.csv"))
 
 real_years <- 2011:2024 
 n_sim      <- 114
