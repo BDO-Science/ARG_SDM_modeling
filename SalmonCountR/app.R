@@ -209,7 +209,6 @@ ui <- navbarPage("Fall-run Chinook Power Bypass Simulator",
                               sliderInput("w_chinook", "Fall-run Chinook Salmon", min = 0, max = 1, value = 0.4, step = 0.05),
                               sliderInput("w_steelhead", "American River Steelhead", min = 0, max = 1, value = 0.3, step = 0.05),
                               sliderInput("w_hydro", "Hydropower Generation", min = 0, max = 1, value = 0.15, step = 0.05),
-                              sliderInput("w_hatchery", "Nimbus Hatchery Impact", min = 0, max = 1, value = 0.15, step = 0.05),
                               width = 3
                             ),
                             mainPanel(
@@ -229,7 +228,7 @@ server <- function(input, output, session) {
   
   # --- Reactive Values ---
   calib_data <- reactiveVal(NULL); sim_data <- reactiveVal(NULL); cmp_data <- reactiveVal(NULL)
-  performance_scores <- reactiveVal(tibble(alternative = as.character(1:5), Chinook = rep(NA_real_, 5), Steelhead = normalize_scores_max(other_objectives$Steelhead), Hydropower = rep(50, 5), Hatchery = rep(50, 5)))
+  performance_scores <- reactiveVal(tibble(alternative = as.character(1:5), Chinook = rep(NA_real_, 5), Steelhead = normalize_scores_max(c(55,59,61,61,61)), Hydropower = normalize_scores_min(c(0,10000,370000,400000,399000))))
   
   # --- Helper Functions ---
   run_weighted_simulation <- function(selected_alt, hydro_weights, tdm_weights, sim_params) {
@@ -277,7 +276,7 @@ server <- function(input, output, session) {
   single_tdm_lock <- reactiveVal(FALSE); make_3_slider_observers("weight_wf", "weight_sm", "weight_martin", single_tdm_lock)
   cmp_hydro_lock <- reactiveVal(FALSE); make_2_slider_observers("cmp_weight_hydro_2017", "cmp_weight_hydro_2020", cmp_hydro_lock)
   cmp_tdm_lock <- reactiveVal(FALSE); make_3_slider_observers("cmp_weight_wf", "cmp_weight_sm", "cmp_weight_martin", cmp_tdm_lock)
-  objective_lock <- reactiveVal(FALSE); make_4_slider_observers("w_chinook", "w_steelhead", "w_hydro", "w_hatchery", objective_lock)
+  objective_lock <- reactiveVal(FALSE); make_3_slider_observers("w_chinook", "w_steelhead", "w_hydro", objective_lock)
   
   # --- Simulation Observers ---
   observeEvent(input$run_calib, {
@@ -331,7 +330,7 @@ server <- function(input, output, session) {
   
   # --- Dynamic UI for Performance Metrics ---
   output$performance_metric_inputs <- renderUI({
-    metrics <- c("Steelhead", "Hydropower", "Hatchery"); alts <- 1:5; scores <- performance_scores()
+    metrics <- c("Steelhead", "Hydropower"); alts <- 1:5; scores <- performance_scores()
     fluidPage(
       fluidRow(column(3, strong("Chinook (auto)")), lapply(alts, function(alt) { column(2, p(strong(round(scores$Chinook[scores$alternative == alt], 1)))) })),
       lapply(metrics, function(metric) {
@@ -351,12 +350,11 @@ server <- function(input, output, session) {
     for (alt in 1:5) { 
       if(!is.null(input[[paste0("pm_steelhead_", alt)]])) scores$Steelhead[alt]<-input[[paste0("pm_steelhead_",alt)]]
       if(!is.null(input[[paste0("pm_hydropower_",alt)]])) scores$Hydropower[alt]<-input[[paste0("pm_hydropower_",alt)]]
-      if(!is.null(input[[paste0("pm_hatchery_",alt)]])) scores$Hatchery[alt]<-input[[paste0("pm_hatchery_",alt)]]
     }
-    weights <- c(Chinook=input$w_chinook,Steelhead=input$w_steelhead,Hydropower=input$w_hydro,Hatchery=input$w_hatchery)
-    scores %>% mutate(across(c(Chinook,Steelhead,Hydropower,Hatchery),~replace_na(.x,0)))%>%
-      mutate(w_Chinook=Chinook*weights["Chinook"],w_Steelhead=Steelhead*weights["Steelhead"],w_Hydropower=Hydropower*weights["Hydropower"],w_Hatchery=Hatchery*weights["Hatchery"],
-             TotalScore=w_Chinook+w_Steelhead+w_Hydropower+w_Hatchery)
+    weights <- c(Chinook=input$w_chinook,Steelhead=input$w_steelhead,Hydropower=input$w_hydro)
+    scores %>% mutate(across(c(Chinook,Steelhead,Hydropower),~replace_na(.x,0)))%>%
+      mutate(w_Chinook=Chinook*weights["Chinook"],w_Steelhead=Steelhead*weights["Steelhead"],w_Hydropower=Hydropower*weights["Hydropower"],
+             TotalScore=w_Chinook+w_Steelhead+w_Hydropower)
   })
   
   # --- Decision Support Plot Outputs ---
