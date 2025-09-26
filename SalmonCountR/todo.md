@@ -7,4 +7,11 @@ Escapement (natural only?)- both for now but consider getting numbers from const
 
 **2. add age-2 fish and proportion mature**
 
-3. remove age-2 fish issue?
+1. make the alt performance scores static
+2. make steelhead data update automatically
+3. make placeholders for all alternatives
+4. make performance scores all in same row
+5. change alternative naming
+
+
+remove age-2 fish issue?
