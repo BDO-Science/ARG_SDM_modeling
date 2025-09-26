@@ -50,7 +50,7 @@ clim14 <- amer_obs %>%
   summarize(clim_temp = mean(temp, na.rm = TRUE), .groups = "drop")
 
 # 3) READ ALT FORECASTS & BUILD A DOY→temp TABLE FOR EACH ALT
-xlsx_path <- "ARG_LAR_TempModeling_10-21-24.xlsx"
+xlsx_path <- "scripts_data_misc/ARG_LAR_TempModeling_placeholders.xlsx" #CHANGE THIS WITH NEW TEMP DATA
 alts      <- excel_sheets(xlsx_path)[-1]  # assume first sheet is metadata
 
 pred_by_doy <- map_df(alts, function(alt) {
