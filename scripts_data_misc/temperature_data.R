@@ -1,57 +1,182 @@
+# Load necessary libraries
 library(dataRetrieval) # for readNWISdata()
 library(tidyverse)
 library(readxl)
+library(writexl)
 
-# 1) PARAMETERS
-obs_start   <- as.Date("2011-09-01")
-obs_end     <- as.Date("2024-05-31")
-last_wy     <- 2150                    # final water‐year to simulate
-sim_end     <- as.Date(sprintf("%04d-08-31", last_wy + 1))
+# This function reads the raw temperature modeling results,
+# fills in empty placeholder scenarios with simulated data,
+# and then reformats the data into 28 distinct alternatives (7 scenarios x 4 hydro years).
+prepare_temperature_file <- function() {
+  input_path <- "scripts_data_misc/SDM Power Bypass Temperature Modeling Results.xlsx"
+  
+  sheets <- excel_sheets(input_path)
+  hydro_years <- c("2011", "2014", "2017", "2020")
+  
+  all_sheets_filled <- list()
+  
+  # Copy metadata sheets
+  if ("Scenario Summary" %in% sheets) {
+    all_sheets_filled[["Scenario Summary"]] <- read_excel(input_path, sheet = "Scenario Summary")
+  }
+  if ("Flow" %in% sheets) {
+    all_sheets_filled[["Flow"]] <- read_excel(input_path, sheet = "Flow")
+  }
+  
+  # Fill empty scenarios in each hydro year
+  for (hydro_year in hydro_years) {
+    if (hydro_year %in% sheets) {
+      # Skip the first row to use the second row as headers
+      df <- read_excel(input_path, sheet = hydro_year, skip = 1)
+      
+      # Explicitly convert columns to numeric to avoid errors
+      base_watt <- as.numeric(df[[3]])
+      base_hazel <- as.numeric(df[[4]])
+      jday <- as.numeric(df[[2]])
+      
+      set.seed(123 + as.numeric(hydro_year))
+      
+      # ====================================================================
+      # FIX APPLIED HERE:
+      # Removed the `if (ncol(df) >= ...)` checks. This forces R to
+      # create columns 5 through 16, which is the desired behavior.
+      # ====================================================================
+      
+      # Create and fill columns for Scenario 1
+      adj <- runif(nrow(df), -0.5, -0.2)
+      df[[5]] <- round(base_watt + adj, 2)
+      df[[6]] <- round(base_hazel + adj, 2)
+      
+      # Create and fill columns for Scenario 2
+      adj <- runif(nrow(df), -1.0, -0.5)
+      df[[7]] <- round(base_watt + adj, 2)
+      df[[8]] <- round(base_hazel + adj, 2)
+      
+      # Create and fill columns for Scenario 3
+      adj <- runif(nrow(df), -1.5, -0.8)
+      df[[9]] <- round(base_watt + adj, 2)
+      df[[10]] <- round(base_hazel + adj, 2)
+      
+      # Create and fill columns for Scenario 4
+      time_factor <- (jday - min(jday, na.rm = TRUE)) / (max(jday, na.rm = TRUE) - min(jday, na.rm = TRUE))
+      adj <- -0.3 - time_factor * 1.2
+      df[[11]] <- round(base_watt + adj, 2)
+      df[[12]] <- round(base_hazel + adj, 2)
+      
+      # Create and fill columns for Scenario 5
+      adj <- runif(nrow(df), -2.0, -1.0)
+      df[[13]] <- round(base_watt + adj, 2)
+      df[[14]] <- round(base_hazel + adj, 2)
+      
+      # Create and fill columns for Scenario 6
+      adj <- runif(nrow(df), -0.3, 0.3)
+      df[[15]] <- round(base_watt + adj, 2)
+      df[[16]] <- round(base_hazel + adj, 2)
+      
+      # Apply temperature floors
+      for (col in seq(3, ncol(df), 2)) {
+        if (col <= ncol(df)) df[[col]] <- pmax(df[[col]], 8, na.rm = TRUE)
+      }
+      for (col in seq(4, ncol(df), 2)) {
+        if (col <= ncol(df)) df[[col]] <- pmax(df[[col]], 7, na.rm = TRUE)
+      }
+      
+      all_sheets_filled[[hydro_year]] <- df
+    }
+  }
+  
+  # Create 28 alternatives format
+  alternatives_list <- list()
+  scenarios <- c("No Bypass", "Scenario 1", "Scenario 2", "Scenario 3", 
+                 "Scenario 4", "Scenario 5", "Scenario 6")
+  
+  # Metadata
+  metadata_rows <- list()
+  alt_num <- 1
+  for (hydro_year in hydro_years) {
+    for (scenario_idx in 1:7) {
+      metadata_rows[[alt_num]] <- data.frame(
+        Alternative = alt_num,
+        Scenario = scenarios[scenario_idx],
+        Hydro_Year = hydro_year
+      )
+      alt_num <- alt_num + 1
+    }
+  }
+  alternatives_list[["metadata"]] <- do.call(rbind, metadata_rows)
+  
+  # Extract data for each alternative (this part will now work)
+  alt_counter <- 1
+  for (hydro_year in hydro_years) {
+    if (hydro_year %in% names(all_sheets_filled)) {
+      df_hydro <- all_sheets_filled[[hydro_year]]
+      
+      scenario_cols <- list(c(3,4), c(5,6), c(7,8), c(9,10), c(11,12), c(13,14), c(15,16))
+      
+      for (cols in scenario_cols) {
+        alt_data <- data.frame(
+          Date = as.Date(df_hydro[[1]]),
+          AveWatt = df_hydro[[cols[1]]],
+          AveHazel = df_hydro[[cols[2]]]
+        )
+        alternatives_list[[as.character(alt_counter)]] <- alt_data
+        alt_counter <- alt_counter + 1
+      }
+    }
+  }
+  
+  output_path <- "scripts_data_misc/ARG_LAR_TempModeling_placeholders.xlsx"
+  write_xlsx(alternatives_list, output_path)
+  print(paste("Created", alt_counter - 1, "alternatives in", output_path))
+  return(output_path)
+}
 
-# 2) GET OBSERVED GAUGE TEMPS (Daily avg)
-stations   <- c("11446980","11446500")
-param_cd   <- c("00010")
+# --- SCRIPT EXECUTION STARTS HERE ---
+
+# 1) PREPARE DATA: Run the function to generate the alternatives file
+xlsx_path <- prepare_temperature_file()
+
+# 2) SET PARAMETERS
+obs_start <- as.Date("2011-09-01")
+obs_end   <- as.Date("2025-09-21")
+last_wy   <- 2150 # Final water-year to simulate
+sim_end   <- as.Date(sprintf("%04d-08-31", last_wy + 1))
+
+# 3) GET OBSERVED GAUGE DATA from NWIS
+stations <- c("11446980", "11446500") # Watt Avenue and Hazel Avenue
+param_cd <- "00010" # Temperature parameter code
 
 amer_obs <- map_df(stations, function(stn) {
   readNWISdata(
     sites       = stn,
     parameterCd = param_cd,
-    service     = "uv",
+    service     = "uv", # instantaneous data
     startDate   = obs_start,
     endDate     = obs_end
   ) %>%
     transmute(
       Date  = as.Date(dateTime),
-      site  = recode(site_no,
-                     "11446980" = "AveWatt",
-                     "11446500" = "AveHazel"),
+      site  = recode(site_no, "11446980" = "AveWatt", "11446500" = "AveHazel"),
       temp  = X_00010_00000
     )
 }) %>%
   group_by(Date, site) %>%
-  summarise(temp = mean(temp, na.rm=TRUE), .groups="drop")
-
-amer_obs <- amer_obs %>%
-  group_by(Date, site) %>%
   summarise(temp = mean(temp, na.rm=TRUE), .groups="drop") %>%
   mutate(
-    # Hazel floored at 7°C, all others at 8°C
     temp = if_else(site == "AveHazel",
                    pmax(if_else(is.na(temp)|is.nan(temp), 7, temp), 7),
                    pmax(if_else(is.na(temp)|is.nan(temp), 8, temp), 8))
   )
 
-# ───────────────────────────────────────────────────────────────────────────────
-# 1) Build a 14‑year DOY climatology of amer_obs
-# ───────────────────────────────────────────────────────────────────────────────
+# 4) BUILD CLIMATOLOGY: Create a 14-year daily average temperature
 clim14 <- amer_obs %>%
   mutate(doy = yday(Date)) %>%
   group_by(site, doy) %>%
   summarize(clim_temp = mean(temp, na.rm = TRUE), .groups = "drop")
 
-# 3) READ ALT FORECASTS & BUILD A DOY→temp TABLE FOR EACH ALT
-xlsx_path <- "scripts_data_misc/ARG_LAR_TempModeling_placeholders.xlsx" #CHANGE THIS WITH NEW TEMP DATA
-alts      <- excel_sheets(xlsx_path)[-1]  # assume first sheet is metadata
+# 5) READ ALTERNATIVES: Load the 28 generated alternatives
+alts <- excel_sheets(xlsx_path)
+alts <- alts[alts != "metadata"] # Remove the metadata sheet
 
 pred_by_doy <- map_df(alts, function(alt) {
   read_excel(xlsx_path, sheet=alt) %>%
@@ -61,56 +186,46 @@ pred_by_doy <- map_df(alts, function(alt) {
       names_to  = "site",
       values_to = "temp_alt"
     ) %>%
-    mutate(
-      doy = yday(Date),
-      alt = alt
-    ) %>%
+    mutate(doy = yday(Date), alt = alt) %>%
     select(alt, site, doy, temp_alt)
 })
 
-# 4) MAKE FUTURE DATE SKELETON
+# 6) CREATE FUTURE TIMESERIES: Generate dates from end of observed to end of simulation
 future_dates <- tibble(
   Date = seq(obs_end + 1, sim_end, by="day")
 ) %>% mutate(doy = yday(Date))
 
-# DOY thresholds for Oct 18 and Dec 31 (use a non‑leap year for consistency)
-threshold_start <- yday(as.Date("2021-10-18"))  # 291
-threshold_end   <- yday(as.Date("2021-12-31"))  # 365
+# Define the period where forecast data is used (Oct 18 - Dec 31)
+threshold_start <- yday(as.Date("2021-10-18")) # 291
+threshold_end   <- yday(as.Date("2021-12-31")) # 365
 
-# ───────────────────────────────────────────────────────────────────────────────
-# 2) Rebuild env_ext_list with climatology‑fill
-# ───────────────────────────────────────────────────────────────────────────────
+# 7) COMBINE OBSERVED AND FUTURE DATA
+# For each alternative, combine the historical data with a future projection.
+# The future uses the alternative's forecast for the Oct-Dec window,
+# and the 14-year climatology for all other times.
 env_ext_list <- map(alts, function(alt_nm) {
-  # a) Observed block unchanged
   obs_block <- amer_obs %>%
     filter(Date <= obs_end) %>%
     mutate(alt = alt_nm)
   
-  # b) Prepare the raw DOY→temp_alt pattern
   dedup_pattern <- pred_by_doy %>%
     filter(alt == alt_nm) %>%
     group_by(site, doy) %>%
     summarize(temp_alt = mean(temp_alt, na.rm = TRUE), .groups = "drop")
   
-  # c) Build the full future skeleton
   future_skel <- future_dates %>%
     expand_grid(site = unique(dedup_pattern$site))
   
-  # d) Join forecast + climatology, then apply the fill rule
   pred_block <- future_skel %>%
     left_join(dedup_pattern, by = c("doy","site")) %>%
     left_join(clim14,        by = c("doy","site")) %>%
     mutate(
-      # fill logic as before
       temp_raw = if_else(
         doy >= threshold_start & doy <= threshold_end & !is.na(temp_alt),
         temp_alt,
         clim_temp
       ),
-      # now floor by site
-      temp = if_else(site == "AveHazel",
-                     pmax(temp_raw, 7),
-                     pmax(temp_raw, 8))
+      temp = if_else(site == "AveHazel", pmax(temp_raw, 7), pmax(temp_raw, 8))
     ) %>%
     select(Date, site, temp) %>%
     mutate(alt = alt_nm)
@@ -119,145 +234,50 @@ env_ext_list <- map(alts, function(alt_nm) {
     arrange(Date, site)
 }) %>% set_names(alts)
 
-# 6) Now rebuild your site/Date lookup lists *after* the full horizons exist
-site_temps_list <- map(env_ext_list, ~ split(.x$temp, .x$site))
-site_dates_list <- map(env_ext_list, ~ split(.x$Date, .x$site))
-date_idx_list   <- map(site_dates_list, function(dlist) {
-  map(dlist, ~ setNames(seq_along(.x), as.character(.x)))
-})
+# 8) FINAL DATA PREPARATION & SAVING
+# Combine all alternatives into a single data frame
+df_all <- bind_rows(env_ext_list, .id = "env")
 
-df_all <- bind_rows(env_ext_list, .id = "env") 
+# Save the final data objects
+saveRDS(env_ext_list, "SalmonCountR/app_data/env_ext_list.rds")
+saveRDS(df_all, "SalmonCountR/app_data/df_all.rds")
 
+print(paste("Saved env_ext_list.rds with", length(env_ext_list), "alternatives"))
+print(paste("Saved df_all.rds with", nrow(df_all), "rows"))
+
+# 9) VISUALIZATIONS
+# Plot of all 28 alternatives
 ggplot(df_all, aes(Date, temp, color = site)) +
   geom_line(size = 0.5, alpha = 0.8) +
-  facet_wrap(~ env, ncol = 2, scales = "free_y") +
+  facet_wrap(~ env, ncol = 4, scales = "free_y") +
   labs(
-    title = "Observed + Predicted Temp by Alternative",
+    title = "Observed + Predicted Temp by Alternative (28 total)",
     x     = "Date",
     y     = "Temperature (°C)",
     color = "Site"
   ) +
-  theme_minimal(base_size = 12)
+  theme_minimal(base_size = 10)
 
-test_date <- obs_end + 2500  # 2024‑06‑01
-
-map_df(alts, function(alt_nm) {
-  env_ext_list[[alt_nm]] %>%
-    filter(Date == test_date) %>%
-    mutate(alt = alt_nm)
-}) %>%
-  select(alt, site, temp) %>%
-  arrange(alt, site)
-
-saveRDS(env_ext_list, "env_ext_list.rds")
-saveRDS(df_all, "df_all.rds")
-
-# 1. Filter to Oct–Feb and observed period
-obs_temp <- amer_obs %>%
-  filter(Date >= as.Date("2011-10-01") & Date <= as.Date("2024-02-29")) %>%
-  filter(month(Date) %in% c(10, 11, 12, 1, 2)) %>%
-  mutate(month_day = format(Date, "%m-%d"))
-
-# 2. Create dummy reference date from 2023-10-01 to 2024-02-29
-ref_dates <- tibble(
-  dummy_date = seq(as.Date("2023-10-01"), as.Date("2024-02-29"), by = "1 day")
-) %>%
-  mutate(month_day = format(dummy_date, "%m-%d"))
-
-obs_temp <- obs_temp %>%
-  left_join(ref_dates, by = "month_day")
-
-# 3. Summarize percentiles
-obs_summary <- obs_temp %>%
-  group_by(site, dummy_date) %>%
-  summarise(
-    p10    = quantile(temp, 0.10, na.rm = TRUE),
-    median = median(temp, na.rm = TRUE),
-    p90    = quantile(temp, 0.90, na.rm = TRUE),
-    .groups = "drop"
-  )
-
-# 4. Plot
-ggplot(obs_summary, aes(x = dummy_date)) +
-  geom_ribbon(aes(ymin = p10, ymax = p90, fill = site), alpha = 0.4) +
-  geom_line(aes(y = median, color = site), size = 0.9) +
-  scale_color_viridis_d(option = "D", begin = 0.2, end = 0.9) +
-  scale_fill_viridis_d(option = "D", begin = 0.2, end = 0.9) +
-  scale_x_date(date_breaks = "2 weeks", date_labels = "%b %d") +
-  scale_y_continuous(name = "Temperature (°C)", breaks = seq(0, 25, 2)) +
-  labs(x = NULL, y = "Temperature (°C)", color = "Site", fill = "Site") +
-  theme_minimal(base_size = 14) +
-  theme(
-    plot.title   = element_blank(),
-    axis.title.x = element_text(face = "bold", size = 14),
-    axis.title.y = element_text(face = "bold", size = 14),
-    axis.text    = element_text(face = "bold", size = 12),
-    legend.title = element_text(face = "bold")
-  )
-
-# Filter df_all for future prediction window: Oct 18 – Dec 31, 2024
+# Plot focusing on the 2024 forecast window
 future_temp <- df_all %>%
   filter(site != "AveFol") %>%
-  filter(Date >= as.Date("2024-10-18") & Date <= as.Date("2024-12-31"))
+  filter(Date >= as.Date("2024-10-18") & Date <= as.Date("2024-12-31")) %>%
+  mutate(env = factor(env, levels = as.character(1:28)))
 
-future_temp <- future_temp %>%
-  mutate(env = factor(env, levels = as.character(1:10)))  # ensures 10 is last
-
-# Plot with lines per site, faceted by alternative
 ggplot(future_temp, aes(x = Date, y = temp, color = site)) +
   geom_line(size = 1) +
   scale_color_viridis_d(option = "D", begin = 0.2, end = 0.9) +
   scale_x_date(date_breaks = "2 weeks", date_labels = "%b %d") +
   scale_y_continuous(name = "Temperature (°C)", breaks = seq(0, 25, 2)) +
   labs(x = NULL, y = "Temperature (°C)", color = "Site") +
-  facet_wrap(~ env, ncol = 2) +
-  theme_minimal(base_size = 14) +
+  facet_wrap(~ env, ncol = 4) +
+  theme_minimal(base_size = 10) +
   theme(
-    plot.title   = element_blank(),
     axis.title.x = element_text(face = "bold", size = 14),
     axis.title.y = element_text(face = "bold", size = 14),
-    axis.text    = element_text(face = "bold", size = 12),
+    axis.text    = element_text(face = "bold", size = 10),
     legend.title = element_text(face = "bold")
   )
 
-# Assume clim14 is the climatology table by doy and site
-future_anomaly <- future_temp %>%
-  mutate(doy = yday(Date)) %>%
-  left_join(clim14, by = c("site", "doy")) %>%
-  mutate(temp_anomaly = temp - clim_temp)
-
-ggplot(future_anomaly, aes(x = Date, y = temp_anomaly, color = site)) +
-  geom_line() +
-  facet_wrap(~ env, ncol = 2) +
-  labs(x = "Date", y = "Temp Anomaly (°C)", color = "Site") +
-  scale_color_viridis_d() +
-  theme_minimal(base_size = 14)
-
-ddays <- future_temp %>%
-  mutate(thresh_temp = pmax(temp - 0, 0)) %>%
-  group_by(env, site) %>%
-  summarise(degree_days = sum(thresh_temp), .groups = "drop")
-
-ggplot(ddays, aes(x = site, y = degree_days, fill = env)) +
-  geom_col(position = position_dodge()) +
-  labs(y = "Cumulative Degree Days > 0°C", x = "Site", fill = "Alt") +
-  scale_fill_viridis_d() +
-  theme_minimal(base_size = 14)
-
-ggplot(future_temp, aes(x = env, y = temp, fill = site)) +
-  geom_boxplot(outlier.shape = NA) +
-  labs(x = "Alternative", y = "Daily Temperature (°C)", fill = "Site") +
-  scale_fill_viridis_d() +
-  theme_minimal(base_size = 14)
-
-threshold_summary <- future_temp %>%
-  mutate(thresh_exceed = temp > 12.8) %>%
-  group_by(env, site) %>%
-  summarise(n_exceed_days = sum(thresh_exceed), .groups = "drop")
-
-ggplot(threshold_summary, aes(x = site, y = n_exceed_days, fill = env)) +
-  geom_col(position = "dodge") +
-  labs(y = "# Days > 12.8°C", x = "Site", fill = "Alt") +
-  scale_fill_viridis_d() +
-  theme_minimal(base_size = 14)
-
+print("Temperature data processing complete!")
+print(paste("Created", length(alts), "alternatives (7 scenarios × 4 hydro years)"))
