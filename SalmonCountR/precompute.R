@@ -1103,7 +1103,27 @@ results_full <- purrr::map_dfr(keys, function(key) {
   )()
 })
 
-# ---- 36. SAVE ALL OUTPUTS FOR SHINY APPLICATION ----
+# ---- 36.STEELHEAD PERFORMANCE METRIC CALCULATION ----
+# This metric is the number of days below 18.3°C in Oct/Nov for each alternative.
+
+# Calculate the metric for each of the 28 alternatives
+steelhead_metrics <- df_all_orig %>%
+  # 1. Filter for the relevant time period first
+  filter(
+    month(Date) %in% c(10, 11),      # October and November
+    year(Date) == 2025               # Standard forecast year
+  ) %>%
+  # 2. For each day in each alternative, calculate the average temperature across sites
+  group_by(env, Date) %>%
+  summarise(avg_temp = mean(temp, na.rm = TRUE), .groups = "drop") %>%
+  # 3. For each alternative, count how many days had an average temp below the threshold
+  group_by(env) %>%
+  summarise(
+    steelhead_score = sum(avg_temp < 18.3, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+# ---- 37. SAVE ALL OUTPUTS FOR SHINY APPLICATION ----
 # Save all processed data frames and model objects as .rds files. These files
 # will be loaded directly by the Shiny dashboard for fast startup.
 
@@ -1119,6 +1139,7 @@ saveRDS(S_seed_fore_list,      here("SalmonCountR","app_data","S_seed_fore_list.
 saveRDS(stoch_SAR_opts,        here("SalmonCountR","app_data","stoch_SAR_opts.rds"))
 saveRDS(sim_years,             here("SalmonCountR","app_data","sim_years.rds"))
 saveRDS(spawn_dates_by_alt,    here("SalmonCountR","app_data","spawn_dates_by_alt.rds"))
+saveRDS(steelhead_metrics, here("SalmonCountR","app_data", "steelhead_metrics.rds"))
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                             END OF PRECOMPUTE SCRIPT                          ║
