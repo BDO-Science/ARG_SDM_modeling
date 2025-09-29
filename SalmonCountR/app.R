@@ -210,7 +210,7 @@ ui <- navbarPage("lower American River Power Bypass Decision Support",
                                      tags$li(strong("Single Scenario Analysis:"), "Detailed forecasts with custom hydrology and TDM weighting"),
                                      tags$li(strong("Scenario Comparison:"), "Side-by-side evaluation of multiple alternatives"),
                                      tags$li(strong("Swing Weighting:"), "Multi-objective decision support with importance ratings"),
-                                     tags$li(strong("Performance Matrix:"), "Raw and normalized (0-1) scores for all objectives")
+                                     tags$li(strong("Consequence Table:"), "Raw and normalized (0-1) scores for all objectives")
                                    ),
                                    
                                    h4("Weighting Options:"),
@@ -423,8 +423,8 @@ ui <- navbarPage("lower American River Power Bypass Decision Support",
                                          h4("Current Objective Weights"),
                                          tableOutput("weights_table")
                                 ),
-                                tabPanel("Performance Matrix",
-                                         h4("Performance Matrix"),
+                                tabPanel("Consequence Table",
+                                         h4("Consequence Table"),
                                          p("Raw and normalized (0-1) scores for each objective by scenario."),
                                          tableOutput("performance_matrix")
                                 ),
@@ -448,8 +448,8 @@ server <- function(input, output, session) {
   # Manually define raw hydropower scores here.
   # The names (e.g., "NB", "PB1") must match the scenario names.
   hardcoded_hydro_scores <- c(
-    "NB"  = 85, "PB1" = 75, "PB2" = 70, "PB3" = 72,
-    "PB4" = 68, "PB5" = 65, "PB6" = 60
+    "NB"  = 0, "PB1" = 111422, "PB2" = 370826, "PB3" = 201552,
+    "PB4" = 241590, "PB5" = 199382, "PB6" = 348806
   )
   
   # --- Reactive Values ---
