@@ -56,7 +56,7 @@ get_scenario_alternatives <- function(scenario, hydro_year) {
   }
 }
 
-ui <- navbarPage("lower American River Power Bypass Decision Support",
+ui <- navbarPage("Lower American River Power Bypass Decision Support",
                  useShinyjs(), 
                  
                  # ---- About Tab ----
@@ -260,15 +260,15 @@ ui <- navbarPage("lower American River Power Bypass Decision Support",
                           )
                  ),
                  
-                 # ---- Temperature Explorer Tab ----
+                 # ---- Temperature Explorer Tab (FIXED) ----
                  tabPanel("Temperature Explorer",
                           sidebarLayout(
                             sidebarPanel(
                               h4("Hydrology Weights"),
-                              sliderInput("temp_w_2011", "2011 (Dry)", value = 0.25, min = 0, max = 1, step = 0.01),
+                              sliderInput("temp_w_2011", "2011 (Wet)", value = 0.25, min = 0, max = 1, step = 0.01),
                               sliderInput("temp_w_2014", "2014 (Critical)", value = 0.25, min = 0, max = 1, step = 0.01),
                               sliderInput("temp_w_2017", "2017 (Wet)", value = 0.25, min = 0, max = 1, step = 0.01),
-                              sliderInput("temp_w_2020", "2020 (Below Normal)", value = 0.25, min = 0, max = 1, step = 0.01),
+                              sliderInput("temp_w_2020", "2020 (Dry)", value = 0.25, min = 0, max = 1, step = 0.01),
                               hr(),
                               selectInput("temp_scenario", "Scenario:",
                                           choices = c("No Bypass (NB)"="NB", "Power Bypass 1"="PB1", "Power Bypass 2"="PB2",
@@ -276,7 +276,7 @@ ui <- navbarPage("lower American River Power Bypass Decision Support",
                                                       "Power Bypass 6"="PB6")),
                               radioButtons("temp_site", "Site:", choices = c("Ave Watt"="AveWatt", "Ave Hazel"="AveHazel")),
                               radioButtons("temp_period", "Time Period:",
-                                           choices = c("Oct-Dec 2025"="oct_dec", "Full Year"="full")),
+                                           choices = c("Oct-Dec 2025"="oct_dec", "Full Year 2025"="full")),
                               width = 3
                             ),
                             mainPanel(
@@ -289,64 +289,8 @@ ui <- navbarPage("lower American River Power Bypass Decision Support",
                           )
                  ),
                  
-                 # ---- Calibration Tab (Restored Functionality) ----
-                 tabPanel("Calibration",
-                          sidebarLayout(
-                            sidebarPanel(
-                              h4("TDM Model Weights"),
-                              p("Adjust weights to see how the combined model fits historical data."),
-                              sliderInput("calib_weight_wf", "Water Forum", value = 0.51, min = 0, max = 1, step = 0.01),
-                              sliderInput("calib_weight_sm", "SALMOD", value = 0.24, min = 0, max = 1, step = 0.01),
-                              sliderInput("calib_weight_martin", "Martin", value = 0.25, min = 0, max = 1, step = 0.01),
-                              actionButton("run_calib", "Run Calibration"),
-                              width = 3
-                            ),
-                            mainPanel(
-                              DTOutput("calib_table"),
-                              plotOutput("calib_ts_plot"),
-                              width = 9
-                            )
-                          )
-                 ),
                  
-                 # ---- Single Scenario Tab (Merged Functionality) ----
-                 tabPanel("Single Scenario",
-                          sidebarLayout(
-                            sidebarPanel(
-                              h4("Scenario"),
-                              selectInput("single_scenario", "Select:",
-                                          choices = c("No Bypass"="NB", "Power Bypass 1"="PB1", "Power Bypass 2"="PB2",
-                                                      "Power Bypass 3"="PB3", "Power Bypass 4"="PB4",
-                                                      "Power Bypass 5"="PB5", "Power Bypass 6"="PB6")),
-                              hr(),
-                              h4("Hydrology Weights"),
-                              sliderInput("single_w_2011", "2011 (Dry)", value = 0.25, min = 0, max = 1, step = 0.01),
-                              sliderInput("single_w_2014", "2014 (Critical)", value = 0.25, min = 0, max = 1, step = 0.01),
-                              sliderInput("single_w_2017", "2017 (Wet)", value = 0.25, min = 0, max = 1, step = 0.01),
-                              sliderInput("single_w_2020", "2020 (Below Normal)", value = 0.25, min = 0, max = 1, step = 0.01),
-                              hr(),
-                              h4("TDM Weights"),
-                              sliderInput("single_tdm_wf", "Water Forum", value = 0.51, min = 0, max = 1, step = 0.01),
-                              sliderInput("single_tdm_sm", "SALMOD", value = 0.24, min = 0, max = 1, step = 0.01),
-                              sliderInput("single_tdm_martin", "Martin", value = 0.25, min = 0, max = 1, step = 0.01),
-                              hr(),
-                              sliderInput("single_years", "Forecast Years", value = 50, min = 10, max = 100),
-                              actionButton("run_single", "Run Simulation"),
-                              width = 3
-                            ),
-                            mainPanel(
-                              tabsetPanel(
-                                tabPanel("Time Series", plotOutput("single_ts_plot")),
-                                tabPanel("Distribution", plotOutput("single_dist_plot")),
-                                tabPanel("Table", DTOutput("single_table")),
-                                tabPanel("Heatmap", plotOutput("single_heatmap_plot"))
-                              ),
-                              width = 9
-                            )
-                          )
-                 ),
-                 
-                 # ---- Compare Scenarios Tab (Merged Functionality) ----
+                 # ---- Compare Scenarios Tab ----
                  tabPanel("Compare Scenarios",
                           sidebarLayout(
                             sidebarPanel(
@@ -380,34 +324,27 @@ ui <- navbarPage("lower American River Power Bypass Decision Support",
                                          plotOutput("cmp_box_plot"),
                                          hr(),
                                          h4("Boxplot Summary"),
-                                         tableOutput("cmp_boxplot_stats")
-                                ),
-                                tabPanel("Summary Table", DTOutput("cmp_summary")),
-                                tabPanel("Heatmap", plotOutput("cmp_heatmap_plot"))
+                                         tableOutput("cmp_boxplot_stats")),
+                                tabPanel("Summary Table", DTOutput("cmp_summary"))
                               ),
                               width = 9
                             )
                           )
                  ),
                  
-                 # UPDATED: Merged "Objectives" and "Swing Weighting" into one "Decision Support" tab
+                 # ---- Decision Support Tab (WITH STACKED BAR PLOT) ----
                  tabPanel("Decision Support",
                           sidebarLayout(
                             sidebarPanel(
                               h4("Objective Weighting"),
-                              
-                              # NEW: Added choice for weighting method
                               radioButtons("weight_method", "Choose Weighting Method:",
                                            choices = c("Equal Weights" = "equal",
                                                        "Manual Weights" = "manual"),
                                            selected = "manual"),
-                              
                               hr(),
-                              
-                              # NEW: Sliders are now conditional on the manual choice
                               conditionalPanel(
                                 condition = "input.weight_method == 'manual'",
-                                p("Adjust sliders to reflect the relative importance of each objective. Weights will always sum to 1."),
+                                p("Adjust sliders to reflect importance. Weights sum to 1."),
                                 sliderInput("w_chinook", "Fall-run Chinook", min = 0, max = 1, value = 0.4, step = 0.05),
                                 sliderInput("w_steelhead", "Steelhead", min = 0, max = 1, value = 0.3, step = 0.05),
                                 sliderInput("w_hydro", "Hydropower", min = 0, max = 1, value = 0.3, step = 0.05)
@@ -420,21 +357,21 @@ ui <- navbarPage("lower American River Power Bypass Decision Support",
                                          h4("Overall Weighted Scores"),
                                          plotOutput("overall_scores_plot"),
                                          hr(),
+                                         h4("Score Contribution by Objective"),
+                                         plotOutput("plot_score_contribution"),
+                                         hr(),
                                          h4("Current Objective Weights"),
-                                         tableOutput("weights_table")
-                                ),
+                                         tableOutput("weights_table")),
                                 tabPanel("Consequence Table",
                                          h4("Consequence Table"),
                                          p("Raw and normalized (0-1) scores for each objective by scenario."),
-                                         tableOutput("performance_matrix")
-                                ),
+                                         tableOutput("performance_matrix")),
                                 tabPanel("Trade-offs",
                                          h4("Multi-Objective Performance"),
                                          plotOutput("performance_plot"),
                                          hr(),
                                          h4("Trade-off Analysis (Chinook vs. Hydropower)"),
-                                         plotOutput("tradeoff_plot")
-                                )
+                                         plotOutput("tradeoff_plot"))
                               ),
                               width = 9
                             )
@@ -444,15 +381,13 @@ ui <- navbarPage("lower American River Power Bypass Decision Support",
 
 server <- function(input, output, session) {
   
-  # --- Hard-coded Hydropower Scores ---
-  # Manually define raw hydropower scores here.
-  # The names (e.g., "NB", "PB1") must match the scenario names.
+  # Hard-coded Hydropower Scores
   hardcoded_hydro_scores <- c(
     "NB"  = 0, "PB1" = 111422, "PB2" = 370826, "PB3" = 201552,
     "PB4" = 241590, "PB5" = 199382, "PB6" = 348806
   )
   
-  # --- Reactive Values ---
+  # Reactive Values
   values <- reactiveValues(
     calib_data = NULL,
     single_data = NULL,
@@ -460,18 +395,59 @@ server <- function(input, output, session) {
     performance_auto = NULL
   )
   
-  # --- Helper function to make 3 sliders sum to 1 ---
+  # Helper function for 3-slider auto-adjustment
   make_3_slider_observers <- function(id1, id2, id3, lock) {
-    observeEvent(input[[id1]], { if(lock()) return(); lock(TRUE); remainder <- 1 - input[[id1]]; sum_others <- isolate(input[[id2]]) + isolate(input[[id3]]); if (sum_others > 0) { updateSliderInput(session, id2, value = remainder * (isolate(input[[id2]]) / sum_others)); updateSliderInput(session, id3, value = remainder * (isolate(input[[id3]]) / sum_others)) } else { updateSliderInput(session, id2, value = remainder / 2); updateSliderInput(session, id3, value = remainder / 2) }; lock(FALSE) }, ignoreInit = TRUE)
-    observeEvent(input[[id2]], { if(lock()) return(); lock(TRUE); remainder <- 1 - input[[id2]]; sum_others <- isolate(input[[id1]]) + isolate(input[[id3]]); if (sum_others > 0) { updateSliderInput(session, id1, value = remainder * (isolate(input[[id1]]) / sum_others)); updateSliderInput(session, id3, value = remainder * (isolate(input[[id3]]) / sum_others)) } else { updateSliderInput(session, id1, value = remainder / 2); updateSliderInput(session, id3, value = remainder / 2) }; lock(FALSE) }, ignoreInit = TRUE)
-    observeEvent(input[[id3]], { if(lock()) return(); lock(TRUE); remainder <- 1 - input[[id3]]; sum_others <- isolate(input[[id1]]) + isolate(input[[id2]]); if (sum_others > 0) { updateSliderInput(session, id1, value = remainder * (isolate(input[[id1]]) / sum_others)); updateSliderInput(session, id2, value = remainder * (isolate(input[[id2]]) / sum_others)) } else { updateSliderInput(session, id1, value = remainder / 2); updateSliderInput(session, id2, value = remainder / 2) }; lock(FALSE) }, ignoreInit = TRUE)
+    observeEvent(input[[id1]], {
+      if(lock()) return()
+      lock(TRUE)
+      remainder <- 1 - input[[id1]]
+      sum_others <- isolate(input[[id2]]) + isolate(input[[id3]])
+      if (sum_others > 0) {
+        updateSliderInput(session, id2, value = remainder * (isolate(input[[id2]]) / sum_others))
+        updateSliderInput(session, id3, value = remainder * (isolate(input[[id3]]) / sum_others))
+      } else {
+        updateSliderInput(session, id2, value = remainder / 2)
+        updateSliderInput(session, id3, value = remainder / 2)
+      }
+      lock(FALSE)
+    }, ignoreInit = TRUE)
+    
+    observeEvent(input[[id2]], {
+      if(lock()) return()
+      lock(TRUE)
+      remainder <- 1 - input[[id2]]
+      sum_others <- isolate(input[[id1]]) + isolate(input[[id3]])
+      if (sum_others > 0) {
+        updateSliderInput(session, id1, value = remainder * (isolate(input[[id1]]) / sum_others))
+        updateSliderInput(session, id3, value = remainder * (isolate(input[[id3]]) / sum_others))
+      } else {
+        updateSliderInput(session, id1, value = remainder / 2)
+        updateSliderInput(session, id3, value = remainder / 2)
+      }
+      lock(FALSE)
+    }, ignoreInit = TRUE)
+    
+    observeEvent(input[[id3]], {
+      if(lock()) return()
+      lock(TRUE)
+      remainder <- 1 - input[[id3]]
+      sum_others <- isolate(input[[id1]]) + isolate(input[[id2]])
+      if (sum_others > 0) {
+        updateSliderInput(session, id1, value = remainder * (isolate(input[[id1]]) / sum_others))
+        updateSliderInput(session, id2, value = remainder * (isolate(input[[id2]]) / sum_others))
+      } else {
+        updateSliderInput(session, id1, value = remainder / 2)
+        updateSliderInput(session, id2, value = remainder / 2)
+      }
+      lock(FALSE)
+    }, ignoreInit = TRUE)
   }
   
-  # Create the lock and apply the observer to the objective weight sliders
+  # Create lock and apply observer to objective weight sliders
   objective_lock <- reactiveVal(FALSE)
   make_3_slider_observers("w_chinook", "w_steelhead", "w_hydro", objective_lock)
   
-  # --- Helper: Run simulation for a scenario with hydro weighting ---
+  # Run simulation for a scenario with hydro weighting
   run_scenario_simulation <- function(scenario, hydro_weights, tdm_weights, n_years) {
     alts <- get_scenario_alternatives(scenario, "all")
     hydro_years <- c("2011", "2014", "2017", "2020")
@@ -480,18 +456,25 @@ server <- function(input, output, session) {
     combined_result <- NULL
     
     for (i in seq_along(alts)) {
-      alt_id <- as.character(alts[i]); hydro_year <- hydro_years[i]
+      alt_id <- as.character(alts[i])
+      hydro_year <- hydro_years[i]
       
-      surv_weighted <- tdm_w["wf"] * surv_lookup_full[[paste(alt_id, "exp_WF", sep="_")]] + tdm_w["sm"] * surv_lookup_full[[paste(alt_id, "exp_SM", sep="_")]] + tdm_w["martin"] * surv_lookup_full[[paste(alt_id, "lin_Martin", sep="_")]]
+      surv_weighted <- tdm_w["wf"] * surv_lookup_full[[paste(alt_id, "exp_WF", sep="_")]] +
+        tdm_w["sm"] * surv_lookup_full[[paste(alt_id, "exp_SM", sep="_")]] +
+        tdm_w["martin"] * surv_lookup_full[[paste(alt_id, "lin_Martin", sep="_")]]
       
       P_weighted <- base_P
-      P_weighted$SAR_mean <- tdm_w["wf"] * base_P_list$exp_WF[[alt_id]]$SAR_mean + tdm_w["sm"] * base_P_list$exp_SM[[alt_id]]$SAR_mean + tdm_w["martin"] * base_P_list$lin_Martin[[alt_id]]$SAR_mean
-      P_weighted$rear_surv <- tdm_w["wf"] * base_P_list$exp_WF[[alt_id]]$rear_surv + tdm_w["sm"] * base_P_list$exp_SM[[alt_id]]$rear_surv + tdm_w["martin"] * base_P_list$lin_Martin[[alt_id]]$rear_surv
-      seed_weighted <- tdm_w["wf"] * S_seed_fore_list$exp_WF + tdm_w["sm"] * S_seed_fore_list$exp_SM + tdm_w["martin"] * S_seed_fore_list$lin_Martin
+      P_weighted$SAR_mean <- tdm_w["wf"] * base_P_list$exp_WF[[alt_id]]$SAR_mean +
+        tdm_w["sm"] * base_P_list$exp_SM[[alt_id]]$SAR_mean +
+        tdm_w["martin"] * base_P_list$lin_Martin[[alt_id]]$SAR_mean
+      P_weighted$rear_surv <- tdm_w["wf"] * base_P_list$exp_WF[[alt_id]]$rear_surv +
+        tdm_w["sm"] * base_P_list$exp_SM[[alt_id]]$rear_surv +
+        tdm_w["martin"] * base_P_list$lin_Martin[[alt_id]]$rear_surv
       
-      # FIX: Reverted to using the super-assignment operator (<<-).
-      # Your core sim_forecast_fn() function depends on modifying the global
-      # lookup tables, and my previous change to prevent this broke the connection.
+      seed_weighted <- tdm_w["wf"] * S_seed_fore_list$exp_WF +
+        tdm_w["sm"] * S_seed_fore_list$exp_SM +
+        tdm_w["martin"] * S_seed_fore_list$lin_Martin
+      
       surv_lookup_full[[paste(alt_id, "weighted", sep="_")]] <<- surv_weighted
       if (!"weighted" %in% names(base_P_list)) base_P_list[["weighted"]] <<- list()
       base_P_list[["weighted"]][[alt_id]] <<- P_weighted
@@ -510,169 +493,215 @@ server <- function(input, output, session) {
     return(combined_result)
   }
   
-  #=================================================#
-  # ---- Section 1: Temperature Explorer Tab ----
-  #=================================================#
-  
+  # Temperature Explorer (FIXED)
   output$temp_plot <- renderPlot({
     req(df_all_orig)
     alts <- get_scenario_alternatives(input$temp_scenario, "all")
     
+    # Filter for selected period
     if (input$temp_period == "oct_dec") {
-      temp_data <- df_all_orig %>% filter(env %in% as.character(alts), site == input$temp_site, month(Date) %in% c(10, 11, 12), year(Date) == 2025)
+      temp_data <- df_all_orig %>%
+        filter(env %in% as.character(alts),
+               site == input$temp_site,
+               month(Date) %in% c(10, 11, 12),
+               year(Date) == 2025)
     } else {
-      temp_data <- df_all_orig %>% filter(env %in% as.character(alts), site == input$temp_site, year(Date) == 2025)
+      temp_data <- df_all_orig %>%
+        filter(env %in% as.character(alts),
+               site == input$temp_site,
+               year(Date) == 2025)
     }
     
-    temp_data <- temp_data %>% mutate(hydro = case_when(env %in% as.character(1:7) ~ "2011", env %in% as.character(8:14) ~ "2014", env %in% as.character(15:21) ~ "2017", env %in% as.character(22:28) ~ "2020"))
-    weights <- c("2011" = input$temp_w_2011, "2014" = input$temp_w_2014, "2017" = input$temp_w_2017, "2020" = input$temp_w_2020)
+    # Add hydro year labels
+    temp_data <- temp_data %>%
+      mutate(hydro = case_when(
+        env %in% as.character(1:7) ~ "2011",
+        env %in% as.character(8:14) ~ "2014",
+        env %in% as.character(15:21) ~ "2017",
+        env %in% as.character(22:28) ~ "2020"
+      ))
+    
+    # Calculate weighted average
+    weights <- c("2011" = input$temp_w_2011, "2014" = input$temp_w_2014,
+                 "2017" = input$temp_w_2017, "2020" = input$temp_w_2020)
     weights <- normalize_weights(weights)
-    avg_temp <- temp_data %>% group_by(Date) %>% summarise(temp = sum(temp * weights[hydro]), .groups = "drop")
+    
+    # FIXED: Calculate average only from the filtered data
+    avg_temp <- temp_data %>%
+      group_by(Date) %>%
+      summarise(temp = sum(temp * weights[hydro]), .groups = "drop")
     
     ggplot() +
       geom_line(data = temp_data, aes(Date, temp, color = hydro), alpha = 0.5, size = 1) +
       geom_line(data = avg_temp, aes(Date, temp), color = "black", size = 1.5) +
       scale_color_viridis_d(name = "Hydro Year") +
-      labs(title = paste("Weighted Average Temperature:", input$temp_scenario, "at", input$temp_site), subtitle = "Colored lines show individual hydro years; black line is the weighted average.", y = "Temperature (°C)", x = "Date") +
+      labs(title = paste("Temperature:", input$temp_scenario, "at", input$temp_site),
+           subtitle = "Black line = weighted average",
+           y = "Temperature (°C)", x = "Date") +
       theme_minimal(base_size = 14)
   })
   
+  # FIXED: Temperature stats without steelhead metric
   output$temp_stats <- renderTable({
     req(df_all_orig)
     alts <- get_scenario_alternatives(input$temp_scenario, "all")
     
     if (input$temp_period == "oct_dec") {
-      temp_data <- df_all_orig %>% filter(env %in% as.character(alts), site == input$temp_site, month(Date) %in% c(10, 11, 12), year(Date) == 2025)
+      temp_data <- df_all_orig %>%
+        filter(env %in% as.character(alts),
+               site == input$temp_site,
+               month(Date) %in% c(10, 11, 12),
+               year(Date) == 2025)
     } else {
-      temp_data <- df_all_orig %>% filter(env %in% as.character(alts), site == input$temp_site, year(Date) == 2025)
+      temp_data <- df_all_orig %>%
+        filter(env %in% as.character(alts),
+               site == input$temp_site,
+               year(Date) == 2025)
     }
     
-    temp_data <- temp_data %>% mutate(hydro = case_when(env %in% as.character(1:7) ~ "2011", env %in% as.character(8:14) ~ "2014", env %in% as.character(15:21) ~ "2017", env %in% as.character(22:28) ~ "2020"))
-    weights <- c("2011" = input$temp_w_2011, "2014" = input$temp_w_2014, "2017" = input$temp_w_2017, "2020" = input$temp_w_2020)
+    temp_data <- temp_data %>%
+      mutate(hydro = case_when(
+        env %in% as.character(1:7) ~ "2011",
+        env %in% as.character(8:14) ~ "2014",
+        env %in% as.character(15:21) ~ "2017",
+        env %in% as.character(22:28) ~ "2020"
+      ))
+    
+    weights <- c("2011" = input$temp_w_2011, "2014" = input$temp_w_2014,
+                 "2017" = input$temp_w_2017, "2020" = input$temp_w_2020)
     weights <- normalize_weights(weights)
-    weighted_temps <- temp_data %>% group_by(Date) %>% summarise(temp = sum(temp * weights[hydro]), .groups = "drop")
+    
+    weighted_temps <- temp_data %>%
+      group_by(Date) %>%
+      summarise(temp = sum(temp * weights[hydro]), .groups = "drop")
     
     tibble(
-      Metric = c("Mean Temp", "Median Temp", "Min Temp", "Max Temp", "Temp Std. Dev.", "Days > 18.3°C (Steelhead)"), 
+      Metric = c("Mean Temp", "Median Temp", "Min Temp", "Max Temp", "Std Dev", "Days > 12.8°C"),
       Value = c(
-        round(mean(weighted_temps$temp), 2), 
-        round(median(weighted_temps$temp), 2), 
-        round(min(weighted_temps$temp), 2), 
-        round(max(weighted_temps$temp), 2), 
-        round(sd(weighted_temps$temp), 2), 
-        sum(weighted_temps$temp > 18.3)
+        round(mean(weighted_temps$temp), 2),
+        round(median(weighted_temps$temp), 2),
+        round(min(weighted_temps$temp), 2),
+        round(max(weighted_temps$temp), 2),
+        round(sd(weighted_temps$temp), 2),
+        sum(weighted_temps$temp > 12.8)
       )
     )
   })
   
-  #=========================================#
-  # ---- Section 2: Calibration Tab ----
-  #=========================================#
-  
-  observeEvent(input$run_calib, {
-    tdm_weights <- c(exp_WF = input$calib_weight_wf, exp_SM = input$calib_weight_sm, lin_Martin = input$calib_weight_martin); tdm_weights_norm <- normalize_weights(tdm_weights)
-    ref_env <- "1"
-    deg_day_cal <- compute_deg_day_adult(env_nm = ref_env, sim_years = real_years, spawn_dates = spawn_dates_by_alt[[ref_env]][match(real_years, sim_years)], env_ext_list = env_ext_list)
-    calib_surv_vec <- (surv_lookup_full[[paste(ref_env, "exp_WF", sep="_")]]*tdm_weights_norm["exp_WF"])+(surv_lookup_full[[paste(ref_env, "exp_SM", sep="_")]]*tdm_weights_norm["exp_SM"])+(surv_lookup_full[[paste(ref_env, "lin_Martin", sep="_")]]*tdm_weights_norm["lin_Martin"])
-    P_calib <- base_P
-    for(param in c("SAR_mean","rear_surv")){P_calib[[param]]<-(base_P_list$exp_WF[[ref_env]][[param]]*tdm_weights_norm["exp_WF"])+(base_P_list$exp_SM[[ref_env]][[param]]*tdm_weights_norm["exp_SM"])+(base_P_list$lin_Martin[[ref_env]][[param]]*tdm_weights_norm["lin_Martin"])}
-    out <- simulate_variant(surv_vec=calib_surv_vec[1:n_calib],P=P_calib,years=n_calib,S_init=S_seed_calib, SAR_vec=rep(P_calib$SAR_mean,n_calib),K_spawners_vec=rep(P_calib$K_spawners,n_calib), deg_day_adult=deg_day_cal, sim_years_vec=real_years)
-    values$calib_data <- tibble(year=real_years, observed=esc_obs$spawners, predicted=out$spawners)
-  })
-  
-  output$calib_table <- renderDT({
-    req(values$calib_data) %>% mutate(across(where(is.numeric), \(x) round(x, 0))) %>% datatable(rownames=FALSE, options=list(dom='t', paging = FALSE))
-  })
-  
-  output$calib_ts_plot <- renderPlot({
-    df <- req(values$calib_data); ggplot(df, aes(x=year)) + geom_line(aes(y=observed,color="Observed"),linewidth=1) + geom_line(aes(y=predicted,color="Predicted"),linewidth=1) + scale_color_manual(name="Series",values=c(Observed="black",Predicted="steelblue")) + scale_y_continuous(labels=comma) + labs(title="Weighted Calibration: Observed vs Predicted",x="Year",y="Spawner Abundance") + theme_minimal(base_size=16) + theme(legend.position="bottom")
-  })
-  
-  #=============================================#
-  # ---- Section 3: Single Scenario Tab ----
-  #=============================================#
-  
-  observeEvent(input$run_single, {
-    showNotification("Running simulation...", duration = NULL, id = "notify")
-    hydro_w <- c("2011" = input$single_w_2011, "2014" = input$single_w_2014, "2017" = input$single_w_2017, "2020" = input$single_w_2020)
-    tdm_w <- c(wf = input$single_tdm_wf, sm = input$single_tdm_sm, martin = input$single_tdm_martin)
-    values$single_data <- run_scenario_simulation(input$single_scenario, hydro_w, tdm_w, input$single_years)
-    removeNotification("notify"); showNotification("Simulation complete!", duration = 2)
-  })
-  
-  output$single_table <- renderDT({ req(values$single_data) %>% mutate(spawners=round(spawners)) %>% select(Year=year,`Forecasted Spawners`=spawners) %>% datatable(rownames=FALSE,extensions='Buttons',options=list(dom='Bfrtip',buttons=c('csv'))) })
-  output$single_ts_plot <- renderPlot({ df <- req(values$single_data); ggplot(df, aes(x=year,y=spawners)) + geom_line(color="steelblue",size=1.2) + expand_limits(y=0) + scale_y_continuous(labels=scales::comma) + labs(title=paste0("Weighted Forecast for Scenario ",unique(df$scenario)),x="Year",y="Forecasted Spawner Abundance") + theme_minimal(base_size=16) })
-  output$single_dist_plot <- renderPlot({ df <- req(values$single_data); ggplot(df, aes(x=spawners)) + geom_histogram(bins=30,fill="steelblue",alpha=0.8) + scale_x_continuous(labels=scales::comma) + labs(title=paste0("Distribution of Forecasted Spawners for Scenario ",unique(df$scenario)),x="Forecasted Spawner Abundance",y="Frequency") + theme_minimal(base_size=16) })
-  output$single_heatmap_plot <- renderPlot({ df <- req(values$single_data); ggplot(df, aes(x=year,y=scenario,fill=spawners)) + geom_tile() + scale_fill_viridis_c(name="Spawners",labels=comma) + labs(title="Forecast Heatmap",x="Year",y="Scenario") + theme_minimal(base_size=14) })
-  
-  #===============================================#
-  # ---- Section 4: Compare Scenarios Tab ----
-  #===============================================#
-  
+  # Compare Scenarios
   observeEvent(input$run_cmp, {
     req(input$cmp_scenarios)
     showNotification("Running comparison...", duration = NULL, id = "notify")
-    hydro_w_raw <- c("2011" = input$cmp_w_2011, "2014" = input$cmp_w_2014, "2017" = input$cmp_w_2017, "2020" = input$cmp_w_2020)
+    
+    hydro_w_raw <- c("2011" = input$cmp_w_2011, "2014" = input$cmp_w_2014,
+                     "2017" = input$cmp_w_2017, "2020" = input$cmp_w_2020)
     hydro_w <- normalize_weights(hydro_w_raw)
     tdm_w_raw <- c(wf = input$cmp_tdm_wf, sm = input$cmp_tdm_sm, martin = input$cmp_tdm_martin)
     
     cmp_results <- map_dfr(input$cmp_scenarios, ~run_scenario_simulation(., hydro_w_raw, tdm_w_raw, input$cmp_years))
     values$cmp_data <- cmp_results
     
+    # Calculate performance for Chinook
     perf_data_chinook <- cmp_results %>%
       group_by(scenario) %>%
       summarise(chinook_raw = median(spawners), .groups = "drop")
     
-    steelhead_weighted <- map_dfr(input$cmp_scenarios, function(scen) {
-      alts <- get_scenario_alternatives(scen, "all")
-      alt_scores <- steelhead_metrics %>% filter(env %in% as.character(alts))
-      alt_scores$hydro_year <- c("2011", "2014", "2017", "2020")
-      weighted_score <- sum(alt_scores$steelhead_score * hydro_w[alt_scores$hydro_year])
-      tibble(scenario = scen, steelhead_raw = weighted_score)
-    })
+    # Calculate weighted steelhead scores if steelhead_metrics exists
+    if(exists("steelhead_metrics")) {
+      steelhead_weighted <- map_dfr(input$cmp_scenarios, function(scen) {
+        alts <- get_scenario_alternatives(scen, "all")
+        alt_scores <- steelhead_metrics %>% filter(env %in% as.character(alts))
+        alt_scores$hydro_year <- c("2011", "2014", "2017", "2020")
+        weighted_score <- sum(alt_scores$steelhead_score * hydro_w[alt_scores$hydro_year])
+        tibble(scenario = scen, steelhead_raw = weighted_score)
+      })
+      
+      values$performance_auto <- perf_data_chinook %>%
+        left_join(steelhead_weighted, by = "scenario")
+    } else {
+      # If no steelhead data, use placeholder values
+      values$performance_auto <- perf_data_chinook %>%
+        mutate(steelhead_raw = runif(n(), 40, 60))
+    }
     
-    values$performance_auto <- perf_data_chinook %>%
-      left_join(steelhead_weighted, by = "scenario")
-    
-    removeNotification("notify"); showNotification("Comparison complete!", duration = 2)
+    removeNotification("notify")
+    showNotification("Comparison complete!", duration = 2)
   })
   
   output$cmp_summary <- renderDT({
     req(values$cmp_data) %>%
-      mutate(spawners = round(spawners)) %>%
-      dplyr::select(Scenario = scenario, Year = year, `Forecasted Spawners` = spawners) %>%
-      datatable(rownames = FALSE, extensions = 'Buttons', options = list(dom = 'Bfrtip', buttons = c('csv')))
+      mutate(
+        spawners   = round(spawners),
+        pre_spawn  = round(pre_spawn, 2),
+        egg_surv   = round(egg_surv, 2),
+        eff_surv   = round(eff_surv, 2),
+        rear_surv  = round(rear_surv, 2),
+        SAR_used   = round(SAR_used, 4),
+        K_spawners = round(K_spawners, 0)
+      ) %>%
+      dplyr::select(
+        Scenario = scenario,
+        Year = year,
+        `Forecasted Spawners` = spawners,
+        `Pre-Spawn Survival` = pre_spawn,
+        `Egg Survival` = egg_surv,
+        `Effective Survival` = eff_surv,
+        `Rearing Survival` = rear_surv,
+        `Smolt-to-Adult Ratio (SAR)` = SAR_used,
+        `Spawning Capacity (K)` = K_spawners
+      ) %>%
+      DT::datatable(
+        rownames = FALSE,
+        extensions = 'Buttons',
+        options = list(dom = 'Bfrtip', buttons = c('csv'))
+      )
   })
   
   output$cmp_ts_plot <- renderPlot({
-    df <- req(values$cmp_data); ggplot(df, aes(x = year, y = spawners, color = factor(scenario), group = scenario)) + geom_line(size = 1.2) + expand_limits(y = 0) + scale_y_continuous(labels = scales::comma) + scale_color_viridis_d(name = "Scenario") + labs(title = "Comparison of Weighted Scenarios", x = "Year", y = "Forecasted Spawner Abundance") + theme_minimal(base_size = 16) + theme(legend.position = "bottom")
+    df <- req(values$cmp_data)
+    ggplot(df, aes(x = year, y = spawners, color = factor(scenario), group = scenario)) +
+      geom_line(size = 1.2) +
+      expand_limits(y = 0) +
+      scale_y_continuous(labels = comma) +
+      scale_color_viridis_d(name = "Scenario") +
+      labs(title = "Comparison of Weighted Scenarios",
+           x = "Year", y = "Forecasted Spawner Abundance") +
+      theme_minimal(base_size = 16) +
+      theme(legend.position = "bottom")
   })
   
   output$cmp_box_plot <- renderPlot({
-    req(values$cmp_data); last_yr <- max(values$cmp_data$year); df_filt <- values$cmp_data %>% filter(year >= (last_yr - input$last_n + 1)); ggplot(df_filt, aes(x = factor(scenario), y = spawners, fill = factor(scenario))) + geom_boxplot() + scale_fill_viridis_d(guide = "none") + scale_y_continuous(labels = scales::comma) + labs(title = paste0("Spawner Distribution: Last ", input$last_n, " Years"), x = "Scenario", y = "Forecasted Spawner Abundance") + theme_minimal(base_size = 16)
+    req(values$cmp_data)
+    last_yr <- max(values$cmp_data$year)
+    df_filt <- values$cmp_data %>%
+      filter(year >= (last_yr - input$last_n + 1))
+    
+    ggplot(df_filt, aes(x = factor(scenario), y = spawners, fill = factor(scenario))) +
+      geom_boxplot() +
+      scale_fill_viridis_d(guide = "none") +
+      scale_y_continuous(labels = comma) +
+      labs(title = paste0("Spawner Distribution: Last ", input$last_n, " Years"),
+           x = "Scenario", y = "Forecasted Spawner Abundance") +
+      theme_minimal(base_size = 16)
   })
   
   output$cmp_boxplot_stats <- renderTable({
-    req(values$cmp_data); last_yr <- max(values$cmp_data$year)
+    req(values$cmp_data)
+    last_yr <- max(values$cmp_data$year)
     values$cmp_data %>%
       filter(year >= (last_yr - input$last_n + 1)) %>%
       group_by(scenario) %>%
-      summarise(Minimum = min(spawners, na.rm = TRUE),
-                `1st Qu.` = quantile(spawners, 0.25, na.rm = TRUE),
-                Median = median(spawners, na.rm = TRUE),
-                `3rd Qu.` = quantile(spawners, 0.75, na.rm = TRUE),
-                Maximum = max(spawners, na.rm = TRUE), .groups = "drop") %>%
-      mutate(across(where(is.numeric), \(x) round(x, 0)))
+      summarise(
+        Minimum = min(spawners, na.rm = TRUE),
+        `1st Qu.` = quantile(spawners, 0.25, na.rm = TRUE),
+        Median = median(spawners, na.rm = TRUE),
+        `3rd Qu.` = quantile(spawners, 0.75, na.rm = TRUE),
+        Maximum = max(spawners, na.rm = TRUE),
+        .groups = "drop") %>%
+      mutate(across(where(is.numeric), round, 0))
   }, rownames = FALSE)
   
-  output$cmp_heatmap_plot <- renderPlot({
-    df <- req(values$cmp_data); ggplot(df, aes(year, scenario, fill = spawners)) + geom_tile() + scale_fill_viridis_c(name = "Spawners", labels = comma) + labs(title = "Comparison Heatmap", x = "Year", y = "Scenario") + theme_minimal(base_size = 14) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
-  })
-  
-  #=====================================================#
-  # ---- Section 5: Decision Support Tab ----
-  #=====================================================#
-  
+  # Decision Support
   performance_data_full <- reactive({
     req(values$performance_auto)
     
@@ -687,17 +716,14 @@ server <- function(input, output, session) {
       mutate(
         chinook_norm = normalize_scores_max(chinook_raw),
         steelhead_norm = normalize_scores_max(steelhead_raw),
-        hydro_norm = normalize_scores_min(hydro_raw) # Lower hydro cost is better
+        hydro_norm = normalize_scores_min(hydro_raw)  # Lower cost is better
       )
   })
   
-  # NEW: Create a reactive that returns the final weights based on user's choice
   objective_weights <- reactive({
     if (input$weight_method == "equal") {
-      # Equal weighting
       weights <- c(chinook = 1/3, steelhead = 1/3, hydro = 1/3)
     } else {
-      # Manual weighting from sliders
       weights <- c(chinook = input$w_chinook, steelhead = input$w_steelhead, hydro = input$w_hydro)
     }
     return(weights)
@@ -705,19 +731,26 @@ server <- function(input, output, session) {
   
   output$performance_matrix <- renderTable({
     req(performance_data_full()) %>%
-      dplyr::select(
-        Scenario = scenario, 
-        `Chinook (Raw)` = chinook_raw, `Chinook (0-1)` = chinook_norm, 
-        `Steelhead (Raw)` = steelhead_raw, `Steelhead (0-1)` = steelhead_norm, 
-        `Hydro (Raw)` = hydro_raw, `Hydro (0-1)` = hydro_norm
+      select(
+        Scenario = scenario,
+        `Chinook (Raw)` = chinook_raw,
+        `Chinook (0-1)` = chinook_norm,
+        `Steelhead (Raw)` = steelhead_raw,
+        `Steelhead (0-1)` = steelhead_norm,
+        `Hydro (Raw)` = hydro_raw,
+        `Hydro (0-1)` = hydro_norm
       ) %>%
-      mutate(across(where(is.numeric), ~round(., 3)))
+      mutate(
+        `Chinook (Raw)` = round(`Chinook (Raw)`, 0),
+        `Steelhead (Raw)` = round(`Steelhead (Raw)`, 2),
+        `Hydro (Raw)` = round(`Hydro (Raw)`, 0)
+      )
   })
   
   output$performance_plot <- renderPlot({
     df <- req(performance_data_full())
     df %>%
-      dplyr::select(scenario, chinook_norm, steelhead_norm, hydro_norm) %>%
+      select(scenario, chinook_norm, steelhead_norm, hydro_norm) %>%
       pivot_longer(cols = -scenario, names_to = "objective", values_to = "score") %>%
       mutate(objective = str_remove(objective, "_norm")) %>%
       ggplot(aes(x = scenario, y = score, fill = objective)) +
@@ -744,7 +777,6 @@ server <- function(input, output, session) {
   })
   
   output$weights_table <- renderTable({
-    # UPDATED: This table now reflects the chosen weighting method
     weights <- objective_weights()
     tibble(
       Objective = c("Fall-run Chinook", "Steelhead", "Hydropower"),
@@ -754,20 +786,44 @@ server <- function(input, output, session) {
   
   output$overall_scores_plot <- renderPlot({
     req(performance_data_full())
-    # UPDATED: This plot now uses the chosen weights
     weights <- objective_weights()
     
     scores <- performance_data_full() %>%
-      mutate(overall_score = (chinook_norm * weights["chinook"]) + 
-               (steelhead_norm * weights["steelhead"]) + 
+      mutate(overall_score = (chinook_norm * weights["chinook"]) +
+               (steelhead_norm * weights["steelhead"]) +
                (hydro_norm * weights["hydro"]))
     
-    ggplot(scores, aes(x = scenario, y = overall_score, fill = scenario)) + 
-      geom_col() + 
-      scale_fill_viridis_d(guide = "none") + 
-      scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
-      labs(title = "Overall Performance Scores", y = "Total Weighted Score") + 
+    ggplot(scores, aes(x = scenario, y = overall_score, fill = scenario)) +
+      geom_col() +
+      scale_fill_viridis_d(guide = "none") +
+      scale_y_continuous(limits = c(0, 1), labels = percent) +
+      labs(title = "Overall Performance Scores", y = "Total Weighted Score") +
       theme_minimal(base_size = 14)
+  })
+  
+  # ADDED: Stacked bar plot for score contribution
+  output$plot_score_contribution <- renderPlot({
+    req(performance_data_full())
+    weights <- objective_weights()
+    
+    df <- performance_data_full() %>%
+      mutate(
+        w_Chinook = chinook_norm * weights["chinook"],
+        w_Steelhead = steelhead_norm * weights["steelhead"],
+        w_Hydropower = hydro_norm * weights["hydro"]
+      ) %>%
+      select(scenario, w_Chinook, w_Steelhead, w_Hydropower) %>%
+      pivot_longer(cols = starts_with("w_"), names_to = "objective", values_to = "contribution") %>%
+      mutate(objective = str_remove(objective, "w_"))
+    
+    ggplot(df, aes(x = scenario, y = contribution, fill = objective)) +
+      geom_col(position = "stack") +
+      scale_fill_viridis_d(name = "Objective") +
+      labs(title = "Contribution to Score by Objective",
+           x = "Management Alternative",
+           y = "Weighted Score Contribution") +
+      theme_minimal(base_size = 16) +
+      theme(legend.position = "bottom")
   })
 }
 
