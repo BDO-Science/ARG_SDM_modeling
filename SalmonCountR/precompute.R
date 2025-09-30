@@ -1123,7 +1123,93 @@ steelhead_metrics <- df_all %>%
   ) %>%
   ungroup()
 
-# ---- 37. SAVE ALL OUTPUTS FOR SHINY APPLICATION ----
+# ---- 37. CALCULATE EXTREME SWING WEIGHTING RANGES ----
+# Calculate Chinook performance under all extreme weight combinations
+# for use in Swing Weighting tool
+
+# Define extreme weight combinations
+wyt_extremes <- list(
+  "2011_only" = c("2011" = 1, "2014" = 0, "2017" = 0, "2020" = 0),
+  "2014_only" = c("2011" = 0, "2014" = 1, "2017" = 0, "2020" = 0),
+  "2017_only" = c("2011" = 0, "2014" = 0, "2017" = 1, "2020" = 0),
+  "2020_only" = c("2011" = 0, "2014" = 0, "2017" = 0, "2020" = 1)
+)
+
+tdm_extremes <- list(
+  "wf_only"     = c("exp_WF" = 1, "exp_SM" = 0, "lin_Martin" = 0),
+  "sm_only"     = c("exp_WF" = 0, "exp_SM" = 1, "lin_Martin" = 0),
+  "martin_only" = c("exp_WF" = 0, "exp_SM" = 0, "lin_Martin" = 1)
+)
+
+swing_combinations <- expand.grid(
+  wyt = names(wyt_extremes),
+  tdm = names(tdm_extremes),
+  stringsAsFactors = FALSE
+)
+
+# Use the existing results_full data
+swing_results <- map_dfr(1:nrow(swing_combinations), function(i) {
+  wyt_name <- swing_combinations$wyt[i]
+  tdm_name <- swing_combinations$tdm[i]
+  
+  wyt_weights <- wyt_extremes[[wyt_name]]
+  tdm_weights <- tdm_extremes[[tdm_name]]
+  
+  cat(sprintf("  Combo %d/%d: %s + %s\n", i, nrow(swing_combinations), wyt_name, tdm_name))
+  
+  # For each scenario, calculate weighted average across WYT and TDM
+  scenario_results <- map_dfr(c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6"), function(scen) {
+    
+    alts <- get_scenario_alternatives(scen, "all")
+    hydro_years <- c("2011", "2014", "2017", "2020")
+    
+    combined_spawners <- 0
+    
+    for (j in seq_along(alts)) {
+      alt_id <- as.character(alts[j])
+      hydro_year <- hydro_years[j]
+      
+      # Get results for each TDM variant for this alternative
+      tdm_spawners <- 0
+      for (variant_name in names(tdm_weights)) {
+        if (tdm_weights[variant_name] > 0) {
+          # Filter results for this specific env and variant
+          variant_results <- results_full %>%
+            filter(env == alt_id, variant == variant_name, year > max(real_years)) %>%
+            slice_head(n = 50)
+          
+          if (nrow(variant_results) > 0) {
+            tdm_spawners <- tdm_spawners + median(variant_results$spawners) * tdm_weights[variant_name]
+          }
+        }
+      }
+      
+      # Weight by hydro year
+      combined_spawners <- combined_spawners + (tdm_spawners * wyt_weights[hydro_year])
+    }
+    
+    tibble(
+      scenario = scen,
+      median_spawners = combined_spawners
+    )
+  })
+  
+  tibble(
+    wyt_combo = wyt_name,
+    tdm_combo = tdm_name,
+    min_spawners = min(scenario_results$median_spawners),
+    max_spawners = max(scenario_results$median_spawners)
+  )
+})
+
+# Calculate overall ranges
+swing_ranges <- tibble(
+  objective = "Fall-run Chinook",
+  worst_case = min(swing_results$min_spawners),
+  best_case = max(swing_results$max_spawners)
+)
+
+# ---- 38. SAVE ALL OUTPUTS FOR SHINY APPLICATION ----
 # Save all processed data frames and model objects as .rds files. These files
 # will be loaded directly by the Shiny dashboard for fast startup.
 
@@ -1140,6 +1226,8 @@ saveRDS(stoch_SAR_opts,        here("SalmonCountR","app_data","stoch_SAR_opts.rd
 saveRDS(sim_years,             here("SalmonCountR","app_data","sim_years.rds"))
 saveRDS(spawn_dates_by_alt,    here("SalmonCountR","app_data","spawn_dates_by_alt.rds"))
 saveRDS(steelhead_metrics, here("SalmonCountR","app_data", "steelhead_metrics.rds"))
+saveRDS(swing_ranges, here("SalmonCountR","app_data","swing_ranges.rds"))
+saveRDS(swing_results, here("SalmonCountR","app_data","swing_extreme_combos.rds"))
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                             END OF PRECOMPUTE SCRIPT                          ║

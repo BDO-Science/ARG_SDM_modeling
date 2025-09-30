@@ -1366,6 +1366,22 @@ eval_year <- function(sim_yr, sim_redds_split, env_cache, tdm_defs) {
   rbindlist(env_tables, use.names = TRUE, fill = TRUE)
 }
 
+# ---- Helper function for scenario alternatives ----
+get_scenario_alternatives <- function(scenario, hydro_year) {
+  # Mapping: Alt 1-9 (2011), 10-18 (2014), 19-27 (2017), 28-36 (2020)
+  # Within each hydro year: 1=NB, 2=PB1, 3=PB2, 4=PB2b, 5=PB2c, 6=PB3, 7=PB4, 8=PB5, 9=PB6
+  scenario_map <- c("NB"=1, "PB1"=2, "PB2"=3, "PB2b"=4, "PB2c"=5, "PB3"=6, "PB4"=7, "PB5"=8, "PB6"=9)
+  hydro_map <- c("2011"=0, "2014"=9, "2017"=18, "2020"=27)
+  
+  if (hydro_year == "all") {
+    # Return alternatives for this scenario across all hydro years
+    base_idx <- scenario_map[scenario]
+    return(c(base_idx, base_idx+9, base_idx+18, base_idx+27))
+  } else {
+    return(hydro_map[hydro_year] + scenario_map[scenario])
+  }
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # END OF FUNCTIONS.R
 # ═══════════════════════════════════════════════════════════════════════════════

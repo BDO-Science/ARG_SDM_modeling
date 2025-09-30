@@ -80,11 +80,93 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    
                                    h4("Management Structure:"),
                                    tags$ul(
-                                     tags$li(strong("28 Total Alternatives:"), "7 scenarios × 4 hydrological year types"),
-                                     tags$li(strong("Scenarios:"), "No Bypass (NB) and 6 Power Bypass configurations (PB1-PB6) with varying flow rates and timing"),
+                                     tags$li(strong("36 Total Alternatives:"), "9 scenarios × 4 hydrological year types"),
+                                     tags$li(strong("Scenarios:"), "No Bypass (NB) and 8 Power Bypass configurations (S1-S6, including S2b and S2c variants) with varying flow rates and timing"),
                                      tags$li(strong("Hydrological Years:"), "2011 (Wet), 2014 (Critical), 2017 (Wet), 2020 (Dry)"),
                                      tags$li(strong("Temperature Data:"), "Oct 18 - Dec 31 forecast window from SDM Power Bypass modeling, combined with 14-year USGS gauge climatology (2011-2025) for full annual cycles"),
                                      tags$li(strong("Simulation Period:"), "2025-2150 with dynamic weighting of hydrological conditions and TDM models")
+                                   ),
+                                   
+                                   h4("Power Bypass Scenario Specifications:"),
+                                   tags$div(style = "margin-left: 20px;",
+                                            tags$table(class = "table table-striped table-condensed",
+                                                       tags$thead(
+                                                         tags$tr(
+                                                           tags$th("Scenario"),
+                                                           tags$th("Bypass (AF)"),
+                                                           tags$th("Bypass (MWh)"),
+                                                           tags$th("Loss ($)"),
+                                                           tags$th("Increase (mTCO2)"),
+                                                           tags$th("Description")
+                                                         )
+                                                       ),
+                                                       tags$tbody(
+                                                         tags$tr(
+                                                           tags$td(strong("S1")),
+                                                           tags$td("10,163"),
+                                                           tags$td("2,424"),
+                                                           tags$td("$111,422"),
+                                                           tags$td("1,149"),
+                                                           tags$td("125 cfs starting Oct 15, 250 cfs on Oct 28, 125 cfs on Nov 7, end bypass on Nov 14")
+                                                         ),
+                                                         tags$tr(
+                                                           tags$td(strong("S2")),
+                                                           tags$td("32,224"),
+                                                           tags$td("7,674"),
+                                                           tags$td("$376,671"),
+                                                           tags$td("3,650"),
+                                                           tags$td("250 cfs starting Oct 15, 500 cfs on Oct 28, 250 cfs on Nov 14, end bypass on Nov 30")
+                                                         ),
+                                                         tags$tr(
+                                                           tags$td(strong("S2b")),
+                                                           tags$td("40,156"),
+                                                           tags$td("9,558"),
+                                                           tags$td("$470,090"),
+                                                           tags$td("4,522"),
+                                                           tags$td("250 cfs starting Oct 15, 500 cfs on Oct 28, end bypass on Nov 30")
+                                                         ),
+                                                         tags$tr(
+                                                           tags$td(strong("S2c")),
+                                                           tags$td("37,181"),
+                                                           tags$td("8,846"),
+                                                           tags$td("$433,215"),
+                                                           tags$td("4,195"),
+                                                           tags$td("250 cfs starting Oct 21, 500 cfs on Oct 28, end bypass on Nov 30")
+                                                         ),
+                                                         tags$tr(
+                                                           tags$td(strong("S3")),
+                                                           tags$td("17,351"),
+                                                           tags$td("4,135"),
+                                                           tags$td("$201,552"),
+                                                           tags$td("1,932"),
+                                                           tags$td("250 cfs starting Oct 21, 500 cfs on Oct 28, 250 cfs on Nov 7, end bypass on Nov 14")
+                                                         ),
+                                                         tags$tr(
+                                                           tags$td(strong("S4")),
+                                                           tags$td("20,822"),
+                                                           tags$td("4,959"),
+                                                           tags$td("$241,590"),
+                                                           tags$td("2,350"),
+                                                           tags$td("250 cfs starting Oct 21, 500 cfs on Oct 28, 250 cfs on Nov 7, end bypass on Nov 21")
+                                                         ),
+                                                         tags$tr(
+                                                           tags$td(strong("S5")),
+                                                           tags$td("17,351"),
+                                                           tags$td("4,130"),
+                                                           tags$td("$199,382"),
+                                                           tags$td("1,974"),
+                                                           tags$td("500 cfs bypass starting Oct 28, reduce to 250 on Nov 7, end bypass on Nov 21")
+                                                         ),
+                                                         tags$tr(
+                                                           tags$td(strong("S6")),
+                                                           tags$td("30,141"),
+                                                           tags$td("7,100"),
+                                                           tags$td("$348,806"),
+                                                           tags$td("3,321"),
+                                                           tags$td("100 cfs Oct 1, 200 cfs Oct 8, 300 cfs Oct 15, 400 cfs Oct 22, 500 cfs Nov 1, ending Nov 14")
+                                                         )
+                                                       )
+                                            )
                                    ),
                                    
                                    h3("Model Components"),
@@ -105,7 +187,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                      tags$li("Temperature coefficients: β_Oct and β_Nov control timing shifts with temperature"),
                                      tags$li("Threshold parameters (ζ) define cumulative probability boundaries between periods"),
                                      tags$li("Model formula: P(spawn in period j) = logit⁻¹(ζⱼ - β'X) - logit⁻¹(ζⱼ₋₁ - β'X)"),
-                                     tags$li("Calibrated on 2011-2024 American River carcass survey data (n = observations)")
+                                     tags$li("Calibrated on 2011-2024 American River carcass survey data")
                                    ),
                                    
                                    h4("3. Temperature-Dependent Mortality (TDM)"),
@@ -168,7 +250,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                      tags$li(strong("Carcass Surveys:"), "American River sections NB, W, 1a, 1b, 2, 3 (2011-2024)"),
                                      tags$li(strong("Temperature:"), "USGS stations 11446980, 11446500 (15-minute intervals aggregated to daily)"),
                                      tags$li(strong("Age Structure:"), "Coded wire tag recoveries from Central Valley database"),
-                                     tags$li(strong("Power Bypass Modeling:"), "SDM temperature projections for 7 operational scenarios")
+                                     tags$li(strong("Power Bypass Modeling:"), "SDM temperature projections for 9 operational scenarios")
                                    ),
                                    
                                    h3("Key Equations Reference"),
@@ -208,18 +290,17 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    h4("Interactive Components:"),
                                    tags$ul(
                                      tags$li(strong("Temperature Explorer:"), "Visualize weighted temperature patterns across scenarios and hydrological years"),
-                                     tags$li(strong("Calibration Tab:"), "Adjust TDM model weights and examine historical fit"),
-                                     tags$li(strong("Single Scenario Analysis:"), "Detailed forecasts with custom hydrology and TDM weighting"),
-                                     tags$li(strong("Scenario Comparison:"), "Side-by-side evaluation of multiple alternatives"),
-                                     tags$li(strong("Swing Weighting:"), "Multi-objective decision support with importance ratings"),
-                                     tags$li(strong("Consequence Table:"), "Raw and normalized (0-1) scores for all objectives")
+                                     tags$li(strong("Scenario Comparison:"), "Side-by-side evaluation of multiple alternatives with customizable hydrology and TDM weighting"),
+                                     tags$li(strong("Swing Weighting:"), "Interactive preference elicitation tool to determine objective importance through hypothetical alternative rankings"),
+                                     tags$li(strong("Decision Support:"), "Multi-objective analysis with consequence tables, trade-off plots, and weighted performance scores")
                                    ),
                                    
                                    h4("Weighting Options:"),
                                    tags$ul(
                                      tags$li(strong("Hydrology Weights:"), "Adjust relative importance of 4 water year types (sum to 1.0)"),
                                      tags$li(strong("TDM Model Weights:"), "Combine 3 mortality models with custom weights (sum to 1.0)"),
-                                     tags$li(strong("Default Weights:"), "TDM: 51% Water Forum, 24% SALMOD, 25% Martin; Hydrology: 25% each")
+                                     tags$li(strong("Objective Weights:"), "Two methods: (1) Equal weights (33.3% each), (2) Manual slider adjustment, or derive from Swing Weighting tab"),
+                                     tags$li(strong("Default Weights:"), "TDM: 51% Water Forum, 24% SALMOD, 25% Martin; Hydrology: 25% each; Objectives: 40% Chinook, 30% Steelhead, 30% Hydropower")
                                    ),
                                    
                                    h3("Technical Implementation"),
@@ -250,13 +331,6 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                      tags$li("Martin, B.T., Pike, A., John, S.N., Hamda, N., Roberts, J., Lindley, S.T., Danner, E.M. (2017). Phenomenological vs. biophysical models of thermal stress in aquatic eggs. Ecology Letters 20:50-59."),
                                      tags$li("USFWS (2006). SALMOD: Salmon Population Model Version 3.0. Sacramento Fish and Wildlife Office."),
                                      tags$li("CDFW GrandTab (2024). California Central Valley Chinook Salmon Escapement Database. Available at: https://wildlife.ca.gov/Conservation/Fishes/Chinook-Salmon/Anadromous-Assessment")
-                                   ),
-                                   
-                                   h3("Version History"),
-                                   tags$ul(
-                                     tags$li(strong("v3.0 (Current):"), "28-alternative structure with SDM Power Bypass temperature integration"),
-                                     tags$li(strong("v2.0:"), "10-alternative version with preliminary temperature scenarios"),
-                                     tags$li(strong("v1.0:"), "Initial 5-alternative proof of concept")
                                    )
                             )
                           )
@@ -348,9 +422,15 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                      tags$ol(
                                        tags$li("Review the three hypothetical alternatives below. Each performs BEST on one objective and WORST on all others."),
                                        tags$li("The 'Worst Alternative' scores worst on all objectives (rank 4, score 0)."),
-                                       tags$li(strong("Rank"), "alternatives 1-3 based on which improvement matters most to you."),
-                                       tags$li(strong("Score"), "the alternatives: Rank 1 gets 100 points. Score ranks 2-3 between 0-100."),
-                                       tags$li("Weights are calculated automatically: weight = score / total_scores."),
+                                       tags$li(strong("Rank"), "alternatives 1-3 based on which improvement matters most to you (1 = most valuable improvement)."),
+                                       tags$li(strong("Score the alternatives:"), 
+                                               tags$ul(
+                                                 tags$li(strong("Rank 1 gets 100 points"), " (this is the reference)"),
+                                                 tags$li("Rank 2: Score between 0-100 based on how valuable that improvement is compared to rank 1"),
+                                                 tags$li("Rank 3: Score between 0-100 based on how valuable that improvement is compared to rank 1"),
+                                                 tags$li("Example: If rank 2 is half as important as rank 1, give it 50 points")
+                                               )),
+                                       tags$li("Weights are calculated automatically: weight = score / sum(all scores)."),
                                        tags$li("Click 'Apply to Decision Support' to use these weights in your analysis.")
                                      )
                                    ),
@@ -976,56 +1056,51 @@ server <- function(input, output, session) {
   
   # Display objective ranges
   output$swing_ranges_table <- renderTable({
-    req(performance_data_full())
-    
-    df <- performance_data_full()
     
     tibble(
       Objective = c("Fall-run Chinook", "Steelhead", "Hydropower"),
       Direction = c("Maximize", "Maximize", "Minimize"),
       `Worst Case` = c(
-        min(df$chinook_raw),
-        min(df$steelhead_raw),
-        max(df$hydro_raw)
+        swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"],
+        min(steelhead_metrics$steelhead_score),
+        max(hardcoded_hydro_scores)
       ),
       `Best Case` = c(
-        max(df$chinook_raw),
-        max(df$steelhead_raw),
-        min(df$hydro_raw)
+        swing_ranges$best_case[swing_ranges$objective == "Fall-run Chinook"],
+        max(steelhead_metrics$steelhead_score),
+        min(hardcoded_hydro_scores)
       )
     ) %>%
       mutate(across(where(is.numeric), ~round(., 0)))
-  }, align = 'lccc')  # Changed from 'lcccc' to 'lccc' (4 columns)
+  }, align = 'lccc')
   
   # Display hypothetical alternatives
   output$swing_alternatives_table <- renderTable({
-    req(performance_data_full())
-    
-    df <- performance_data_full()
+    req(swing_ranges)  # Use the pre-computed ranges instead
     
     tibble(
       Alternative = c("Worst Alternative", "Alt 1: Best Chinook", "Alt 2: Best Steelhead", "Alt 3: Best Hydropower"),
       `Chinook Abundance` = c(
-        min(df$chinook_raw),
-        max(df$chinook_raw),
-        min(df$chinook_raw),
-        min(df$chinook_raw)
+        swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"],
+        swing_ranges$best_case[swing_ranges$objective == "Fall-run Chinook"],
+        swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"],
+        swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"]
       ),
       `Steelhead Score` = c(
-        min(df$steelhead_raw),
-        min(df$steelhead_raw),
-        max(df$steelhead_raw),
-        min(df$steelhead_raw)
+        min(steelhead_metrics$steelhead_score),
+        min(steelhead_metrics$steelhead_score),
+        max(steelhead_metrics$steelhead_score),
+        min(steelhead_metrics$steelhead_score)
       ),
       `Hydropower Cost` = c(
-        max(df$hydro_raw),
-        max(df$hydro_raw),
-        max(df$hydro_raw),
-        min(df$hydro_raw)
+        max(hardcoded_hydro_scores),
+        max(hardcoded_hydro_scores),
+        max(hardcoded_hydro_scores),
+        min(hardcoded_hydro_scores)
       )
     ) %>%
       mutate(across(where(is.numeric), ~round(., 0)))
-  }, align = 'lccc')  # Changed from 'lccc' to 'lccc' (4 columns - this one was correct)
+  }, align = 'lccc')
   
   # Calculate and display weights
   swing_weights_calculated <- reactive({
