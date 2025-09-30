@@ -335,14 +335,14 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                           )
                  ),
                  
-                 # ---- Decision Support Tab (WITH STACKED BAR PLOT) ----
                  tabPanel("Decision Support",
                           sidebarLayout(
                             sidebarPanel(
                               h4("Objective Weighting"),
                               radioButtons("weight_method", "Choose Weighting Method:",
                                            choices = c("Equal Weights" = "equal",
-                                                       "Manual Weights" = "manual"),
+                                                       "Manual Weights" = "manual",
+                                                       "Swing Weighting" = "swing"),  # ADD THIS
                                            selected = "manual"),
                               hr(),
                               conditionalPanel(
@@ -351,6 +351,11 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                 sliderInput("w_chinook", "Fall-run Chinook", min = 0, max = 1, value = 0.4, step = 0.05),
                                 sliderInput("w_steelhead", "Steelhead", min = 0, max = 1, value = 0.3, step = 0.05),
                                 sliderInput("w_hydro", "Hydropower", min = 0, max = 1, value = 0.3, step = 0.05)
+                              ),
+                              conditionalPanel(
+                                condition = "input.weight_method == 'swing'",
+                                p("Use the Swing Weighting tab to determine weights based on preference rankings."),
+                                actionButton("goto_swing", "Go to Swing Weighting", class = "btn-primary")
                               ),
                               width = 3
                             ),
@@ -374,7 +379,72 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                          plotOutput("performance_plot"),
                                          hr(),
                                          h4("Trade-off Analysis (Chinook vs. Hydropower)"),
-                                         plotOutput("tradeoff_plot"))
+                                         plotOutput("tradeoff_plot")),
+                                
+                                # ADD SWING WEIGHTING TAB HERE
+                                tabPanel("Swing Weighting",
+                                         fluidRow(
+                                           column(12,
+                                                  h4("Swing Weighting for Objective Importance"),
+                                                  p("Swing weighting helps determine objective weights by comparing hypothetical alternatives that perform best on one objective and worst on all others."),
+                                                  hr(),
+                                                  
+                                                  wellPanel(
+                                                    h5(icon("info-circle"), "Instructions:"),
+                                                    tags$ol(
+                                                      tags$li("Review the three hypothetical alternatives below. Each alternative performs BEST on one objective and WORST on all others."),
+                                                      tags$li("The 'Worst Alternative' scores worst on all objectives and is automatically ranked last (rank 4) with a score of 0."),
+                                                      tags$li(strong("Rank"), "the three hypothetical alternatives from 1 (most preferred) to 3 based on which improvement matters most to you."),
+                                                      tags$li(strong("Score"), "the alternatives: Give rank 1 a score of 100, then score ranks 2 and 3 between 0-100 based on their relative value."),
+                                                      tags$li("Click 'Apply Weights' to use these calculated weights in your analysis.")
+                                                    )
+                                                  ),
+                                                  
+                                                  hr(),
+                                                  h5("Objective Ranges"),
+                                                  tableOutput("swing_ranges_table"),
+                                                  
+                                                  hr(),
+                                                  h5("Hypothetical Alternatives to Rank"),
+                                                  p(em("Each alternative below performs BEST on one objective (highlighted) and worst on all others.")),
+                                                  tableOutput("swing_alternatives_table"),
+                                                  
+                                                  hr(),
+                                                  h5("Ranking and Scoring"),
+                                                  fluidRow(
+                                                    column(4,
+                                                           h6("Alternative 1: Best Chinook"),
+                                                           numericInput("rank_chinook", "Rank (1-3):", value = 1, min = 1, max = 3, step = 1),
+                                                           numericInput("score_chinook", "Score (0-100):", value = 100, min = 0, max = 100, step = 1)
+                                                    ),
+                                                    column(4,
+                                                           h6("Alternative 2: Best Steelhead"),
+                                                           numericInput("rank_steelhead", "Rank (1-3):", value = 2, min = 1, max = 3, step = 1),
+                                                           numericInput("score_steelhead", "Score (0-100):", value = 50, min = 0, max = 100, step = 1)
+                                                    ),
+                                                    column(4,
+                                                           h6("Alternative 3: Best Hydropower"),
+                                                           numericInput("rank_hydropower", "Rank (1-3):", value = 3, min = 1, max = 3, step = 1),
+                                                           numericInput("score_hydropower", "Score (0-100):", value = 25, min = 0, max = 100, step = 1)
+                                                    )
+                                                  ),
+                                                  
+                                                  uiOutput("swing_validation"),
+                                                  
+                                                  hr(),
+                                                  h5("Calculated Weights"),
+                                                  tableOutput("swing_weights_table"),
+                                                  
+                                                  hr(),
+                                                  actionButton("apply_swing_weights", "Apply These Weights to Analysis", 
+                                                               class = "btn-primary btn-lg"),
+                                                  
+                                                  hr(),
+                                                  h5("Visual Comparison"),
+                                                  plotOutput("swing_weights_plot", height = "300px")
+                                           )
+                                         )
+                                )
                               ),
                               width = 9
                             )
@@ -765,6 +835,14 @@ server <- function(input, output, session) {
   objective_weights <- reactive({
     if (input$weight_method == "equal") {
       weights <- c(chinook = 1/3, steelhead = 1/3, hydro = 1/3)
+    } else if (input$weight_method == "swing") {
+      # Use swing weights if available
+      swing_w <- swing_weights_calculated()
+      weights <- c(
+        chinook = swing_w$Weight[swing_w$Objective == "Fall-run Chinook"],
+        steelhead = swing_w$Weight[swing_w$Objective == "Steelhead"],
+        hydro = swing_w$Weight[swing_w$Objective == "Hydropower"]
+      )
     } else {
       weights <- c(chinook = input$w_chinook, steelhead = input$w_steelhead, hydro = input$w_hydro)
     }
@@ -866,6 +944,151 @@ server <- function(input, output, session) {
            y = "Weighted Score Contribution") +
       theme_minimal(base_size = 16) +
       theme(legend.position = "bottom")
+  })
+  # Validation for rankings
+  output$swing_validation <- renderUI({
+    ranks <- c(input$rank_chinook, input$rank_steelhead, input$rank_hydropower)
+    scores <- c(input$score_chinook, input$score_steelhead, input$score_hydropower)
+    
+    messages <- list()
+    
+    # Check for duplicate ranks
+    if (length(unique(ranks)) != 3) {
+      messages <- c(messages, list(
+        tags$div(class = "alert alert-warning", 
+                 icon("exclamation-triangle"), 
+                 " Each alternative must have a unique rank (1, 2, or 3).")
+      ))
+    }
+    
+    # Check that scores align with ranks
+    rank_order <- order(ranks)
+    score_order <- order(-scores)  # Negative for descending
+    
+    if (!identical(rank_order, score_order)) {
+      messages <- c(messages, list(
+        tags$div(class = "alert alert-warning",
+                 icon("exclamation-triangle"),
+                 " Scores should match rankings: Rank 1 should have the highest score, rank 3 the lowest.")
+      ))
+    }
+    
+    if (length(messages) == 0) {
+      tags$div(class = "alert alert-success",
+               icon("check-circle"),
+               " Rankings and scores are valid!")
+    } else {
+      do.call(tagList, messages)
+    }
+  })
+  
+  # Display objective ranges
+  output$swing_ranges_table <- renderTable({
+    req(performance_data_full())
+    
+    df <- performance_data_full()
+    
+    tibble(
+      Objective = c("Fall-run Chinook", "Steelhead", "Hydropower"),
+      Direction = c("Maximize", "Maximize", "Minimize"),
+      `Worst Case` = c(
+        min(df$chinook_raw),
+        min(df$steelhead_raw),
+        max(df$hydro_raw)
+      ),
+      `Best Case` = c(
+        max(df$chinook_raw),
+        max(df$steelhead_raw),
+        min(df$hydro_raw)
+      )
+    ) %>%
+      mutate(across(where(is.numeric), ~round(., 0)))
+  }, align = 'lccc')  # Changed from 'lcccc' to 'lccc' (4 columns)
+  
+  # Display hypothetical alternatives
+  output$swing_alternatives_table <- renderTable({
+    req(performance_data_full())
+    
+    df <- performance_data_full()
+    
+    tibble(
+      Alternative = c("Worst Alternative", "Alt 1: Best Chinook", "Alt 2: Best Steelhead", "Alt 3: Best Hydropower"),
+      `Chinook Abundance` = c(
+        min(df$chinook_raw),
+        max(df$chinook_raw),
+        min(df$chinook_raw),
+        min(df$chinook_raw)
+      ),
+      `Steelhead Score` = c(
+        min(df$steelhead_raw),
+        min(df$steelhead_raw),
+        max(df$steelhead_raw),
+        min(df$steelhead_raw)
+      ),
+      `Hydropower Cost` = c(
+        max(df$hydro_raw),
+        max(df$hydro_raw),
+        max(df$hydro_raw),
+        min(df$hydro_raw)
+      )
+    ) %>%
+      mutate(across(where(is.numeric), ~round(., 0)))
+  }, align = 'lccc')  # Changed from 'lccc' to 'lccc' (4 columns - this one was correct)
+  
+  # Calculate and display weights
+  swing_weights_calculated <- reactive({
+    scores <- c(
+      Chinook = input$score_chinook,
+      Steelhead = input$score_steelhead,
+      Hydropower = input$score_hydropower
+    )
+    
+    total <- sum(scores)
+    if (total == 0) {
+      weights <- c(Chinook = 0.33, Steelhead = 0.33, Hydropower = 0.34)
+    } else {
+      weights <- scores / total
+    }
+    
+    tibble(
+      Objective = c("Fall-run Chinook", "Steelhead", "Hydropower"),
+      Score = scores,
+      Weight = weights,
+      `Weight %` = scales::percent(weights, accuracy = 0.1)
+    )
+  })
+  
+  output$swing_weights_table <- renderTable({
+    swing_weights_calculated()
+  }, digits = 3)
+  
+  # Plot weights
+  output$swing_weights_plot <- renderPlot({
+    df <- swing_weights_calculated()
+    
+    ggplot(df, aes(x = Objective, y = Weight, fill = Objective)) +
+      geom_col() +
+      geom_text(aes(label = `Weight %`), vjust = -0.5, size = 5) +
+      scale_fill_viridis_d(guide = "none") +
+      scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
+      labs(title = "Calculated Objective Weights from Swing Weighting",
+           y = "Weight", x = NULL) +
+      theme_minimal(base_size = 14)
+  })
+  
+  # Apply weights to the main analysis
+  observeEvent(input$apply_swing_weights, {
+    weights <- swing_weights_calculated()
+    
+    # Update the weight sliders
+    updateSliderInput(session, "w_chinook", value = weights$Weight[weights$Objective == "Fall-run Chinook"])
+    updateSliderInput(session, "w_steelhead", value = weights$Weight[weights$Objective == "Steelhead"])
+    updateSliderInput(session, "w_hydro", value = weights$Weight[weights$Objective == "Hydropower"])
+    
+    # Also switch to manual weights mode
+    updateRadioButtons(session, "weight_method", selected = "manual")
+    
+    showNotification("Swing weights applied to analysis!", type = "message", duration = 3)
   })
 }
 
