@@ -21,6 +21,7 @@ sim_years          <- readRDS(here("SalmonCountR", "app_data", "sim_years.rds"))
 spawn_dates_by_alt <- readRDS(here("SalmonCountR", "app_data","spawn_dates_by_alt.rds"))
 instream <- readRDS(here("SalmonCountR", "app_data","american_river_instream.rds"))
 steelhead_metrics <- readRDS(here("SalmonCountR", "app_data", "steelhead_metrics.rds"))
+swing_ranges <- readRDS(here("SalmonCountR", "app_data", "swing_ranges.rds"))
 
 real_years <- 2011:2024 
 n_sim      <- 114
