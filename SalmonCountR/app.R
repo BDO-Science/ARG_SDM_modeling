@@ -44,6 +44,16 @@ normalize_scores_min <- function(scores) {
   (max_s - scores) / (max_s - min_s)
 }
 
+# Helper for min-max normalization (scales results to 0-1), one for each objective following the swing weighting values
+
+normalize_scores_salmon <- function(scores) {
+  min_s <- min(scores, na.rm = TRUE)
+  max_s <- max(scores, na.rm = TRUE)
+  if (max_s == min_s) return(rep(100, length(scores))) # Return 1 if all values are the same
+  (scores - swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"]) / (swing_ranges$best_case[swing_ranges$objective == "Fall-run Chinook"] - swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"])
+}
+
+
 get_scenario_alternatives <- function(scenario, hydro_year) {
   # Mapping: Alt 1-9 (2011), 10-18 (2014), 19-27 (2017), 28-36 (2020)
   # Within each hydro year: 1=NB, 2=PB1, 3=PB2, 4=PB2b, 5=PB2c, 6=PB3, 7=PB4, 8=PB5, 9=PB6
@@ -906,7 +916,7 @@ server <- function(input, output, session) {
       left_join(hydro_df, by = "scenario") %>%
       mutate(hydro_raw = ifelse(is.na(hydro_raw), 50, hydro_raw)) %>%
       mutate(
-        chinook_norm = normalize_scores_max(chinook_raw),
+        chinook_norm = normalize_scores_salmon(chinook_raw),
         steelhead_norm = normalize_scores_max(steelhead_raw),
         hydro_norm = normalize_scores_min(hydro_raw)  # Lower cost is better
       )
