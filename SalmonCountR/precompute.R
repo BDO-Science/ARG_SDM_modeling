@@ -1107,7 +1107,7 @@ results_full <- purrr::map_dfr(keys, function(key) {
 # This metric is the number of days below 18.3°C in Oct/Nov for each alternative.
 
 # Calculate the metric for each of the 28 alternatives
-steelhead_metrics <- df_all_orig %>%
+steelhead_metrics <- df_all %>%
   # 1. Filter for the relevant time period first
   filter(
     month(Date) %in% c(10, 11),      # October and November

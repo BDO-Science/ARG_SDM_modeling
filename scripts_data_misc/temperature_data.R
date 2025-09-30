@@ -4,97 +4,44 @@ library(tidyverse)
 library(readxl)
 library(writexl)
 
-# This function reads the raw temperature modeling results,
-# fills in empty placeholder scenarios with simulated data,
-# and then reformats the data into 28 distinct alternatives (7 scenarios x 4 hydro years).
+# This function reads the temperature modeling results and reformats into alternatives
 prepare_temperature_file <- function() {
   input_path <- "scripts_data_misc/SDM Power Bypass Temperature Modeling Results.xlsx"
   
   sheets <- excel_sheets(input_path)
   hydro_years <- c("2011", "2014", "2017", "2020")
   
-  all_sheets_filled <- list()
+  all_sheets <- list()
   
   # Copy metadata sheets
   if ("Scenario Summary" %in% sheets) {
-    all_sheets_filled[["Scenario Summary"]] <- read_excel(input_path, sheet = "Scenario Summary")
+    all_sheets[["Scenario Summary"]] <- read_excel(input_path, sheet = "Scenario Summary")
   }
   if ("Flow" %in% sheets) {
-    all_sheets_filled[["Flow"]] <- read_excel(input_path, sheet = "Flow")
+    all_sheets[["Flow"]] <- read_excel(input_path, sheet = "Flow")
   }
   
-  # Fill empty scenarios in each hydro year
+  # Read each hydro year sheet
   for (hydro_year in hydro_years) {
     if (hydro_year %in% sheets) {
       # Skip the first row to use the second row as headers
       df <- read_excel(input_path, sheet = hydro_year, skip = 1)
-      
-      # Explicitly convert columns to numeric to avoid errors
-      base_watt <- as.numeric(df[[3]])
-      base_hazel <- as.numeric(df[[4]])
-      jday <- as.numeric(df[[2]])
-      
-      set.seed(123 + as.numeric(hydro_year))
-      
-      # ====================================================================
-      # FIX APPLIED HERE:
-      # Removed the `if (ncol(df) >= ...)` checks. This forces R to
-      # create columns 5 through 16, which is the desired behavior.
-      # ====================================================================
-      
-      # Create and fill columns for Scenario 1
-      adj <- runif(nrow(df), -0.5, -0.2)
-      df[[5]] <- round(base_watt + adj, 2)
-      df[[6]] <- round(base_hazel + adj, 2)
-      
-      # Create and fill columns for Scenario 2
-      adj <- runif(nrow(df), -1.0, -0.5)
-      df[[7]] <- round(base_watt + adj, 2)
-      df[[8]] <- round(base_hazel + adj, 2)
-      
-      # Create and fill columns for Scenario 3
-      adj <- runif(nrow(df), -1.5, -0.8)
-      df[[9]] <- round(base_watt + adj, 2)
-      df[[10]] <- round(base_hazel + adj, 2)
-      
-      # Create and fill columns for Scenario 4
-      time_factor <- (jday - min(jday, na.rm = TRUE)) / (max(jday, na.rm = TRUE) - min(jday, na.rm = TRUE))
-      adj <- -0.3 - time_factor * 1.2
-      df[[11]] <- round(base_watt + adj, 2)
-      df[[12]] <- round(base_hazel + adj, 2)
-      
-      # Create and fill columns for Scenario 5
-      adj <- runif(nrow(df), -2.0, -1.0)
-      df[[13]] <- round(base_watt + adj, 2)
-      df[[14]] <- round(base_hazel + adj, 2)
-      
-      # Create and fill columns for Scenario 6
-      adj <- runif(nrow(df), -0.3, 0.3)
-      df[[15]] <- round(base_watt + adj, 2)
-      df[[16]] <- round(base_hazel + adj, 2)
-      
-      # Apply temperature floors
-      for (col in seq(3, ncol(df), 2)) {
-        if (col <= ncol(df)) df[[col]] <- pmax(df[[col]], 8, na.rm = TRUE)
-      }
-      for (col in seq(4, ncol(df), 2)) {
-        if (col <= ncol(df)) df[[col]] <- pmax(df[[col]], 7, na.rm = TRUE)
-      }
-      
-      all_sheets_filled[[hydro_year]] <- df
+      all_sheets[[hydro_year]] <- df
     }
   }
   
-  # Create 28 alternatives format
+  # Create alternatives format
   alternatives_list <- list()
-  scenarios <- c("No Bypass", "Scenario 1", "Scenario 2", "Scenario 3", 
-                 "Scenario 4", "Scenario 5", "Scenario 6")
+  
+  # Updated scenarios list to match the actual data
+  scenarios <- c("No Bypass", "Scenario 1", "Scenario 2", "Scenario 2b", 
+                 "Scenario 2c", "Scenario 3", "Scenario 4", "Scenario 5", "Scenario 6")
   
   # Metadata
   metadata_rows <- list()
   alt_num <- 1
   for (hydro_year in hydro_years) {
-    for (scenario_idx in 1:7) {
+    for (scenario_idx in 1:length(scenarios)) {
       metadata_rows[[alt_num]] <- data.frame(
         Alternative = alt_num,
         Scenario = scenarios[scenario_idx],
@@ -105,13 +52,24 @@ prepare_temperature_file <- function() {
   }
   alternatives_list[["metadata"]] <- do.call(rbind, metadata_rows)
   
-  # Extract data for each alternative (this part will now work)
+  # Extract data for each alternative
   alt_counter <- 1
   for (hydro_year in hydro_years) {
-    if (hydro_year %in% names(all_sheets_filled)) {
-      df_hydro <- all_sheets_filled[[hydro_year]]
+    if (hydro_year %in% names(all_sheets)) {
+      df_hydro <- all_sheets[[hydro_year]]
       
-      scenario_cols <- list(c(3,4), c(5,6), c(7,8), c(9,10), c(11,12), c(13,14), c(15,16))
+      # Column pairs for each scenario (columns 3-4, 5-6, 7-8, etc.)
+      # No Bypass: cols 3-4
+      # Scenario 1: cols 5-6
+      # Scenario 2: cols 7-8
+      # Scenario 2b: cols 9-10
+      # Scenario 2c: cols 11-12
+      # Scenario 3: cols 13-14
+      # Scenario 4: cols 15-16
+      # Scenario 5: cols 17-18
+      # Scenario 6: cols 19-20
+      scenario_cols <- list(c(3,4), c(5,6), c(7,8), c(9,10), c(11,12), 
+                            c(13,14), c(15,16), c(17,18), c(19,20))
       
       for (cols in scenario_cols) {
         alt_data <- data.frame(
@@ -125,7 +83,7 @@ prepare_temperature_file <- function() {
     }
   }
   
-  output_path <- "scripts_data_misc/ARG_LAR_TempModeling_placeholders.xlsx"
+  output_path <- "scripts_data_misc/ARG_LAR_TempModeling_alternatives.xlsx"
   write_xlsx(alternatives_list, output_path)
   print(paste("Created", alt_counter - 1, "alternatives in", output_path))
   return(output_path)
@@ -133,7 +91,7 @@ prepare_temperature_file <- function() {
 
 # --- SCRIPT EXECUTION STARTS HERE ---
 
-# 1) PREPARE DATA: Run the function to generate the alternatives file
+# 1) PREPARE DATA: Run the function to reformat the alternatives file
 xlsx_path <- prepare_temperature_file()
 
 # 2) SET PARAMETERS
@@ -174,7 +132,7 @@ clim14 <- amer_obs %>%
   group_by(site, doy) %>%
   summarize(clim_temp = mean(temp, na.rm = TRUE), .groups = "drop")
 
-# 5) READ ALTERNATIVES: Load the 28 generated alternatives
+# 5) READ ALTERNATIVES: Load the generated alternatives
 alts <- excel_sheets(xlsx_path)
 alts <- alts[alts != "metadata"] # Remove the metadata sheet
 
@@ -246,12 +204,12 @@ print(paste("Saved env_ext_list.rds with", length(env_ext_list), "alternatives")
 print(paste("Saved df_all.rds with", nrow(df_all), "rows"))
 
 # 9) VISUALIZATIONS
-# Plot of all 28 alternatives
+# Plot of all alternatives
 ggplot(df_all, aes(Date, temp, color = site)) +
   geom_line(size = 0.5, alpha = 0.8) +
-  facet_wrap(~ env, ncol = 4, scales = "free_y") +
+  facet_wrap(~ env, ncol = 6, scales = "free_y") +
   labs(
-    title = "Observed + Predicted Temp by Alternative (28 total)",
+    title = "Observed + Predicted Temp by Alternative (36 total)",
     x     = "Date",
     y     = "Temperature (°C)",
     color = "Site"
@@ -262,7 +220,7 @@ ggplot(df_all, aes(Date, temp, color = site)) +
 future_temp <- df_all %>%
   filter(site != "AveFol") %>%
   filter(Date >= as.Date("2024-10-18") & Date <= as.Date("2024-12-31")) %>%
-  mutate(env = factor(env, levels = as.character(1:28)))
+  mutate(env = factor(env, levels = as.character(1:36)))
 
 ggplot(future_temp, aes(x = Date, y = temp, color = site)) +
   geom_line(size = 1) +
@@ -270,7 +228,7 @@ ggplot(future_temp, aes(x = Date, y = temp, color = site)) +
   scale_x_date(date_breaks = "2 weeks", date_labels = "%b %d") +
   scale_y_continuous(name = "Temperature (°C)", breaks = seq(0, 25, 2)) +
   labs(x = NULL, y = "Temperature (°C)", color = "Site") +
-  facet_wrap(~ env, ncol = 4) +
+  facet_wrap(~ env, ncol = 6) +
   theme_minimal(base_size = 10) +
   theme(
     axis.title.x = element_text(face = "bold", size = 14),
@@ -280,4 +238,4 @@ ggplot(future_temp, aes(x = Date, y = temp, color = site)) +
   )
 
 print("Temperature data processing complete!")
-print(paste("Created", length(alts), "alternatives (7 scenarios × 4 hydro years)"))
+print(paste("Created", length(alts), "alternatives (9 scenarios × 4 hydro years)"))

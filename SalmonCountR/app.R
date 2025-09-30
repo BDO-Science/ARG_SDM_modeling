@@ -4,6 +4,10 @@ library(DT)
 library(scales)
 library(shinyjs) # Using shinyjs for smoother slider updates
 library(shinyWidgets) # For styled buttons
+library(ggrepel)
+
+# Add this line to fix the select() conflict
+select <- dplyr::select
 
 # The global.R file should load all pre-computed .rds files
 source("global.R")
@@ -40,17 +44,15 @@ normalize_scores_min <- function(scores) {
   (max_s - scores) / (max_s - min_s)
 }
 
-# Map 28 alternatives to scenarios and hydro years
 get_scenario_alternatives <- function(scenario, hydro_year) {
-  # Mapping: Alt 1-7 (2011), 8-14 (2014), 15-21 (2017), 22-28 (2020)
-  # Within each hydro year: 1=NB, 2=PB1, 3=PB2, 4=PB3, 5=PB4, 6=PB5, 7=PB6
-  scenario_map <- c("NB"=1, "PB1"=2, "PB2"=3, "PB3"=4, "PB4"=5, "PB5"=6, "PB6"=7)
-  hydro_map <- c("2011"=0, "2014"=7, "2017"=14, "2020"=21)
+  # Mapping: Alt 1-9 (2011), 10-18 (2014), 19-27 (2017), 28-36 (2020)
+  # Within each hydro year: 1=NB, 2=PB1, 3=PB2, 4=PB2b, 5=PB2c, 6=PB3, 7=PB4, 8=PB5, 9=PB6
+  scenario_map <- c("NB"=1, "PB1"=2, "PB2"=3, "PB2b"=4, "PB2c"=5, "PB3"=6, "PB4"=7, "PB5"=8, "PB6"=9)
+  hydro_map <- c("2011"=0, "2014"=9, "2017"=18, "2020"=27)
   
   if (hydro_year == "all") {
-    # Return alternatives for this scenario across all hydro years
     base_idx <- scenario_map[scenario]
-    return(c(base_idx, base_idx+7, base_idx+14, base_idx+21))
+    return(c(base_idx, base_idx+9, base_idx+18, base_idx+27))
   } else {
     return(hydro_map[hydro_year] + scenario_map[scenario])
   }
@@ -272,8 +274,8 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                               hr(),
                               selectInput("temp_scenario", "Scenario:",
                                           choices = c("No Bypass (NB)"="NB", "Power Bypass 1"="PB1", "Power Bypass 2"="PB2",
-                                                      "Power Bypass 3"="PB3", "Power Bypass 4"="PB4", "Power Bypass 5"="PB5",
-                                                      "Power Bypass 6"="PB6")),
+                                                      "Power Bypass 2b"="PB2b", "Power Bypass 2c"="PB2c", "Power Bypass 3"="PB3",
+                                                      "Power Bypass 4"="PB4", "Power Bypass 5"="PB5", "Power Bypass 6"="PB6")),
                               radioButtons("temp_site", "Site:", choices = c("Ave Watt"="AveWatt", "Ave Hazel"="AveHazel")),
                               radioButtons("temp_period", "Time Period:",
                                            choices = c("Oct-Dec 2025"="oct_dec", "Full Year 2025"="full")),
@@ -297,9 +299,10 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                               h4("Scenarios to Compare"),
                               checkboxGroupInput("cmp_scenarios", "Select:",
                                                  choices = c("No Bypass"="NB", "Power Bypass 1"="PB1", "Power Bypass 2"="PB2",
+                                                             "Power Bypass 2b"="PB2b", "Power Bypass 2c"="PB2c",
                                                              "Power Bypass 3"="PB3", "Power Bypass 4"="PB4",
                                                              "Power Bypass 5"="PB5", "Power Bypass 6"="PB6"),
-                                                 selected = c("NB", "PB1", "PB2", "PB3", "PB4", "PB5", "PB6")),
+                                                 selected = c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6")),
                               hr(),
                               h4("Hydrology Weights"),
                               sliderInput("cmp_w_2011", "2011 (Dry)", value = 0.25, min = 0, max = 1, step = 0.01),
@@ -383,8 +386,8 @@ server <- function(input, output, session) {
   
   # Hard-coded Hydropower Scores
   hardcoded_hydro_scores <- c(
-    "NB"  = 0, "PB1" = 111422, "PB2" = 370826, "PB3" = 201552,
-    "PB4" = 241590, "PB5" = 199382, "PB6" = 348806
+    "NB"  = 0, "PB1" = 111422, "PB2" = 370826, "PB2b" = 470090, "PB2c" = 433215,
+    "PB3" = 201552, "PB4" = 241590, "PB5" = 199382, "PB6" = 348806
   )
   
   # Reactive Values
@@ -395,52 +398,91 @@ server <- function(input, output, session) {
     performance_auto = NULL
   )
   
-  # Helper function for 3-slider auto-adjustment
+  # Helper function for 3-slider auto-adjustment with debouncing
   make_3_slider_observers <- function(id1, id2, id3, lock) {
+    # Use debounce to prevent rapid-fire updates
     observeEvent(input[[id1]], {
       if(lock()) return()
       lock(TRUE)
+      
+      # Add a small delay to allow the UI to settle
+      Sys.sleep(0.01)
+      
       remainder <- 1 - input[[id1]]
       sum_others <- isolate(input[[id2]]) + isolate(input[[id3]])
+      
       if (sum_others > 0) {
-        updateSliderInput(session, id2, value = remainder * (isolate(input[[id2]]) / sum_others))
-        updateSliderInput(session, id3, value = remainder * (isolate(input[[id3]]) / sum_others))
+        new_val2 <- remainder * (isolate(input[[id2]]) / sum_others)
+        new_val3 <- remainder * (isolate(input[[id3]]) / sum_others)
       } else {
-        updateSliderInput(session, id2, value = remainder / 2)
-        updateSliderInput(session, id3, value = remainder / 2)
+        new_val2 <- remainder / 2
+        new_val3 <- remainder / 2
       }
+      
+      # Only update if the change is significant (more than 0.001)
+      if (abs(isolate(input[[id2]]) - new_val2) > 0.001) {
+        updateSliderInput(session, id2, value = new_val2)
+      }
+      if (abs(isolate(input[[id3]]) - new_val3) > 0.001) {
+        updateSliderInput(session, id3, value = new_val3)
+      }
+      
       lock(FALSE)
-    }, ignoreInit = TRUE)
+    }, ignoreInit = TRUE, priority = 1)
     
     observeEvent(input[[id2]], {
       if(lock()) return()
       lock(TRUE)
+      
+      Sys.sleep(0.01)
+      
       remainder <- 1 - input[[id2]]
       sum_others <- isolate(input[[id1]]) + isolate(input[[id3]])
+      
       if (sum_others > 0) {
-        updateSliderInput(session, id1, value = remainder * (isolate(input[[id1]]) / sum_others))
-        updateSliderInput(session, id3, value = remainder * (isolate(input[[id3]]) / sum_others))
+        new_val1 <- remainder * (isolate(input[[id1]]) / sum_others)
+        new_val3 <- remainder * (isolate(input[[id3]]) / sum_others)
       } else {
-        updateSliderInput(session, id1, value = remainder / 2)
-        updateSliderInput(session, id3, value = remainder / 2)
+        new_val1 <- remainder / 2
+        new_val3 <- remainder / 2
       }
+      
+      if (abs(isolate(input[[id1]]) - new_val1) > 0.001) {
+        updateSliderInput(session, id1, value = new_val1)
+      }
+      if (abs(isolate(input[[id3]]) - new_val3) > 0.001) {
+        updateSliderInput(session, id3, value = new_val3)
+      }
+      
       lock(FALSE)
-    }, ignoreInit = TRUE)
+    }, ignoreInit = TRUE, priority = 1)
     
     observeEvent(input[[id3]], {
       if(lock()) return()
       lock(TRUE)
+      
+      Sys.sleep(0.01)
+      
       remainder <- 1 - input[[id3]]
       sum_others <- isolate(input[[id1]]) + isolate(input[[id2]])
+      
       if (sum_others > 0) {
-        updateSliderInput(session, id1, value = remainder * (isolate(input[[id1]]) / sum_others))
-        updateSliderInput(session, id2, value = remainder * (isolate(input[[id2]]) / sum_others))
+        new_val1 <- remainder * (isolate(input[[id1]]) / sum_others)
+        new_val2 <- remainder * (isolate(input[[id2]]) / sum_others)
       } else {
-        updateSliderInput(session, id1, value = remainder / 2)
-        updateSliderInput(session, id2, value = remainder / 2)
+        new_val1 <- remainder / 2
+        new_val2 <- remainder / 2
       }
+      
+      if (abs(isolate(input[[id1]]) - new_val1) > 0.001) {
+        updateSliderInput(session, id1, value = new_val1)
+      }
+      if (abs(isolate(input[[id2]]) - new_val2) > 0.001) {
+        updateSliderInput(session, id2, value = new_val2)
+      }
+      
       lock(FALSE)
-    }, ignoreInit = TRUE)
+    }, ignoreInit = TRUE, priority = 1)
   }
   
   # Create lock and apply observer to objective weight sliders
@@ -515,10 +557,10 @@ server <- function(input, output, session) {
     # Add hydro year labels
     temp_data <- temp_data %>%
       mutate(hydro = case_when(
-        env %in% as.character(1:7) ~ "2011",
-        env %in% as.character(8:14) ~ "2014",
-        env %in% as.character(15:21) ~ "2017",
-        env %in% as.character(22:28) ~ "2020"
+        env %in% as.character(1:9) ~ "2011",
+        env %in% as.character(10:18) ~ "2014",
+        env %in% as.character(19:27) ~ "2017",
+        env %in% as.character(28:36) ~ "2020"
       ))
     
     # Calculate weighted average
@@ -561,10 +603,10 @@ server <- function(input, output, session) {
     
     temp_data <- temp_data %>%
       mutate(hydro = case_when(
-        env %in% as.character(1:7) ~ "2011",
-        env %in% as.character(8:14) ~ "2014",
-        env %in% as.character(15:21) ~ "2017",
-        env %in% as.character(22:28) ~ "2020"
+        env %in% as.character(1:9) ~ "2011",
+        env %in% as.character(10:18) ~ "2014",
+        env %in% as.character(19:27) ~ "2017",
+        env %in% as.character(28:36) ~ "2020"
       ))
     
     weights <- c("2011" = input$temp_w_2011, "2014" = input$temp_w_2014,
