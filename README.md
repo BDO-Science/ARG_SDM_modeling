@@ -1,4 +1,4 @@
-# SalmonCountR — American River Fall-run Chinook Power-Bypass Simulator
+# SalmonCountR — Lower American River Power Bypass Decision Support
 
 End-to-end R workflow and Shiny app to simulate American River fall-run Chinook spawner dynamics under alternative power-bypass (water temperature) scenarios. It precomputes temperature-dependent mortality (TDM), calibrates a simple life cycle, and serves interactive comparisons across alternatives.
 
