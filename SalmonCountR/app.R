@@ -90,11 +90,11 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    
                                    h4("Management Structure:"),
                                    tags$ul(
-                                     tags$li(strong("36 Total Alternatives:"), "9 scenarios × 4 hydrological year types"),
-                                     tags$li(strong("Scenarios:"), "No Bypass (NB) and 8 Power Bypass configurations (S1-S6, including S2b and S2c variants) with varying flow rates and timing"),
-                                     tags$li(strong("Hydrological Years:"), "2011 (Wet), 2014 (Critical), 2017 (Wet), 2020 (Dry)"),
-                                     tags$li(strong("Temperature Data:"), "Oct 18 - Dec 31 forecast window from SDM Power Bypass modeling, combined with 14-year USGS gauge climatology (2011-2025) for full annual cycles"),
-                                     tags$li(strong("Simulation Period:"), "2025-2150 with dynamic weighting of hydrological conditions and TDM models")
+                                     tags$li(strong("9 Management Scenarios:"), "No Bypass (NB) and 8 Power Bypass configurations (S1-S6, including S2b and S2c variants) with varying flow rates and timing"),
+                                     tags$li(strong("4 Hydrological Year Types:"), "2011 (Wet), 2014 (Critical), 2017 (Wet), 2020 (Dry)"),
+                                     tags$li(strong("36 Pre-computed Alternatives:"), "Each scenario modeled under all 4 hydro year conditions, allowing dynamic weighting"),
+                                     tags$li(strong("Temperature Data:"), "Sept 22 - Nov 30 forecast window from SDM Power Bypass modeling, combined with 14-year USGS gauge climatology (2011-2025) for full annual cycles"),
+                                     tags$li(strong("Simulation Period:"), "2025-2150 with user-adjustable weighting of hydrological conditions and TDM models")
                                    ),
                                    
                                    h4("Power Bypass Scenario Specifications:"),
@@ -237,22 +237,24 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                      tags$li(HTML("<strong>Density Dependence:</strong> Beverton-Holt at fry stage: dd = 0.347 / (1 + Redds / K)")),
                                      tags$li(HTML("<strong>Carrying Capacity:</strong> K = 12,493 spawners (or flow-dependent if specified)")),
                                      tags$li(HTML("<strong>Fry Production:</strong> Fry = Eggs × S<sub>TDM</sub> × dd")),
-                                     tags$li(HTML("<strong>Smolt Production:</strong> Smolts = Fry × rear_surv (calibrated)")),
-                                     tags$li(HTML("<strong>Ocean Survival:</strong> SAR (smolt-to-adult return) calibrated to 2011-2024 escapement")),
+                                     tags$li(HTML("<strong>Smolt Production:</strong> Smolts = Fry × rear_surv (fixed at 0.5419)")),
+                                     tags$li(HTML("<strong>Non-American River Survival:</strong> SAR = 0.0025 (fixed value representing 0.25% survival from the Sacramento River to returning adults)")),
                                      tags$li(HTML("<strong>Age Structure:</strong> 82.9% age-3, 16.9% age-4, 0.2% age-5 returns (CWT data)")),
                                      tags$li(HTML("<strong>Returns:</strong> Spawners<sub>t+a</sub> = Smolts<sub>t</sub> × SAR × P(age=a)"))
                                    ),
                                    
-                                   h3("Calibration & Validation"),
+                                   h3("Model Parameters"),
                                    
-                                   h4("Calibration Procedure:"),
-                                   tags$ol(
-                                     tags$li("Years 2011-2013 serve as initial population seed"),
-                                     tags$li("Model jointly optimizes SAR_mean and rear_surv parameters"),
-                                     tags$li("Minimizes SSE between predicted and observed spawners for 2014-2024"),
-                                     tags$li("Observed data: CDFW GrandTab escapement estimates"),
-                                     tags$li("Each TDM variant calibrated independently, then weighted ensemble created")
+                                   h4("Fixed Life-Cycle Parameters:"),
+                                   p("The model uses pre-specified biological parameters rather than statistical calibration:"),
+                                   tags$ul(
+                                     tags$li(HTML("<strong>Smolt-to-Adult Return (SAR):</strong> 0.0025 (0.25%) - fixed value representing ocean survival")),
+                                     tags$li(HTML("<strong>Rearing Survival:</strong> 0.5419 (54.19%) - fixed freshwater survival from fry to smolt")),
+                                     tags$li(HTML("<strong>Initial Population:</strong> Years 2011-2013 seeded from CDFW GrandTab observed escapement")),
+                                     tags$li(HTML("<strong>Forecast Starting Point:</strong> 2022-2024 observed escapement used as initial conditions for 2025+ projections"))
                                    ),
+                                   
+                                   p("These fixed parameters are applied uniformly across all TDM variants, with forecasts driven primarily by temperature-dependent egg-to-fry survival differences between scenarios."),
                                    
                                    h4("Data Sources:"),
                                    tags$ul(
@@ -399,7 +401,14 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                               sliderInput("cmp_tdm_sm", "SALMOD", value = 0.24, min = 0, max = 1, step = 0.01),
                               sliderInput("cmp_tdm_martin", "Martin", value = 0.25, min = 0, max = 1, step = 0.01),
                               hr(),
-                              sliderInput("cmp_years", "Forecast Years", value = 50, min = 10, max = 100),
+                              # ★★★★★★★★★★★
+                              h4("Flow and Capacity"),
+                              sliderInput("cmp_flow", "Set Downstream Flow (cfs)",
+                                          min = 500, max = 5000, value = 1500, step = 100),
+                              hr(),
+                              # ★★★★★★★★★★
+                              
+                              sliderInput("cmp_years", "Forecast Years", value = 100, min = 10, max = 100),
                               actionButton("run_cmp", "Run Comparison"),
                               width = 3
                             ),
@@ -468,14 +477,14 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                             wellPanel(
                                               h5("Alternative 2: Best Steelhead"),
                                               numericInput("rank_steelhead", "Rank (1-3):", value = 2, min = 1, max = 3, step = 1),
-                                              numericInput("score_steelhead", "Score (0-100):", value = 50, min = 0, max = 100, step = 1)
+                                              numericInput("score_steelhead", "Score (0-100):", value = 5, min = 0, max = 100, step = 1)
                                             )
                                      ),
                                      column(4,
                                             wellPanel(
                                               h5("Alternative 3: Best Hydropower"),
                                               numericInput("rank_hydropower", "Rank (1-3):", value = 3, min = 1, max = 3, step = 1),
-                                              numericInput("score_hydropower", "Score (0-100):", value = 25, min = 0, max = 100, step = 1)
+                                              numericInput("score_hydropower", "Score (0-100):", value = 30, min = 0, max = 100, step = 1)
                                             )
                                      )
                                    ),
@@ -649,50 +658,83 @@ server <- function(input, output, session) {
   objective_lock <- reactiveVal(FALSE)
   make_3_slider_observers("w_chinook", "w_steelhead", "w_hydro", objective_lock)
   
-  # Run simulation for a scenario with hydro weighting
-  run_scenario_simulation <- function(scenario, hydro_weights, tdm_weights, n_years) {
+  # Run simulation for a scenario with hydro and TDM weighting
+  run_scenario_simulation <- function(scenario, hydro_weights, tdm_weights, n_years, flow_val) {
     alts <- get_scenario_alternatives(scenario, "all")
     hydro_years <- c("2011", "2014", "2017", "2020")
+    
+    # Normalize weights
     hydro_w <- normalize_weights(hydro_weights)
     tdm_w <- normalize_weights(tdm_weights)
-    combined_result <- NULL
+    
+    # Extract forecast years from results_full
+    forecast_data <- results_full %>%
+      filter(year >= 2025) %>%
+      slice_head(n = n_years)
+    
+    if (nrow(forecast_data) == 0) {
+      stop("No forecast data available in results_full")
+    }
+    
+    # Initialize accumulator for final results
+    final_spawners <- rep(0, n_years)
+    years_vec <- sort(unique(forecast_data$year))[1:n_years]
     
     for (i in seq_along(alts)) {
       alt_id <- as.character(alts[i])
-      hydro_year <- hydro_years[i]
       
-      surv_weighted <- tdm_w["wf"] * surv_lookup_full[[paste(alt_id, "exp_WF", sep="_")]] +
-        tdm_w["sm"] * surv_lookup_full[[paste(alt_id, "exp_SM", sep="_")]] +
-        tdm_w["martin"] * surv_lookup_full[[paste(alt_id, "lin_Martin", sep="_")]]
+      # Get data for all TDM variants for this alternative
+      alt_data <- results_full %>%
+        filter(env == alt_id, year %in% years_vec)
       
-      P_weighted <- base_P
-      P_weighted$SAR_mean <- tdm_w["wf"] * base_P_list$exp_WF[[alt_id]]$SAR_mean +
-        tdm_w["sm"] * base_P_list$exp_SM[[alt_id]]$SAR_mean +
-        tdm_w["martin"] * base_P_list$lin_Martin[[alt_id]]$SAR_mean
-      P_weighted$rear_surv <- tdm_w["wf"] * base_P_list$exp_WF[[alt_id]]$rear_surv +
-        tdm_w["sm"] * base_P_list$exp_SM[[alt_id]]$rear_surv +
-        tdm_w["martin"] * base_P_list$lin_Martin[[alt_id]]$rear_surv
+      if (nrow(alt_data) == 0) next
       
-      seed_weighted <- tdm_w["wf"] * S_seed_fore_list$exp_WF +
-        tdm_w["sm"] * S_seed_fore_list$exp_SM +
-        tdm_w["martin"] * S_seed_fore_list$lin_Martin
+      # Calculate TDM-weighted spawners for this alternative
+      tdm_weighted <- alt_data %>%
+        filter(variant %in% c("exp_WF", "exp_SM", "lin_Martin")) %>%
+        group_by(year) %>%
+        summarise(
+          spawners = sum(
+            case_when(
+              variant == "exp_WF" ~ spawners * tdm_w["wf"],
+              variant == "exp_SM" ~ spawners * tdm_w["sm"],
+              variant == "lin_Martin" ~ spawners * tdm_w["martin"],
+              TRUE ~ 0
+            ), na.rm = TRUE
+          ),
+          .groups = "drop"
+        ) %>%
+        arrange(year)
       
-      surv_lookup_full[[paste(alt_id, "weighted", sep="_")]] <<- surv_weighted
-      if (!"weighted" %in% names(base_P_list)) base_P_list[["weighted"]] <<- list()
-      base_P_list[["weighted"]][[alt_id]] <<- P_weighted
-      
-      fc_fn <- sim_forecast_fn("weighted", alt_id, NULL, seed_weighted, spawn_dates_by_alt)
-      result <- fc_fn() %>% filter(year > max(real_years)) %>% slice_head(n = n_years)
-      
-      if (is.null(combined_result)) {
-        combined_result <- result
-        combined_result$spawners <- combined_result$spawners * hydro_w[i]
-      } else {
-        combined_result$spawners <- combined_result$spawners + (result$spawners * hydro_w[i])
+      # Apply hydrology weight and accumulate
+      if (nrow(tdm_weighted) > 0) {
+        # Ensure we have the right number of years
+        tdm_spawners <- tdm_weighted$spawners[1:min(n_years, length(tdm_weighted$spawners))]
+        final_spawners[1:length(tdm_spawners)] <- final_spawners[1:length(tdm_spawners)] + 
+          tdm_spawners * hydro_w[i]
       }
     }
-    combined_result$scenario <- scenario
-    return(combined_result)
+    
+    # Build final result dataframe
+    result <- tibble(
+      year = years_vec,
+      spawners = final_spawners,
+      scenario = scenario
+    )
+    
+    # Add other columns from template for compatibility
+    template_cols <- results_full %>%
+      filter(env == as.character(alts[1]), variant == "exp_WF") %>%
+      slice_head(n = 1) %>%
+      select(-year, -spawners, -env, -variant)
+    
+    if (ncol(template_cols) > 0) {
+      for (col in names(template_cols)) {
+        result[[col]] <- template_cols[[col]][1]
+      }
+    }
+    
+    return(result)
   }
   
   # Temperature Explorer (FIXED)
@@ -800,7 +842,7 @@ server <- function(input, output, session) {
     hydro_w <- normalize_weights(hydro_w_raw)
     tdm_w_raw <- c(wf = input$cmp_tdm_wf, sm = input$cmp_tdm_sm, martin = input$cmp_tdm_martin)
     
-    cmp_results <- map_dfr(input$cmp_scenarios, ~run_scenario_simulation(., hydro_w_raw, tdm_w_raw, input$cmp_years))
+    cmp_results <- map_dfr(input$cmp_scenarios, ~run_scenario_simulation(., hydro_w_raw, tdm_w_raw, input$cmp_years, input$cmp_flow))
     values$cmp_data <- cmp_results
     
     # Calculate performance for Chinook
@@ -861,9 +903,15 @@ server <- function(input, output, session) {
   
   output$cmp_ts_plot <- renderPlot({
     df <- req(values$cmp_data)
+    
+    # Get the actual range of years in the data
+    year_range <- range(df$year, na.rm = TRUE)
+    
     ggplot(df, aes(x = year, y = spawners, color = factor(scenario), group = scenario)) +
       geom_line(size = 1.2) +
       expand_limits(y = 0) +
+      scale_x_continuous(limits = year_range, 
+                         breaks = seq(year_range[1], year_range[2], by = 25)) +
       scale_y_continuous(labels = comma) +
       scale_color_viridis_d(name = "Scenario") +
       labs(title = "Comparison of Weighted Scenarios",

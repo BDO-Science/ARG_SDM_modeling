@@ -12,8 +12,6 @@ egg_summary_orig   <- readRDS(here("SalmonCountR", "app_data", "egg_summary.rds"
 surv_lookup_full   <- readRDS(here("SalmonCountR", "app_data", "surv_lookup_full.rds"))
 base_P_list        <- readRDS(here("SalmonCountR", "app_data", "base_P_list.rds"))
 base_P             <- readRDS(here("SalmonCountR", "app_data", "base_P.rds"))
-#calib_results         <- readRDS(here("SalmonCountR", "app_data","calib_results.rds"))
-#calib_pred_by_variant <- readRDS(here("SalmonCountR", "app_data","calib_pred_by_variant.rds"))
 S_seed_calib       <- readRDS(here("SalmonCountR", "app_data", "S_seed_calib.rds"))
 S_seed_fore_list   <- readRDS(here("SalmonCountR", "app_data", "S_seed_fore_list.rds"))
 stoch_SAR_opts     <- readRDS(here("SalmonCountR", "app_data", "stoch_SAR_opts.rds"))
@@ -22,6 +20,7 @@ spawn_dates_by_alt <- readRDS(here("SalmonCountR", "app_data","spawn_dates_by_al
 instream <- readRDS(here("SalmonCountR", "app_data","american_river_instream.rds"))
 steelhead_metrics <- readRDS(here("SalmonCountR", "app_data", "steelhead_metrics.rds"))
 swing_ranges <- readRDS(here("SalmonCountR", "app_data", "swing_ranges.rds"))
+results_full <- readRDS(here("SalmonCountR", "app_data", "results_full.rds"))
 
 real_years <- 2011:2024 
 n_sim      <- 114

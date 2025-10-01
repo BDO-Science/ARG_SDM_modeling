@@ -1,5 +1,5 @@
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║         FALL-RUN CHINOOK SALMON POPULATION MODELING AND FORECASTING           ║
+# ║         FALL-RUN CHINOOK SALMON POPULATION MODELING AND FORECASTING          ║
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # This script implements a comprehensive fall-run Chinook salmon population model that:
 # 1. Analyzes historical spawning patterns based on water temperature
@@ -22,6 +22,7 @@ library(ggrepel)        # Text/label positioning in ggplot2
 library(MASS)           # Statistical functions
 library(ordinal)        # Ordinal regression models (CLM)
 library(ggridges)       # Ridge plots for distributions
+library(readxl)         # Excel stuff
 
 # Load custom functions specific to this salmon counting project
 source(here("SalmonCountR", "functions.R"))
@@ -65,8 +66,6 @@ mgt_alt_sites <- purrr::imap_dfr(env_ext_list, ~ {
 df_all <- readRDS(
   here("SalmonCountR", "app_data", "df_all.rds")
 )
-
-
 
 # ---- 4. CARCASS SURVEY DATA ----
 # Load raw carcass detection data from American River field surveys
@@ -961,37 +960,39 @@ ref_env <- names(env_ext_list)[1]
 deg_day_cal_ref <- deg_day_cal_for(ref_env)
 stopifnot(length(deg_day_cal_ref) == length(real_years))
 
-# Define fixed parameters for each TDM variant
-calib_results <- tibble(
-  variant = c("exp_WF", "exp_SM", "lin_Martin"),
-  SAR_mean = c(0.0025, 0.0025, 0.0025),     # Fixed SAR value for all variants
-  rear_surv = c(0.5419, 0.5419, 0.5419),     # Fixed rearing survival for all variants
-  sse = c(NA, NA, NA)                         # No SSE since we didn't calibrate
+# --- New Combined Calibration ---
+# Run the optimization to find the single best set of parameters across all variants
+cat("\nCalibrating for a single best-fit SAR and rearing survival across all variants...\n")
+
+opt_combined <- optim(
+  par     = c(0.0025, 0.5419),      # Starting values for SAR and rear_surv
+  fn      = combined_sse,           # Use our new combined error function
+  obs_spawners = obs_spawners,      # Pass observed data to the function
+  S_seed  = S_seed_calib,           # Pass seed data to the function
+  method  = "L-BFGS-B",
+  lower   = c(0.0001, 0.01),        # Lower bounds for parameters
+  upper   = c(0.1, 1.0)             # Upper bounds for parameters
 )
 
-cat("\nUsing fixed calibration parameters (no optimization):\n")
-print(calib_results)
+# Extract the single best-fit parameters
+best_SAR <- opt_combined$par[1]
+best_rear_surv <- opt_combined$par[2]
 
-# Comment out the original calibration code:
-# calib_results <- furrr::future_map_dfr(
-#   variant_names,
-#   function(v) {
-#     opt <- optim(
-#       par    = c(0.0025, 0.5419),
-#       fn     = modular_sse,
-#       variant= v,
-#       method = "L-BFGS-B",
-#       lower  = c(0, 0), upper  = c(1, 1)
-#     )
-#     tibble::tibble(
-#       variant   = v,
-#       SAR_mean  = opt$par[1],
-#       rear_surv = opt$par[2],
-#       sse       = opt$value
-#     )
-#   },
-#   .options = furrr::furrr_options(seed = TRUE)
-# )
+cat(sprintf("  -> Best-fit SAR: %f\n", best_SAR))
+cat(sprintf("  -> Best-fit Rearing Survival: %f\n", best_rear_surv))
+cat(sprintf("  -> Combined SSE: %f\n", opt_combined$value))
+
+
+# Define fixed parameters for each TDM variant using the new calibrated values
+calib_results <- tibble(
+  variant   = c("exp_WF", "exp_SM", "lin_Martin"),
+  SAR_mean  = rep(best_SAR, 3),       # Use the SAME calibrated SAR for all
+  rear_surv = rep(best_rear_surv, 3),  # Use the SAME calibrated rearing survival for all
+  sse       = c(NA, NA, NA)             # SSE here isn't variant-specific, so we can leave it NA
+)
+
+cat("\nUsing new single-set calibration parameters:\n")
+print(calib_results)
 
 # Create base_P_list with the correct nested structure
 base_P_list <- calib_results %>%
@@ -1160,11 +1161,18 @@ swing_results <- map_dfr(1:nrow(swing_combinations), function(i) {
         if (tdm_weights[variant_name] > 0) {
           # Filter results for this specific env and variant
           variant_results <- results_full %>%
-            filter(env == alt_id, variant == variant_name, year > max(real_years)) %>%
-            slice_head(n = 50)
+            filter(env == alt_id, variant == variant_name, year > max(real_years))
           
           if (nrow(variant_results) > 0) {
-            tdm_spawners <- tdm_spawners + median(variant_results$spawners) * tdm_weights[variant_name]
+            # ★★★★★★★★★★★★★★★★★★★★★ CHANGE IS HERE ★★★★★★★★★★★★★★★★★★★★★
+            # Calculate the average of the final 20 years of the simulation
+            avg_last_20_years <- variant_results %>%
+              slice_tail(n = 20) %>%
+              summarize(avg_spawners = mean(spawners, na.rm = TRUE)) %>%
+              pull(avg_spawners)
+            
+            tdm_spawners <- tdm_spawners + avg_last_20_years * tdm_weights[variant_name]
+            # ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
           }
         }
       }
@@ -1175,24 +1183,17 @@ swing_results <- map_dfr(1:nrow(swing_combinations), function(i) {
     
     tibble(
       scenario = scen,
-      median_spawners = combined_spawners
+      spawner_metric = combined_spawners
     )
   })
   
   tibble(
     wyt_combo = wyt_name,
     tdm_combo = tdm_name,
-    min_spawners = min(scenario_results$median_spawners),
-    max_spawners = max(scenario_results$median_spawners)
+    min_spawners = min(scenario_results$spawner_metric),
+    max_spawners = max(scenario_results$spawner_metric)
   )
 })
-
-# Calculate overall ranges
-swing_ranges <- tibble(
-  objective = "Fall-run Chinook",
-  worst_case = min(swing_results$min_spawners),
-  best_case = max(swing_results$max_spawners)
-)
 
 # ---- 38. CALCULATE STEELHEAD SWING WEIGHTING RANGES ----
 cat("\nCalculating steelhead swing weighting ranges...\n")
@@ -1265,8 +1266,7 @@ cat(sprintf("  Steelhead best case: %s\n", round(swing_ranges$best_case[2], 1)))
 # Save all processed data frames and model objects as .rds files. These files
 # will be loaded directly by the Shiny dashboard for fast startup.
 
-#saveRDS(calib_results,         here("SalmonCountR","app_data","calib_results.rds"))
-#saveRDS(calib_pred_by_variant, here("SalmonCountR","app_data","calib_pred_by_variant.rds"))
+saveRDS(calib_results,         here("SalmonCountR","app_data","calib_results.rds"))
 saveRDS(results_full,          here("SalmonCountR","app_data","results_full.rds"))
 saveRDS(egg_summary,           here("SalmonCountR","app_data","egg_summary.rds"))
 saveRDS(surv_lookup_full,      here("SalmonCountR","app_data","surv_lookup_full.rds"))
