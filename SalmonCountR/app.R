@@ -86,23 +86,23 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    hr(),
                                    
                                    h3("Application Overview"),
-                                   p("This interactive application simulates fall-run Chinook salmon population dynamics on the American River under different Folsom Dam power bypass flow and temperature management alternatives. The model integrates temperature-dependent mortality, spawn timing, and comprehensive life-cycle processes to project spawner abundance through 2150."),
+                                   p("This interactive application simulates fall-run Chinook salmon population dynamics on the American River under different Folsom Dam power bypass flow and temperature management alternatives. The model integrates temperature-dependent mortality, spawn timing, and comprehensive life-cycle processes to project spawner abundance through 2125."),
                                    
                                    h4("Management Structure:"),
                                    tags$ul(
-                                     tags$li(strong("9 Management Scenarios:"), "No Bypass (NB) and 8 Power Bypass configurations (S1-S6, including S2b and S2c variants) with varying flow rates and timing"),
-                                     tags$li(strong("4 Hydrological Year Types:"), "2011 (Wet), 2014 (Critical), 2017 (Wet), 2020 (Dry)"),
-                                     tags$li(strong("36 Pre-computed Alternatives:"), "Each scenario modeled under all 4 hydro year conditions, allowing dynamic weighting"),
+                                     tags$li(strong("9 Management Alternatives:"), "No Bypass (NB) and 8 Power Bypass configurations (PB1-PB6, including PB2b and PB2c variants) with varying flow rates and timing"),
+                                     tags$li(strong("4 Climate Years:"), "2011 (Cool), 2014 (Warm), 2017 (Warm), 2020 (Cool)"),
+                                     tags$li(strong("36 Pre-computed Alternatives:"), "Each alternative modeled under all 4 climate year conditions, allowing dynamic weighting"),
                                      tags$li(strong("Temperature Data:"), "Sept 22 - Nov 30 forecast window from SDM Power Bypass modeling, combined with 14-year USGS gauge climatology (2011-2025) for full annual cycles"),
-                                     tags$li(strong("Simulation Period:"), "2025-2150 with user-adjustable weighting of hydrological conditions and TDM models")
+                                     tags$li(strong("Simulation Period:"), "2025-2125 with user-adjustable weighting of climatological conditions and TDM models")
                                    ),
                                    
-                                   h4("Power Bypass Scenario Specifications:"),
+                                   h4("Power Bypass Alternative Specifications:"),
                                    tags$div(style = "margin-left: 20px;",
                                             tags$table(class = "table table-striped table-condensed",
                                                        tags$thead(
                                                          tags$tr(
-                                                           tags$th("Scenario"),
+                                                           tags$th("Alternative"),
                                                            tags$th("Bypass (AF)"),
                                                            tags$th("Bypass (MWh)"),
                                                            tags$th("Loss ($)"),
@@ -112,7 +112,15 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                                        ),
                                                        tags$tbody(
                                                          tags$tr(
-                                                           tags$td(strong("S1")),
+                                                           tags$td(strong("NB")),
+                                                           tags$td("0"),
+                                                           tags$td("0"),
+                                                           tags$td("$0"),
+                                                           tags$td("0"),
+                                                           tags$td("No bypass - baseline operations")
+                                                         ),
+                                                         tags$tr(
+                                                           tags$td(strong("PB1")),
                                                            tags$td("10,163"),
                                                            tags$td("2,424"),
                                                            tags$td("$111,422"),
@@ -120,7 +128,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                                            tags$td("125 cfs starting Oct 15, 250 cfs on Oct 28, 125 cfs on Nov 7, end bypass on Nov 14")
                                                          ),
                                                          tags$tr(
-                                                           tags$td(strong("S2")),
+                                                           tags$td(strong("PB2")),
                                                            tags$td("32,224"),
                                                            tags$td("7,674"),
                                                            tags$td("$376,671"),
@@ -128,7 +136,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                                            tags$td("250 cfs starting Oct 15, 500 cfs on Oct 28, 250 cfs on Nov 14, end bypass on Nov 30")
                                                          ),
                                                          tags$tr(
-                                                           tags$td(strong("S2b")),
+                                                           tags$td(strong("PB2b")),
                                                            tags$td("40,156"),
                                                            tags$td("9,558"),
                                                            tags$td("$470,090"),
@@ -136,7 +144,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                                            tags$td("250 cfs starting Oct 15, 500 cfs on Oct 28, end bypass on Nov 30")
                                                          ),
                                                          tags$tr(
-                                                           tags$td(strong("S2c")),
+                                                           tags$td(strong("PB2c")),
                                                            tags$td("37,181"),
                                                            tags$td("8,846"),
                                                            tags$td("$433,215"),
@@ -144,7 +152,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                                            tags$td("250 cfs starting Oct 21, 500 cfs on Oct 28, end bypass on Nov 30")
                                                          ),
                                                          tags$tr(
-                                                           tags$td(strong("S3")),
+                                                           tags$td(strong("PB3")),
                                                            tags$td("17,351"),
                                                            tags$td("4,135"),
                                                            tags$td("$201,552"),
@@ -152,7 +160,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                                            tags$td("250 cfs starting Oct 21, 500 cfs on Oct 28, 250 cfs on Nov 7, end bypass on Nov 14")
                                                          ),
                                                          tags$tr(
-                                                           tags$td(strong("S4")),
+                                                           tags$td(strong("PB4")),
                                                            tags$td("20,822"),
                                                            tags$td("4,959"),
                                                            tags$td("$241,590"),
@@ -160,7 +168,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                                            tags$td("250 cfs starting Oct 21, 500 cfs on Oct 28, 250 cfs on Nov 7, end bypass on Nov 21")
                                                          ),
                                                          tags$tr(
-                                                           tags$td(strong("S5")),
+                                                           tags$td(strong("PB5")),
                                                            tags$td("17,351"),
                                                            tags$td("4,130"),
                                                            tags$td("$199,382"),
@@ -168,7 +176,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                                            tags$td("500 cfs bypass starting Oct 28, reduce to 250 on Nov 7, end bypass on Nov 21")
                                                          ),
                                                          tags$tr(
-                                                           tags$td(strong("S6")),
+                                                           tags$td(strong("PB6")),
                                                            tags$td("30,141"),
                                                            tags$td("7,100"),
                                                            tags$td("$348,806"),
@@ -301,18 +309,18 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    
                                    h4("Interactive Components:"),
                                    tags$ul(
-                                     tags$li(strong("Temperature Explorer:"), "Visualize weighted temperature patterns across scenarios and hydrological years"),
-                                     tags$li(strong("Scenario Comparison:"), "Side-by-side evaluation of multiple alternatives with customizable hydrology and TDM weighting"),
+                                     tags$li(strong("Temperature Explorer:"), "Visualize and compare weighted temperature patterns across multiple alternatives and climatological years"),
+                                     tags$li(strong("Alternative Comparison:"), "Side-by-side evaluation of multiple alternatives with customizable climatology and TDM weighting"),
                                      tags$li(strong("Swing Weighting:"), "Interactive preference elicitation tool to determine objective importance through hypothetical alternative rankings"),
                                      tags$li(strong("Decision Support:"), "Multi-objective analysis with consequence tables, trade-off plots, and weighted performance scores")
                                    ),
                                    
                                    h4("Weighting Options:"),
                                    tags$ul(
-                                     tags$li(strong("Hydrology Weights:"), "Adjust relative importance of 4 water year types (sum to 1.0)"),
+                                     tags$li(strong("Climatology Weights:"), "Adjust relative importance of 4 climate year types (sum to 1.0)"),
                                      tags$li(strong("TDM Model Weights:"), "Combine 3 mortality models with custom weights (sum to 1.0)"),
-                                     tags$li(strong("Objective Weights:"), "Two methods: (1) Equal weights (33.3% each), (2) Manual slider adjustment, or derive from Swing Weighting tab"),
-                                     tags$li(strong("Default Weights:"), "TDM: 51% Water Forum, 24% SALMOD, 25% Martin; Hydrology: 25% each; Objectives: 40% Chinook, 30% Steelhead, 30% Hydropower")
+                                     tags$li(strong("Objective Weights:"), "Three methods: (1) Equal weights (33.3% each), (2) Manual slider adjustment, or (3) Derive from Swing Weighting tab"),
+                                     tags$li(strong("Default Weights:"), "TDM: 51% Water Forum, 24% SALMOD, 25% Martin; Climatology: 25% each; Objectives: 40% Chinook, 30% Steelhead, 30% Hydropower")
                                    ),
                                    
                                    h3("Technical Implementation"),
@@ -337,7 +345,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    
                                    h3("References"),
                                    tags$ul(
-                                     tags$li("Bartholow, J.M. & Heasley, J. (2006). Evaluation of Shasta Dam Scenarios Using a Salmon Production Model. USGS Open-File Report 2004-1351."),
+                                     tags$li("Bartholow, J.M. & Heasley, J. (2006). Evaluation of Shasta Dam Alternatives Using a Salmon Production Model. USGS Open-File Report 2004-1351."),
                                      tags$li("Bratovich, P., Neal, M., Ransom, A., et al. (2020). Chinook Salmon Early Lifestage Survival and Folsom Dam Power Bypass Considerations. Water Forum Technical Memorandum."),
                                      tags$li("Colvin, R., Falke, J.A., Henson, S. (2018). Identifying optimal water temperature and flow regimes for anadromous fish. River Research and Applications 34(6):621-632."),
                                      tags$li("Martin, B.T., Pike, A., John, S.N., Hamda, N., Roberts, J., Lindley, S.T., Danner, E.M. (2017). Phenomenological vs. biophysical models of thermal stress in aquatic eggs. Ecology Letters 20:50-59."),
@@ -352,16 +360,20 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                  tabPanel("Temperature Explorer",
                           sidebarLayout(
                             sidebarPanel(
-                              h4("Hydrology Weights"),
-                              sliderInput("temp_w_2011", "2011 (Wet)", value = 0.25, min = 0, max = 1, step = 0.01),
-                              sliderInput("temp_w_2014", "2014 (Critical)", value = 0.25, min = 0, max = 1, step = 0.01),
-                              sliderInput("temp_w_2017", "2017 (Wet)", value = 0.25, min = 0, max = 1, step = 0.01),
-                              sliderInput("temp_w_2020", "2020 (Dry)", value = 0.25, min = 0, max = 1, step = 0.01),
+                              h4("Climatology Weights"),  # Changed
+                              sliderInput("temp_w_2011", "2011 (Cool)", value = 0.25, min = 0, max = 1, step = 0.01),
+                              sliderInput("temp_w_2014", "2014 (Warm)", value = 0.25, min = 0, max = 1, step = 0.01),
+                              sliderInput("temp_w_2017", "2017 (Warm)", value = 0.25, min = 0, max = 1, step = 0.01),
+                              sliderInput("temp_w_2020", "2020 (Cool)", value = 0.25, min = 0, max = 1, step = 0.01),
                               hr(),
-                              selectInput("temp_scenario", "Scenario:",
-                                          choices = c("No Bypass (NB)"="NB", "Power Bypass 1"="PB1", "Power Bypass 2"="PB2",
-                                                      "Power Bypass 2b"="PB2b", "Power Bypass 2c"="PB2c", "Power Bypass 3"="PB3",
-                                                      "Power Bypass 4"="PB4", "Power Bypass 5"="PB5", "Power Bypass 6"="PB6")),
+                              # In the UI, replace the selectInput with:
+                              checkboxGroupInput("temp_alternatives", "Alternatives to Compare:",
+                                                 choices = c("No Bypass"="NB", "Power Bypass 1"="PB1", 
+                                                             "Power Bypass 2"="PB2", "Power Bypass 2b"="PB2b", 
+                                                             "Power Bypass 2c"="PB2c", "Power Bypass 3"="PB3",
+                                                             "Power Bypass 4"="PB4", "Power Bypass 5"="PB5", 
+                                                             "Power Bypass 6"="PB6"),
+                                                 selected = c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6")),  # Default to comparing NB and PB1
                               radioButtons("temp_site", "Site:", choices = c("Ave Watt"="AveWatt", "Ave Hazel"="AveHazel")),
                               radioButtons("temp_period", "Time Period:",
                                            choices = c("Oct-Dec 2025"="oct_dec", "Full Year 2025"="full")),
@@ -378,23 +390,23 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                  ),
                  
                  
-                 # ---- Compare Scenarios Tab ----
-                 tabPanel("Compare Scenarios",
+                 # Compare Alternatives Tab → Compare Alternatives Tab
+                 tabPanel("Compare Alternatives",  # Changed from "Compare Alternatives"
                           sidebarLayout(
                             sidebarPanel(
-                              h4("Scenarios to Compare"),
-                              checkboxGroupInput("cmp_scenarios", "Select:",
+                              h4("Alternatives to Compare"),  # Changed from "Alternatives to Compare"
+                              checkboxGroupInput("cmp_scenarios", "Select:",  # Keep the ID for compatibility
                                                  choices = c("No Bypass"="NB", "Power Bypass 1"="PB1", "Power Bypass 2"="PB2",
                                                              "Power Bypass 2b"="PB2b", "Power Bypass 2c"="PB2c",
                                                              "Power Bypass 3"="PB3", "Power Bypass 4"="PB4",
                                                              "Power Bypass 5"="PB5", "Power Bypass 6"="PB6"),
                                                  selected = c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6")),
                               hr(),
-                              h4("Hydrology Weights"),
-                              sliderInput("cmp_w_2011", "2011 (Wet)", value = 0.25, min = 0, max = 1, step = 0.01),
-                              sliderInput("cmp_w_2014", "2014 (Critical)", value = 0.25, min = 0, max = 1, step = 0.01),
-                              sliderInput("cmp_w_2017", "2017 (Wet)", value = 0.25, min = 0, max = 1, step = 0.01),
-                              sliderInput("cmp_w_2020", "2020 (Dry)", value = 0.25, min = 0, max = 1, step = 0.01),
+                              h4("Climatology Weights"),  # Changed from "Hydrology Weights"
+                              sliderInput("cmp_w_2011", "2011 (Cool)", value = 0.25, min = 0, max = 1, step = 0.01),  # Changed from "Wet"
+                              sliderInput("cmp_w_2014", "2014 (Warm)", value = 0.25, min = 0, max = 1, step = 0.01),  # Changed from "Critical"
+                              sliderInput("cmp_w_2017", "2017 (Warm)", value = 0.25, min = 0, max = 1, step = 0.01),  # Changed from "Wet"
+                              sliderInput("cmp_w_2020", "2020 (Cool)", value = 0.25, min = 0, max = 1, step = 0.01),  # Changed from "Dry"
                               hr(),
                               h4("TDM Weights"),
                               sliderInput("cmp_tdm_wf", "Water Forum", value = 0.51, min = 0, max = 1, step = 0.01),
@@ -476,14 +488,14 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                      column(4,
                                             wellPanel(
                                               h5("Alternative 2: Best Steelhead"),
-                                              numericInput("rank_steelhead", "Rank (1-3):", value = 2, min = 1, max = 3, step = 1),
-                                              numericInput("score_steelhead", "Score (0-100):", value = 5, min = 0, max = 100, step = 1)
+                                              numericInput("rank_steelhead", "Rank (1-3):", value = 3, min = 1, max = 3, step = 1),
+                                              numericInput("score_steelhead", "Score (0-100):", value = 0, min = 0, max = 100, step = 1)
                                             )
                                      ),
                                      column(4,
                                             wellPanel(
                                               h5("Alternative 3: Best Hydropower"),
-                                              numericInput("rank_hydropower", "Rank (1-3):", value = 3, min = 1, max = 3, step = 1),
+                                              numericInput("rank_hydropower", "Rank (1-3):", value = 2, min = 1, max = 3, step = 1),
                                               numericInput("score_hydropower", "Score (0-100):", value = 30, min = 0, max = 100, step = 1)
                                             )
                                      )
@@ -739,100 +751,111 @@ server <- function(input, output, session) {
   
   # Temperature Explorer (FIXED)
   output$temp_plot <- renderPlot({
-    req(df_all_orig)
-    alts <- get_scenario_alternatives(input$temp_scenario, "all")
+    req(df_all_orig, input$temp_alternatives, length(input$temp_alternatives) > 0)
     
-    # Filter for selected period
-    if (input$temp_period == "oct_dec") {
-      temp_data <- df_all_orig %>%
-        filter(env %in% as.character(alts),
-               site == input$temp_site,
-               month(Date) %in% c(10, 11, 12),
-               year(Date) == 2025)
-    } else {
-      temp_data <- df_all_orig %>%
-        filter(env %in% as.character(alts),
-               site == input$temp_site,
-               year(Date) == 2025)
-    }
+    # Process each selected alternative
+    plot_data <- map_dfr(input$temp_alternatives, function(alt) {
+      alts <- get_scenario_alternatives(alt, "all")
+      
+      # Filter for selected period
+      if (input$temp_period == "oct_dec") {
+        temp_data <- df_all_orig %>%
+          filter(env %in% as.character(alts),
+                 site == input$temp_site,
+                 month(Date) %in% c(10, 11, 12),
+                 year(Date) == 2025)
+      } else {
+        temp_data <- df_all_orig %>%
+          filter(env %in% as.character(alts),
+                 site == input$temp_site,
+                 year(Date) == 2025)
+      }
+      
+      # Add climate year labels
+      temp_data <- temp_data %>%
+        mutate(climate = case_when(
+          env %in% as.character(1:9) ~ "2011",
+          env %in% as.character(10:18) ~ "2014",
+          env %in% as.character(19:27) ~ "2017",
+          env %in% as.character(28:36) ~ "2020"
+        ))
+      
+      # Calculate weighted average
+      weights <- c("2011" = input$temp_w_2011, "2014" = input$temp_w_2014,
+                   "2017" = input$temp_w_2017, "2020" = input$temp_w_2020)
+      weights <- normalize_weights(weights)
+      
+      # Calculate average for this alternative
+      temp_data %>%
+        group_by(Date) %>%
+        summarise(temp = sum(temp * weights[climate], na.rm = TRUE), 
+                  .groups = "drop") %>%
+        mutate(Alternative = alt)
+    })
     
-    # Add hydro year labels
-    temp_data <- temp_data %>%
-      mutate(hydro = case_when(
-        env %in% as.character(1:9) ~ "2011",
-        env %in% as.character(10:18) ~ "2014",
-        env %in% as.character(19:27) ~ "2017",
-        env %in% as.character(28:36) ~ "2020"
-      ))
-    
-    # Calculate weighted average
-    weights <- c("2011" = input$temp_w_2011, "2014" = input$temp_w_2014,
-                 "2017" = input$temp_w_2017, "2020" = input$temp_w_2020)
-    weights <- normalize_weights(weights)
-    
-    # FIXED: Calculate average only from the filtered data
-    avg_temp <- temp_data %>%
-      group_by(Date) %>%
-      summarise(temp = sum(temp * weights[hydro]), .groups = "drop")
-    
-    ggplot() +
-      geom_line(data = temp_data, aes(Date, temp, color = hydro), alpha = 0.5, size = 1) +
-      geom_line(data = avg_temp, aes(Date, temp), color = "black", size = 1.5) +
-      scale_color_viridis_d(name = "Hydro Year") +
-      labs(title = paste("Temperature:", input$temp_scenario, "at", input$temp_site),
-           subtitle = "Black line = weighted average",
+    # Create comparison plot
+    ggplot(plot_data, aes(x = Date, y = temp, color = Alternative)) +
+      geom_line(size = 1.2, alpha = 0.8) +
+      scale_color_viridis_d(name = "Alternative") +
+      scale_y_continuous(limits = c(0, 20)) +
+      labs(title = paste("Temperature Comparison at", input$temp_site),
+           subtitle = "Weighted averages based on climatology weights",
            y = "Temperature (°C)", x = "Date") +
-      theme_minimal(base_size = 14)
+      theme_minimal(base_size = 14) +
+      theme(legend.position = "bottom")
   })
   
-  # FIXED: Temperature stats without steelhead metric
+  # Fix the temperature statistics table with updated threshold:
   output$temp_stats <- renderTable({
-    req(df_all_orig)
-    alts <- get_scenario_alternatives(input$temp_scenario, "all")
+    req(df_all_orig, input$temp_alternatives, length(input$temp_alternatives) > 0)
     
-    if (input$temp_period == "oct_dec") {
-      temp_data <- df_all_orig %>%
-        filter(env %in% as.character(alts),
-               site == input$temp_site,
-               month(Date) %in% c(10, 11, 12),
-               year(Date) == 2025)
-    } else {
-      temp_data <- df_all_orig %>%
-        filter(env %in% as.character(alts),
-               site == input$temp_site,
-               year(Date) == 2025)
-    }
-    
-    temp_data <- temp_data %>%
-      mutate(hydro = case_when(
-        env %in% as.character(1:9) ~ "2011",
-        env %in% as.character(10:18) ~ "2014",
-        env %in% as.character(19:27) ~ "2017",
-        env %in% as.character(28:36) ~ "2020"
-      ))
-    
-    weights <- c("2011" = input$temp_w_2011, "2014" = input$temp_w_2014,
-                 "2017" = input$temp_w_2017, "2020" = input$temp_w_2020)
-    weights <- normalize_weights(weights)
-    
-    weighted_temps <- temp_data %>%
-      group_by(Date) %>%
-      summarise(temp = sum(temp * weights[hydro]), .groups = "drop")
-    
-    tibble(
-      Metric = c("Mean Temp", "Median Temp", "Min Temp", "Max Temp", "Std Dev", "Days > 12.8°C"),
-      Value = c(
-        round(mean(weighted_temps$temp), 2),
-        round(median(weighted_temps$temp), 2),
-        round(min(weighted_temps$temp), 2),
-        round(max(weighted_temps$temp), 2),
-        round(sd(weighted_temps$temp), 2),
-        sum(weighted_temps$temp > 12.8)
+    # Calculate stats for each selected alternative
+    stats_list <- map_dfr(input$temp_alternatives, function(alt) {
+      alts <- get_scenario_alternatives(alt, "all")
+      
+      if (input$temp_period == "oct_dec") {
+        temp_data <- df_all_orig %>%
+          filter(env %in% as.character(alts),
+                 site == input$temp_site,
+                 month(Date) %in% c(10, 11, 12),
+                 year(Date) == 2025)
+      } else {
+        temp_data <- df_all_orig %>%
+          filter(env %in% as.character(alts),
+                 site == input$temp_site,
+                 year(Date) == 2025)
+      }
+      
+      temp_data <- temp_data %>%
+        mutate(climate = case_when(
+          env %in% as.character(1:9) ~ "2011",
+          env %in% as.character(10:18) ~ "2014",
+          env %in% as.character(19:27) ~ "2017",
+          env %in% as.character(28:36) ~ "2020"
+        ))
+      
+      weights <- c("2011" = input$temp_w_2011, "2014" = input$temp_w_2014,
+                   "2017" = input$temp_w_2017, "2020" = input$temp_w_2020)
+      weights <- normalize_weights(weights)
+      
+      weighted_temps <- temp_data %>%
+        group_by(Date) %>%
+        summarise(temp = sum(temp * weights[climate], na.rm = TRUE), .groups = "drop")
+      
+      tibble(
+        Alternative = alt,
+        `Mean Temp` = round(mean(weighted_temps$temp, na.rm = TRUE), 2),
+        `Median Temp` = round(median(weighted_temps$temp, na.rm = TRUE), 2),
+        `Min Temp` = round(min(weighted_temps$temp, na.rm = TRUE), 2),
+        `Max Temp` = round(max(weighted_temps$temp, na.rm = TRUE), 2),
+        `Std Dev` = round(sd(weighted_temps$temp, na.rm = TRUE), 2)
       )
-    )
-  })
+    })
+    
+    stats_list
+  }, rownames = FALSE)
   
-  # Compare Scenarios
+  # Compare Alternatives
   observeEvent(input$run_cmp, {
     req(input$cmp_scenarios)
     showNotification("Running comparison...", duration = NULL, id = "notify")
@@ -884,7 +907,7 @@ server <- function(input, output, session) {
         K_spawners = round(K_spawners, 0)
       ) %>%
       dplyr::select(
-        Scenario = scenario,
+        Alternative = scenario,
         Year = year,
         `Forecasted Spawners` = spawners,
         `Pre-Spawn Survival` = pre_spawn,
@@ -913,8 +936,8 @@ server <- function(input, output, session) {
       scale_x_continuous(limits = year_range, 
                          breaks = seq(year_range[1], year_range[2], by = 25)) +
       scale_y_continuous(labels = comma) +
-      scale_color_viridis_d(name = "Scenario") +
-      labs(title = "Comparison of Weighted Scenarios",
+      scale_color_viridis_d(name = "Alternative") +
+      labs(title = "Comparison of Weighted Alternatives",
            x = "Year", y = "Forecasted Spawner Abundance") +
       theme_minimal(base_size = 16) +
       theme(legend.position = "bottom")
@@ -931,7 +954,7 @@ server <- function(input, output, session) {
       scale_fill_viridis_d(guide = "none") +
       scale_y_continuous(labels = comma) +
       labs(title = paste0("Spawner Distribution: Last ", input$last_n, " Years"),
-           x = "Scenario", y = "Forecasted Spawner Abundance") +
+           x = "Alternative", y = "Forecasted Spawner Abundance") +
       theme_minimal(base_size = 16)
   })
   
@@ -982,7 +1005,7 @@ server <- function(input, output, session) {
   output$performance_matrix <- renderTable({
     req(performance_data_full()) %>%
       select(
-        Scenario = scenario,
+        Alternative = scenario,
         `Chinook (Raw)` = chinook_raw,
         `Chinook (0-1)` = chinook_norm,
         `Steelhead (Raw)` = steelhead_raw,
@@ -1008,7 +1031,7 @@ server <- function(input, output, session) {
       scale_y_continuous(limits = c(0, 1)) +
       scale_fill_viridis_d(name = "Objective") +
       labs(title = "Normalized Performance Scores by Objective",
-           x = "Scenario", y = "Normalized Score (0-1)") +
+           x = "Alternative", y = "Normalized Score (0-1)") +
       theme_minimal(base_size = 16)
   })
   
