@@ -961,76 +961,68 @@ ref_env <- names(env_ext_list)[1]
 deg_day_cal_ref <- deg_day_cal_for(ref_env)
 stopifnot(length(deg_day_cal_ref) == length(real_years))
 
-# Run calibration in parallel for each TDM variant
-calib_results <- furrr::future_map_dfr(
-  variant_names, # This will be c("exp_SM", "exp_WF", "lin_Martin")
-  function(v) {
-    opt <- optim(
-      par    = c(0.0025, 0.5419),
-      fn     = modular_sse,
-      variant= v,
-      method = "L-BFGS-B",
-      lower  = c(0, 0), upper  = c(1, 1)
-    )
-    tibble::tibble(
-      variant   = v,
-      SAR_mean  = opt$par[1],
-      rear_surv = opt$par[2],
-      sse       = opt$value
-    )
-  },
-  .options = furrr::furrr_options(seed = TRUE)
+# Define fixed parameters for each TDM variant
+calib_results <- tibble(
+  variant = c("exp_WF", "exp_SM", "lin_Martin"),
+  SAR_mean = c(0.0025, 0.0025, 0.0025),     # Fixed SAR value for all variants
+  rear_surv = c(0.5419, 0.5419, 0.5419),     # Fixed rearing survival for all variants
+  sse = c(NA, NA, NA)                         # No SSE since we didn't calibrate
 )
 
-# Create a nested list of parameter sets for every variant-environment combination
+cat("\nUsing fixed calibration parameters (no optimization):\n")
+print(calib_results)
+
+# Comment out the original calibration code:
+# calib_results <- furrr::future_map_dfr(
+#   variant_names,
+#   function(v) {
+#     opt <- optim(
+#       par    = c(0.0025, 0.5419),
+#       fn     = modular_sse,
+#       variant= v,
+#       method = "L-BFGS-B",
+#       lower  = c(0, 0), upper  = c(1, 1)
+#     )
+#     tibble::tibble(
+#       variant   = v,
+#       SAR_mean  = opt$par[1],
+#       rear_surv = opt$par[2],
+#       sse       = opt$value
+#     )
+#   },
+#   .options = furrr::furrr_options(seed = TRUE)
+# )
+
+# Create base_P_list with the correct nested structure
 base_P_list <- calib_results %>%
   split(.$variant) %>%
   purrr::map(function(df_v) {
     SARv  <- df_v$SAR_mean[1]
     rearv <- df_v$rear_surv[1]
-    rlang::set_names(
-      lapply(names(env_ext_list), function(env_nm) {
-        P <- base_P
-        P$SAR_mean  <- SARv
-        P$rear_surv <- rearv
-        P
-      }),
-      nm = names(env_ext_list)
-    )
+    
+    # Create list for all environments
+    env_list <- lapply(names(env_ext_list), function(env_nm) {
+      P <- list(
+        female_fraction = base_P$female_fraction,
+        fec = base_P$fec,
+        S0 = base_P$S0,
+        K_spawners = base_P$K_spawners,
+        SAR_mean = SARv,
+        SAR_sd = base_P$SAR_sd,
+        lag_probs = base_P$lag_probs,
+        rear_surv = rearv
+      )
+      return(P)
+    })
+    
+    names(env_list) <- names(env_ext_list)
+    return(env_list)
   })
 
 # ---- 33. GENERATE CALIBRATION PREDICTIONS FOR VALIDATION ----
-# Run the model over the historical period using the calibrated parameters
-# to visualize how well the model fits the observed data.
 
-calib_pred_by_variant <- rlang::set_names(
-  lapply(variant_names, function(v) {
-    P0 <- base_P_list[[v]][[ref_env]]
-    # Get the correct survival vector (now includes weighted_avg)
-    surv_vec <- surv_lookup_by_variant[[v]][1:n_calib]
-    # Run simulation for the calibration period
-    out <- simulate_variant(
-      surv_vec       = surv_vec,
-      P              = P0,
-      years          = n_calib,
-      S_init         = S_seed_calib,
-      SAR_vec        = rep(P0$SAR_mean, n_calib),
-      K_spawners_vec = rep(P0$K_spawners, n_calib),
-      deg_day_adult  = deg_day_cal_ref,
-      sim_years_vec  = real_years
-    )
-    # Combine observations and predictions for plotting
-    tibble(
-      year      = real_years,
-      observed  = esc_obs$spawners,
-      predicted = out$spawners,
-      SAR_mean  = P0$SAR_mean,
-      rear_surv = P0$rear_surv,
-      sse       = sum((out$spawners[fit_idx] - esc_obs$spawners[fit_idx])^2)
-    )
-  }),
-  variant_names
-)
+# Since we're not calibrating, create empty calib_pred_by_variant for compatibility
+calib_pred_by_variant <- list()
 
 # ---- 34. PREPARE SEED POPULATIONS FOR FORECASTING ----
 # Use the last 3 years of the calibrated simulation run as the initial "seed"
@@ -1038,30 +1030,12 @@ calib_pred_by_variant <- rlang::set_names(
 
 k <- length(S_seed_calib)  # Number of seed years (3)
 
+# For fixed parameters, use the same seed for all variants
+# (since we're not doing variant-specific calibration runs)
 S_seed_fore_list <- rlang::set_names(
-  purrr::map(calib_results$variant, function(v) {
-    years_cal <- length(real_years)
-    surv_vec  <- surv_lookup_full[[paste(ref_env, v, sep = "_")]][1:years_cal]
-    Ptmp <- base_P_list[[v]][[ref_env]]
-    deg_day_cal <- compute_deg_day_adult(
-      env_nm       = ref_env,
-      sim_years    = real_years,
-      spawn_dates  = spawn_dates_by_alt[[ref_env]][match(real_years, sim_years)],
-      env_ext_list = env_ext_list
-    )
-    # Run the full calibration simulation one last time
-    out <- simulate_variant(
-      surv_vec       = surv_vec,
-      P              = Ptmp,
-      years          = years_cal,
-      S_init         = S_seed_calib,
-      SAR_vec        = rep(Ptmp$SAR_mean, years_cal),
-      K_spawners_vec = rep(Ptmp$K_spawners, years_cal),
-      deg_day_adult  = deg_day_cal,
-      sim_years_vec  = real_years
-    )
-    # Return the last 3 years of the simulation as the seed
-    tail(out$spawners, k)
+  lapply(calib_results$variant, function(v) {
+    # Simply use the last 3 years of observed spawner data
+    tail(esc_obs$spawners, k)
   }),
   calib_results$variant
 )
@@ -1074,9 +1048,10 @@ keys <- names(surv_lookup_full)
 use_stochastic_SAR <- FALSE # Can be toggled in the Shiny app
 
 # Define a list of stochastic SAR options for potential UI control
+# Use the fixed SAR value from calib_results instead of base_P
 stoch_SAR_opts <- list(
   model       = "normal",
-  mean        = base_P$SAR_mean,
+  mean        = 0.0025,  # <-- Use your fixed SAR value here
   sd          = base_P$SAR_sd,
   shape1      = 2,
   shape2      = 5,
@@ -1086,18 +1061,28 @@ stoch_SAR_opts <- list(
   pulse_sd    = 0.002
 )
 
+# Filter keys to only include the three base variants
+keys <- names(surv_lookup_full)
+keys <- keys[!grepl("weighted_avg", keys)]  # Remove weighted_avg keys
+
+cat(sprintf("Running forecasts for %d environment-variant combinations\n", length(keys)))
+
 # Run forecasts for all environment-variant combinations
 results_full <- purrr::map_dfr(keys, function(key) {
-  # Parse key to get environment and variant names
   parts  <- strsplit(key, "_")[[1]]
   env_nm <- parts[1]
   var_nm <- paste(parts[-1], collapse = "_")
   seed_vec <- S_seed_fore_list[[var_nm]]
-  # `sim_forecast_fn` is a helper defined in functions.R
+  
+  if (is.null(seed_vec)) {
+    cat(sprintf("Warning: NULL seed for variant %s\n", var_nm))
+    return(tibble())
+  }
+  
   sim_forecast_fn(
     var_nm,
     env_nm,
-    flow_cfs = NULL, # Flow covariates not used in this version
+    flow_cfs = NULL,
     S_seed   = seed_vec,
     spawn_dates_by_alt = spawn_dates_by_alt
   )()
@@ -1209,12 +1194,79 @@ swing_ranges <- tibble(
   best_case = max(swing_results$max_spawners)
 )
 
-# ---- 38. SAVE ALL OUTPUTS FOR SHINY APPLICATION ----
+# ---- 38. CALCULATE STEELHEAD SWING WEIGHTING RANGES ----
+cat("\nCalculating steelhead swing weighting ranges...\n")
+
+# Steelhead metric is already calculated per alternative in steelhead_metrics
+# We need to find the range across extreme hydrology weightings
+
+# For steelhead, we only weight by hydrology (no TDM variants)
+steelhead_swing_results <- map_dfr(names(wyt_extremes), function(wyt_name) {
+  wyt_weights <- wyt_extremes[[wyt_name]]
+  
+  cat(sprintf("  Hydrology: %s\n", wyt_name))
+  
+  # For each scenario, calculate weighted average across hydro years
+  scenario_results <- map_dfr(c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6"), function(scen) {
+    
+    alts <- get_scenario_alternatives(scen, "all")
+    hydro_years <- c("2011", "2014", "2017", "2020")
+    
+    combined_steelhead <- 0
+    
+    for (j in seq_along(alts)) {
+      alt_id <- as.character(alts[j])
+      hydro_year <- hydro_years[j]
+      
+      # Get steelhead score for this alternative
+      steelhead_score <- steelhead_metrics %>%
+        filter(env == alt_id) %>%
+        pull(steelhead_score)
+      
+      if (length(steelhead_score) > 0) {
+        # Weight by hydro year
+        combined_steelhead <- combined_steelhead + (steelhead_score * wyt_weights[hydro_year])
+      }
+    }
+    
+    tibble(
+      scenario = scen,
+      steelhead_score = combined_steelhead
+    )
+  })
+  
+  tibble(
+    wyt_combo = wyt_name,
+    min_steelhead = min(scenario_results$steelhead_score),
+    max_steelhead = max(scenario_results$steelhead_score)
+  )
+})
+
+# Update swing_ranges to include steelhead
+swing_ranges <- tibble(
+  objective = c("Fall-run Chinook", "Steelhead"),
+  worst_case = c(
+    min(swing_results$min_spawners),
+    min(steelhead_swing_results$min_steelhead)
+  ),
+  best_case = c(
+    max(swing_results$max_spawners),
+    max(steelhead_swing_results$max_steelhead)
+  )
+)
+
+cat(sprintf("\nSwing Weighting Ranges:\n"))
+cat(sprintf("  Chinook worst case: %s\n", round(swing_ranges$worst_case[1], 0)))
+cat(sprintf("  Chinook best case: %s\n", round(swing_ranges$best_case[1], 0)))
+cat(sprintf("  Steelhead worst case: %s\n", round(swing_ranges$worst_case[2], 1)))
+cat(sprintf("  Steelhead best case: %s\n", round(swing_ranges$best_case[2], 1)))
+
+# ---- 39. SAVE ALL OUTPUTS FOR SHINY APPLICATION ----
 # Save all processed data frames and model objects as .rds files. These files
 # will be loaded directly by the Shiny dashboard for fast startup.
 
-saveRDS(calib_results,         here("SalmonCountR","app_data","calib_results.rds"))
-saveRDS(calib_pred_by_variant, here("SalmonCountR","app_data","calib_pred_by_variant.rds"))
+#saveRDS(calib_results,         here("SalmonCountR","app_data","calib_results.rds"))
+#saveRDS(calib_pred_by_variant, here("SalmonCountR","app_data","calib_pred_by_variant.rds"))
 saveRDS(results_full,          here("SalmonCountR","app_data","results_full.rds"))
 saveRDS(egg_summary,           here("SalmonCountR","app_data","egg_summary.rds"))
 saveRDS(surv_lookup_full,      here("SalmonCountR","app_data","surv_lookup_full.rds"))
