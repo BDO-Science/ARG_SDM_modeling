@@ -776,51 +776,76 @@ build_forecast_temps <- function(env_ext_list, yrs_forecast, sc) {
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 8: MODEL CALIBRATION
 # ═══════════════════════════════════════════════════════════════════════════════
-
-#' Sum of Squared Errors objective for life-cycle calibration
+#' Combined Sum of Squared Errors for multi-variant calibration
 #'
-#' Computes SSE between predicted and observed spawner abundances for
-#' calibration years. Used to optimize SAR_mean and rear_surv parameters.
+#' @description
+#' Computes the TOTAL Sum of Squared Errors (SSE) across multiple TDM variants
+#' for a single set of life-cycle parameters. This is used to find one constant
+#' set of parameters (SAR, rearing survival) that provides the best overall fit.
 #'
 #' @details
-#' This function:
-#' 1. Sets SAR and rearing survival from parameter vector
-#' 2. Runs life-cycle simulation for calibration period
-#' 3. Calculates SSE for fit years (typically years 4-14)
-#' 
-#' The optimization finds parameters that minimize discrepancy between
-#' model predictions and observed escapement.
+#' The function iterates through a predefined list of TDM variants. In each
+#' iteration, it runs a full life-cycle simulation using the provided `par`
+#' values and calculates the SSE against observed data. It then returns the
+#' sum of these individual SSEs. The goal of the optimization is to find the
+#' `par` vector that minimizes this total error.
 #'
-#' @param par Numeric length-2: c(SAR_mean, rear_surv).
-#' @param variant Character, TDM variant name (e.g., "exp_WF").
+#' @param par Numeric vector of length 2: c(SAR_mean, rear_surv).
+#' @param obs_spawners Numeric vector of observed spawner abundances for the calibration period.
+#' @param S_seed Numeric vector for the initial seed population (first 3 years).
 #'
-#' @return Numeric scalar SSE; returns large value if simulation fails.
+#' @return A single numeric scalar representing the total Sum of Squared Errors (SSE).
 #' @keywords internal
-modular_sse <- function(par, variant) {
-  # Update parameters
-  P_tmp <- base_P
-  P_tmp$SAR_mean  <- par[1]
-  P_tmp$rear_surv <- par[2]
+combined_sse <- function(par, obs_spawners, S_seed) {
   
-  # Run simulation with trial parameters
-  out <- simulate_variant(
-    surv_vec       = surv_lookup_by_variant[[variant]][1:n_calib],
-    P              = P_tmp,
-    years          = n_calib,
-    S_init         = S_seed_calib,
-    SAR_vec        = rep(P_tmp$SAR_mean,  n_calib),
-    K_spawners_vec = rep(P_tmp$K_spawners, n_calib),
-    deg_day_adult  = deg_day_cal_ref,  # Use actual degree-days
-    sim_years_vec  = real_years
-  )
+  # Parameters to be tested by optim()
+  current_SAR <- par[1]
+  current_rear_surv <- par[2]
   
-  # Calculate SSE for fit years only
-  preds <- out$spawners[fit_idx]
-  if (!all(is.finite(preds))) return(.Machine$double.xmax)
+  # List of the TDM variants to loop through
+  tdm_variants <- c("exp_WF", "exp_SM", "lin_Martin")
   
-  sum((preds - obs_spawners[fit_idx])^2)
+  total_sse <- 0 # Initialize a variable to store the summed error
+  
+  # Loop through each TDM variant
+  for (variant_name in tdm_variants) {
+    
+    # --- Run a simulation for this variant using the CURRENT parameters ---
+    
+    # Set up the parameter list 'P' for this simulation run
+    P_test <- base_P
+    P_test$SAR_mean <- current_SAR
+    P_test$rear_surv <- current_rear_surv
+    
+    # Get the correct TDM survival vector for this variant
+    # This uses the pre-computed survival rates for the calibration period
+    surv_calib <- surv_lookup_by_variant[[variant_name]]
+    
+    # Run the simulation using the core `simulate_variant` function
+    sim_pred <- simulate_variant(
+      surv_vec = surv_calib,
+      P = P_test,
+      years = n_calib,
+      S_init = S_seed,
+      SAR_vec = rep(current_SAR, n_calib), # Use the SAR being tested
+      K_spawners_vec = rep(P_test$K_spawners, n_calib),
+      deg_day_adult = deg_day_cal_ref,
+      sim_years_vec = real_years
+    )
+    
+    # --- Calculate the error for this single simulation ---
+    
+    # Compare the predicted spawners to the observed spawners for the fit period
+    pred_spawners <- sim_pred$spawners[fit_idx]
+    obs_fit <- obs_spawners[fit_idx]
+    
+    # Calculate the Sum of Squared Errors (SSE) and add it to the total
+    total_sse <- total_sse + sum((pred_spawners - obs_fit)^2, na.rm = TRUE)
+  }
+  
+  # Return the single, combined error value
+  return(total_sse)
 }
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 9: POPULATION FORECASTING
@@ -852,9 +877,10 @@ modular_sse <- function(par, variant) {
 #'   year, spawners, deg_day, pre_spawn, dd, fry_dd, egg_surv, eff_surv,
 #'   rear_surv, SAR_used, K_spawners, env, variant
 #' @export
+#' Build a forecast simulator function for one variant-environment pair
 sim_forecast_fn <- function(var_nm,
                             env_nm,
-                            flow_cfs = NULL,
+                            flow_cfs = NULL, # This argument is now used by the Shiny app
                             S_seed,
                             spawn_dates_by_alt,
                             P_override = NULL,
@@ -865,30 +891,37 @@ sim_forecast_fn <- function(var_nm,
   
   # Return closure that captures these values
   function() {
-    # Get parameters for this variant-environment, with override option
+    # Get parameters for this variant-environment
     P_tmp <- if (!is.null(P_override)) P_override else base_P_list[[var_nm]][[env_nm]]
-    if (!is.null(flow_cfs)) P_tmp$K_spawners <- get_K_spawners(flow_cfs)
     
-    # Get survival vector for this combination, with override option
+    # ★★★★★★★★★★★★★★★★★★★★★ CHANGE IS HERE ★★★★★★★★★★★★★★★★★★★★★
+    # If a flow is provided by the app, calculate and update K_spawners
+    # We now use the get_K_spawners() function from global.R
+    if (!is.null(flow_cfs)) {
+      P_tmp$K_spawners <- get_K_spawners(flow_cfs)
+    }
+    # ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    
+    # Get survival vector for this combination
     surv_vec <- if (!is.null(surv_vec_override)) surv_vec_override else surv_lookup_full[[paste(env_nm, var_nm, sep = "_")]]
     
     # Get environment-specific spawn dates
-    if (is.null(spawn_dates_by_alt[[env_nm]])) { stop("spawn_dates_by_alt[[", env_nm, "]] is NULL.") }
     spawn_dates_env <- spawn_dates_by_alt[[env_nm]]
-    if (length(spawn_dates_env) < length(sim_years)) { stop("spawn_dates_by_alt[[", env_nm, "]] length < sim_years length.") }
     
     # Calculate pre-spawn degree-days
     deg_day_vec <- compute_deg_day_adult(env_nm = env_nm, sim_years = sim_years, spawn_dates = spawn_dates_env, env_ext_list = env_ext_list)
     
-    # Set up carrying capacity and SAR vectors
+    # Set up carrying capacity vector using the (potentially updated) P_tmp
     K_vec   <- rep(P_tmp$K_spawners, length(sim_years))
+    
+    # Set up SAR vector
     SAR_vec <- if (exists("use_stochastic_SAR", inherits = TRUE) && use_stochastic_SAR) {
       generate_SAR_vec(length(sim_years), modifyList(stoch_SAR_opts, list(mean = P_tmp$SAR_mean)))
     } else {
       rep(P_tmp$SAR_mean, length(sim_years))
     }
     
-    # Run simulation
+    # Run simulation with the new K_vec
     sim_out <- simulate_variant(surv_vec = surv_vec, P = P_tmp, years = length(sim_years), S_init = S_seed, SAR_vec = SAR_vec, K_spawners_vec = K_vec, deg_day_adult = deg_day_vec, sim_years_vec = sim_years)
     
     # Add environment and variant labels
@@ -896,11 +929,9 @@ sim_forecast_fn <- function(var_nm,
   }
 }
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 10: LIFE CYCLE SIMULATION
 # ═══════════════════════════════════════════════════════════════════════════════
-
 #' Simulate full salmon life cycle with age structure
 #'
 #' Core population dynamics model that tracks cohorts through:
@@ -957,10 +988,10 @@ simulate_variant <- function(
     pre_int = 3.0, pre_beta = -0.00067
 ) {
   # Extend inputs to full simulation length
-  surv_vec       <- rep_len(surv_vec, years)
-  K_spawners_vec <- rep_len(K_spawners_vec, years)
-  SAR_vec        <- rep_len(SAR_vec, years)
-  seed_len       <- min(length(S_init), years)
+  surv_vec         <- rep_len(surv_vec, years)
+  K_spawners_vec   <- rep_len(K_spawners_vec, years)
+  SAR_vec          <- rep_len(SAR_vec, years)
+  seed_len         <- min(length(S_init), years)
   
   # Initialize storage arrays
   S                 <- numeric(years)  # Spawner abundance
@@ -978,6 +1009,14 @@ simulate_variant <- function(
   for (t in seq_len(years)) {
     # Use seeded value if available
     if (t <= seed_len && !is.na(S_init[t])) S[t] <- S_init[t]
+    
+    # ★★★★★★★★★★★★★★★★★★★★★ FIX IS HERE ★★★★★★★★★★★★★★★★★★★★★
+    # At the start of the year's calculation, check if the population has crashed.
+    # We check AFTER seeding to avoid overriding an initial condition.
+    if (t > seed_len && (is.na(S[t]) || S[t] < 1)) {
+      S[t] <- 0 # Set to a definitive zero to stop fractional "ghost" populations
+    }
+    # ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
     
     # Pre-spawn survival (temperature effect on holding adults)
     S_pre[t] <- surv_adult_prespawn(deg_day_adult_vec[t], 
@@ -1024,7 +1063,6 @@ simulate_variant <- function(
     K_spawners = K_spawners_vec
   )
 }
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 11: STOCHASTIC SAR GENERATION
