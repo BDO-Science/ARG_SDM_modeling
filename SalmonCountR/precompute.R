@@ -1109,154 +1109,104 @@ steelhead_metrics <- df_all %>%
   ) %>%
   ungroup()
 
-# ---- 37. CALCULATE EXTREME SWING WEIGHTING RANGES ----
-# Calculate Chinook performance under all extreme weight combinations
+# ---- 37. CALCULATE SWING WEIGHTING RANGES USING DEFAULT WEIGHTS ----
+# Calculate Chinook performance under default weight combinations
 # for use in Swing Weighting tool
 
-# Define extreme weight combinations
-wyt_extremes <- list(
-  "2011_only" = c("2011" = 1, "2014" = 0, "2017" = 0, "2020" = 0),
-  "2014_only" = c("2011" = 0, "2014" = 1, "2017" = 0, "2020" = 0),
-  "2017_only" = c("2011" = 0, "2014" = 0, "2017" = 1, "2020" = 0),
-  "2020_only" = c("2011" = 0, "2014" = 0, "2017" = 0, "2020" = 1)
-)
+# Define default weight combinations (matching app defaults)
+wyt_default <- c("2011" = 0.25, "2014" = 0.25, "2017" = 0.25, "2020" = 0.25)
+tdm_default <- c("exp_WF" = 0.51, "exp_SM" = 0.24, "lin_Martin" = 0.25)
 
-tdm_extremes <- list(
-  "wf_only"     = c("exp_WF" = 1, "exp_SM" = 0, "lin_Martin" = 0),
-  "sm_only"     = c("exp_WF" = 0, "exp_SM" = 1, "lin_Martin" = 0),
-  "martin_only" = c("exp_WF" = 0, "exp_SM" = 0, "lin_Martin" = 1)
-)
+cat("\nCalculating swing weighting ranges using default weights...\n")
 
-swing_combinations <- expand.grid(
-  wyt = names(wyt_extremes),
-  tdm = names(tdm_extremes),
-  stringsAsFactors = FALSE
-)
-
-# Use the existing results_full data
-swing_results <- map_dfr(1:nrow(swing_combinations), function(i) {
-  wyt_name <- swing_combinations$wyt[i]
-  tdm_name <- swing_combinations$tdm[i]
+# Calculate weighted average spawner abundance for each scenario
+swing_scenario_results <- map_dfr(c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6"), function(scen) {
   
-  wyt_weights <- wyt_extremes[[wyt_name]]
-  tdm_weights <- tdm_extremes[[tdm_name]]
+  alts <- get_scenario_alternatives(scen, "all")
+  hydro_years <- c("2011", "2014", "2017", "2020")
   
-  cat(sprintf("  Combo %d/%d: %s + %s\n", i, nrow(swing_combinations), wyt_name, tdm_name))
+  combined_spawners <- 0
   
-  # For each scenario, calculate weighted average across WYT and TDM
-  scenario_results <- map_dfr(c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6"), function(scen) {
+  for (j in seq_along(alts)) {
+    alt_id <- as.character(alts[j])
+    hydro_year <- hydro_years[j]
     
-    alts <- get_scenario_alternatives(scen, "all")
-    hydro_years <- c("2011", "2014", "2017", "2020")
-    
-    combined_spawners <- 0
-    
-    for (j in seq_along(alts)) {
-      alt_id <- as.character(alts[j])
-      hydro_year <- hydro_years[j]
-      
-      # Get results for each TDM variant for this alternative
-      tdm_spawners <- 0
-      for (variant_name in names(tdm_weights)) {
-        if (tdm_weights[variant_name] > 0) {
-          # Filter results for this specific env and variant
-          variant_results <- results_full %>%
-            filter(env == alt_id, variant == variant_name, year > max(real_years))
+    # Get results for each TDM variant for this alternative
+    tdm_spawners <- 0
+    for (variant_name in names(tdm_default)) {
+      if (tdm_default[variant_name] > 0) {
+        # Filter results for this specific env and variant
+        variant_results <- results_full %>%
+          filter(env == alt_id, variant == variant_name, year > max(real_years))
+        
+        if (nrow(variant_results) > 0) {
+          # Calculate the average of the final 20 years of the simulation
+          avg_last_20_years <- variant_results %>%
+            slice_tail(n = 20) %>%
+            summarize(avg_spawners = mean(spawners, na.rm = TRUE)) %>%
+            pull(avg_spawners)
           
-          if (nrow(variant_results) > 0) {
-            # ★★★★★★★★★★★★★★★★★★★★★ CHANGE IS HERE ★★★★★★★★★★★★★★★★★★★★★
-            # Calculate the average of the final 20 years of the simulation
-            avg_last_20_years <- variant_results %>%
-              slice_tail(n = 20) %>%
-              summarize(avg_spawners = mean(spawners, na.rm = TRUE)) %>%
-              pull(avg_spawners)
-            
-            tdm_spawners <- tdm_spawners + avg_last_20_years * tdm_weights[variant_name]
-            # ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-          }
+          tdm_spawners <- tdm_spawners + avg_last_20_years * tdm_default[variant_name]
         }
       }
-      
-      # Weight by hydro year
-      combined_spawners <- combined_spawners + (tdm_spawners * wyt_weights[hydro_year])
     }
     
-    tibble(
-      scenario = scen,
-      spawner_metric = combined_spawners
-    )
-  })
+    # Weight by hydro year
+    combined_spawners <- combined_spawners + (tdm_spawners * wyt_default[hydro_year])
+  }
   
   tibble(
-    wyt_combo = wyt_name,
-    tdm_combo = tdm_name,
-    min_spawners = min(scenario_results$spawner_metric),
-    max_spawners = max(scenario_results$spawner_metric)
+    scenario = scen,
+    spawner_metric = combined_spawners
   )
 })
 
 # ---- 38. CALCULATE STEELHEAD SWING WEIGHTING RANGES ----
-cat("\nCalculating steelhead swing weighting ranges...\n")
+cat("\nCalculating steelhead swing weighting ranges using default weights...\n")
 
-# Steelhead metric is already calculated per alternative in steelhead_metrics
-# We need to find the range across extreme hydrology weightings
-
-# For steelhead, we only weight by hydrology (no TDM variants)
-steelhead_swing_results <- map_dfr(names(wyt_extremes), function(wyt_name) {
-  wyt_weights <- wyt_extremes[[wyt_name]]
+# For each scenario, calculate weighted average across hydro years
+steelhead_scenario_results <- map_dfr(c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6"), function(scen) {
   
-  cat(sprintf("  Hydrology: %s\n", wyt_name))
+  alts <- get_scenario_alternatives(scen, "all")
+  hydro_years <- c("2011", "2014", "2017", "2020")
   
-  # For each scenario, calculate weighted average across hydro years
-  scenario_results <- map_dfr(c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6"), function(scen) {
+  combined_steelhead <- 0
+  
+  for (j in seq_along(alts)) {
+    alt_id <- as.character(alts[j])
+    hydro_year <- hydro_years[j]
     
-    alts <- get_scenario_alternatives(scen, "all")
-    hydro_years <- c("2011", "2014", "2017", "2020")
+    # Get steelhead score for this alternative
+    steelhead_score <- steelhead_metrics %>%
+      filter(env == alt_id) %>%
+      pull(steelhead_score)
     
-    combined_steelhead <- 0
-    
-    for (j in seq_along(alts)) {
-      alt_id <- as.character(alts[j])
-      hydro_year <- hydro_years[j]
-      
-      # Get steelhead score for this alternative
-      steelhead_score <- steelhead_metrics %>%
-        filter(env == alt_id) %>%
-        pull(steelhead_score)
-      
-      if (length(steelhead_score) > 0) {
-        # Weight by hydro year
-        combined_steelhead <- combined_steelhead + (steelhead_score * wyt_weights[hydro_year])
-      }
+    if (length(steelhead_score) > 0) {
+      # Weight by hydro year
+      combined_steelhead <- combined_steelhead + (steelhead_score * wyt_default[hydro_year])
     }
-    
-    tibble(
-      scenario = scen,
-      steelhead_score = combined_steelhead
-    )
-  })
+  }
   
   tibble(
-    wyt_combo = wyt_name,
-    min_steelhead = min(scenario_results$steelhead_score),
-    max_steelhead = max(scenario_results$steelhead_score)
+    scenario = scen,
+    steelhead_score = combined_steelhead
   )
 })
 
-# Update swing_ranges to include steelhead
+# Create swing_ranges using actual scenario outcomes
 swing_ranges <- tibble(
   objective = c("Fall-run Chinook", "Steelhead"),
   worst_case = c(
-    min(swing_results$min_spawners),
-    min(steelhead_swing_results$min_steelhead)
+    min(swing_scenario_results$spawner_metric),
+    min(steelhead_scenario_results$steelhead_score)
   ),
   best_case = c(
-    max(swing_results$max_spawners),
-    max(steelhead_swing_results$max_steelhead)
+    max(swing_scenario_results$spawner_metric),
+    max(steelhead_scenario_results$steelhead_score)
   )
 )
 
-cat(sprintf("\nSwing Weighting Ranges:\n"))
+cat(sprintf("\nSwing Weighting Ranges (using default weights):\n"))
 cat(sprintf("  Chinook worst case: %s\n", round(swing_ranges$worst_case[1], 0)))
 cat(sprintf("  Chinook best case: %s\n", round(swing_ranges$best_case[1], 0)))
 cat(sprintf("  Steelhead worst case: %s\n", round(swing_ranges$worst_case[2], 1)))
@@ -1279,7 +1229,6 @@ saveRDS(sim_years,             here("SalmonCountR","app_data","sim_years.rds"))
 saveRDS(spawn_dates_by_alt,    here("SalmonCountR","app_data","spawn_dates_by_alt.rds"))
 saveRDS(steelhead_metrics, here("SalmonCountR","app_data", "steelhead_metrics.rds"))
 saveRDS(swing_ranges, here("SalmonCountR","app_data","swing_ranges.rds"))
-saveRDS(swing_results, here("SalmonCountR","app_data","swing_extreme_combos.rds"))
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                             END OF PRECOMPUTE SCRIPT                          ║

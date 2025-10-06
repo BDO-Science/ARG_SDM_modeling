@@ -21,38 +21,28 @@ normalize_weights <- function(weights) {
   setNames(rep(1 / length(weights), length(weights)), names(weights))
 }
 
-# Helper for min-max normalization (scales results to 0-100)
-normalize_scores <- function(scores) {
-  min_s <- min(scores, na.rm = TRUE)
-  max_s <- max(scores, na.rm = TRUE)
-  if (max_s == min_s) return(rep(100, length(scores))) # Return 100 if all values are the same
-  (scores - min_s) / (max_s - min_s) * 100 
-}
-
-# Helper for min-max normalization (scales results to 0-1), one for objectives we're maximizing and another for ones we're minimizing
-normalize_scores_max <- function(scores) {
-  min_s <- min(scores, na.rm = TRUE)
-  max_s <- max(scores, na.rm = TRUE)
-  if (max_s == min_s) return(rep(100, length(scores))) # Return 1 if all values are the same
+# Helper for min-max normalization (scales results to 0-1), one for each objective following the swing weighting values
+normalize_scores_chinook <- function(scores) {
+  min_s <- swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"]
+  max_s <- swing_ranges$best_case[swing_ranges$objective == "Fall-run Chinook"]
+  if (max_s == min_s) return(rep(1, length(scores)))
   (scores - min_s) / (max_s - min_s)
 }
 
-normalize_scores_min <- function(scores) {
+normalize_scores_steelhead <- function(scores) {
+  min_s <- swing_ranges$worst_case[swing_ranges$objective == "Steelhead"]
+  max_s <- swing_ranges$best_case[swing_ranges$objective == "Steelhead"]
+  if (max_s == min_s) return(rep(1, length(scores)))
+  (scores - min_s) / (max_s - min_s)
+}
+
+normalize_scores_hydro <- function(scores) {
+  # For hydropower, lower cost is better, so we invert
   min_s <- min(scores, na.rm = TRUE)
   max_s <- max(scores, na.rm = TRUE)
-  if (max_s == min_s) return(rep(100, length(scores))) # Return 1 if all values are the same
+  if (max_s == min_s) return(rep(1, length(scores)))
   (max_s - scores) / (max_s - min_s)
 }
-
-# Helper for min-max normalization (scales results to 0-1), one for each objective following the swing weighting values
-
-normalize_scores_salmon <- function(scores) {
-  min_s <- min(scores, na.rm = TRUE)
-  max_s <- max(scores, na.rm = TRUE)
-  if (max_s == min_s) return(rep(100, length(scores))) # Return 1 if all values are the same
-  (scores - swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"]) / (swing_ranges$best_case[swing_ranges$objective == "Fall-run Chinook"] - swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"])
-}
-
 
 get_scenario_alternatives <- function(scenario, hydro_year) {
   # Mapping: Alt 1-9 (2011), 10-18 (2014), 19-27 (2017), 28-36 (2020)
@@ -527,9 +517,9 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                               conditionalPanel(
                                 condition = "input.weight_method == 'manual'",
                                 p("Adjust sliders to reflect importance. Weights sum to 1."),
-                                sliderInput("w_chinook", "Fall-run Chinook", min = 0, max = 1, value = 0.4, step = 0.05),
-                                sliderInput("w_steelhead", "Steelhead", min = 0, max = 1, value = 0.3, step = 0.05),
-                                sliderInput("w_hydro", "Hydropower", min = 0, max = 1, value = 0.3, step = 0.05),
+                                sliderInput("w_chinook", "Fall-run Chinook", min = 0, max = 1, value = 0.4, step = 0.01),
+                                sliderInput("w_steelhead", "Steelhead", min = 0, max = 1, value = 0.1, step = 0.01),
+                                sliderInput("w_hydro", "Hydropower", min = 0, max = 1, value = 0.5, step = 0.01),
                                 hr(),
                                 p(em("Tip: Use the Swing Weighting tab to determine these weights systematically."))
                               ),
@@ -987,9 +977,9 @@ server <- function(input, output, session) {
       left_join(hydro_df, by = "scenario") %>%
       mutate(hydro_raw = ifelse(is.na(hydro_raw), 50, hydro_raw)) %>%
       mutate(
-        chinook_norm = normalize_scores_salmon(chinook_raw),
-        steelhead_norm = normalize_scores_max(steelhead_raw),
-        hydro_norm = normalize_scores_min(hydro_raw)  # Lower cost is better
+        chinook_norm = normalize_scores_chinook(chinook_raw),
+        steelhead_norm = normalize_scores_steelhead(steelhead_raw),
+        hydro_norm = normalize_scores_hydro(hydro_raw)
       )
   })
   

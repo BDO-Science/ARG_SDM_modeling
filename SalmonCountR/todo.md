@@ -7,5 +7,7 @@ Escapement (natural only?)- both for now but consider getting numbers from const
 
 **2. add age-2 fish and proportion mature**
 
+hatchery fish?
+
 
 remove age-2 fish issue?
