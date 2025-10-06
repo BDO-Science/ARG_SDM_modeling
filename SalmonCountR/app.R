@@ -980,14 +980,20 @@ server <- function(input, output, session) {
   
   # Decision Support
   performance_data_full <- reactive({
-    req(values$performance_auto)
+    # Always use pre-computed swing results for consistency
+    perf_data <- swing_scenario_results %>%
+      rename(chinook_raw = spawner_metric) %>%
+      left_join(
+        steelhead_scenario_results %>% rename(steelhead_raw = steelhead_score),
+        by = "scenario"
+      )
     
     hydro_df <- tibble(
       scenario = names(hardcoded_hydro_scores),
       hydro_raw = hardcoded_hydro_scores
     )
     
-    values$performance_auto %>%
+    perf_data %>%
       left_join(hydro_df, by = "scenario") %>%
       mutate(hydro_raw = ifelse(is.na(hydro_raw), 50, hydro_raw)) %>%
       mutate(
