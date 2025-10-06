@@ -1140,8 +1140,11 @@ swing_scenario_results <- map_dfr(c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "
           filter(env == alt_id, variant == variant_name, year > max(real_years))
         
         if (nrow(variant_results) > 0) {
-          # Calculate the MEDIAN across the FULL 100-year forecast period
-          median_spawners <- median(variant_results$spawners, na.rm = TRUE)
+          # Calculate the MEDIAN of the LAST 20 years
+          median_spawners <- variant_results %>%
+            slice_tail(n = 20) %>%
+            summarize(med = median(spawners, na.rm = TRUE)) %>%
+            pull(med)
           
           tdm_spawners <- tdm_spawners + median_spawners * tdm_default[variant_name]
         }

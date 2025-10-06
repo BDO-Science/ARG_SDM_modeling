@@ -21,18 +21,20 @@ normalize_weights <- function(weights) {
   setNames(rep(1 / length(weights), length(weights)), names(weights))
 }
 
-# Helper for min-max normalization (scales results to 0-1), one for each objective following the swing weighting values
+# Helper for min-max normalization using actual data ranges
 normalize_scores_chinook <- function(scores) {
-  min_s <- swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"]
-  max_s <- swing_ranges$best_case[swing_ranges$objective == "Fall-run Chinook"]
-  if (max_s == min_s) return(rep(1, length(scores)))
+  # Get the actual min and max from the current scores
+  min_s <- min(scores, na.rm = TRUE)
+  max_s <- max(scores, na.rm = TRUE)
+  if (max_s == min_s) return(rep(0.5, length(scores)))
   (scores - min_s) / (max_s - min_s)
 }
 
 normalize_scores_steelhead <- function(scores) {
-  min_s <- swing_ranges$worst_case[swing_ranges$objective == "Steelhead"]
-  max_s <- swing_ranges$best_case[swing_ranges$objective == "Steelhead"]
-  if (max_s == min_s) return(rep(1, length(scores)))
+  # Get the actual min and max from the current scores
+  min_s <- min(scores, na.rm = TRUE)
+  max_s <- max(scores, na.rm = TRUE)
+  if (max_s == min_s) return(rep(0.5, length(scores)))
   (scores - min_s) / (max_s - min_s)
 }
 
@@ -40,7 +42,7 @@ normalize_scores_hydro <- function(scores) {
   # For hydropower, lower cost is better, so we invert
   min_s <- min(scores, na.rm = TRUE)
   max_s <- max(scores, na.rm = TRUE)
-  if (max_s == min_s) return(rep(1, length(scores)))
+  if (max_s == min_s) return(rep(0.5, length(scores)))
   (max_s - scores) / (max_s - min_s)
 }
 
@@ -858,9 +860,10 @@ server <- function(input, output, session) {
     cmp_results <- map_dfr(input$cmp_scenarios, ~run_scenario_simulation(., hydro_w_raw, tdm_w_raw, input$cmp_years, input$cmp_flow))
     values$cmp_data <- cmp_results
     
-    # Calculate performance for Chinook
+    # Calculate performance for Chinook using LAST 20 YEARS to match other tabs
     perf_data_chinook <- cmp_results %>%
       group_by(scenario) %>%
+      slice_tail(n = 20) %>%  # Use last 20 years like boxplot
       summarise(chinook_raw = median(spawners), .groups = "drop")
     
     # Calculate weighted steelhead scores if steelhead_metrics exists
@@ -980,13 +983,19 @@ server <- function(input, output, session) {
   
   # Decision Support
   performance_data_full <- reactive({
-    # Always use pre-computed swing results for consistency
-    perf_data <- swing_scenario_results %>%
-      rename(chinook_raw = spawner_metric) %>%
-      left_join(
-        steelhead_scenario_results %>% rename(steelhead_raw = steelhead_score),
-        by = "scenario"
-      )
+    # Check if user has run Compare Alternatives with custom weights
+    if (!is.null(values$performance_auto)) {
+      # Use the data from Compare Alternatives for consistency
+      perf_data <- values$performance_auto
+    } else {
+      # Use pre-computed swing results (based on default weights)
+      perf_data <- swing_scenario_results %>%
+        rename(chinook_raw = spawner_metric) %>%
+        left_join(
+          steelhead_scenario_results %>% rename(steelhead_raw = steelhead_score),
+          by = "scenario"
+        )
+    }
     
     hydro_df <- tibble(
       scenario = names(hardcoded_hydro_scores),
@@ -1147,18 +1156,21 @@ server <- function(input, output, session) {
   
   # Display objective ranges
   output$swing_ranges_table <- renderTable({
+    # Get the current performance data to find actual ranges
+    perf_data <- performance_data_full()
+    
     tibble(
       Objective = c("Fall-run Chinook", "Steelhead", "Hydropower"),
       Direction = c("Maximize", "Maximize", "Minimize"),
       `Worst Case` = c(
-        swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"],
-        swing_ranges$worst_case[swing_ranges$objective == "Steelhead"],
-        max(hardcoded_hydro_scores)
+        min(perf_data$chinook_raw, na.rm = TRUE),
+        min(perf_data$steelhead_raw, na.rm = TRUE),
+        max(perf_data$hydro_raw, na.rm = TRUE)
       ),
       `Best Case` = c(
-        swing_ranges$best_case[swing_ranges$objective == "Fall-run Chinook"],
-        swing_ranges$best_case[swing_ranges$objective == "Steelhead"],
-        min(hardcoded_hydro_scores)
+        max(perf_data$chinook_raw, na.rm = TRUE),
+        max(perf_data$steelhead_raw, na.rm = TRUE),
+        min(perf_data$hydro_raw, na.rm = TRUE)
       )
     ) %>%
       mutate(
@@ -1168,17 +1180,16 @@ server <- function(input, output, session) {
   }, align = 'lccc')
   
   # Display hypothetical alternatives
-  # Display hypothetical alternatives
   output$swing_alternatives_table <- renderTable({
-    req(swing_ranges, swing_scenario_results, steelhead_scenario_results)
+    perf_data <- performance_data_full()
     
     tibble(
       Alternative = c("Worst Alternative", "Alt 1: Best Chinook", "Alt 2: Best Steelhead", "Alt 3: Best Hydropower"),
       `Chinook Abundance` = c(
-        swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"],
-        swing_ranges$best_case[swing_ranges$objective == "Fall-run Chinook"],
-        swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"],
-        swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"]
+        min(perf_data$chinook_raw, na.rm = TRUE),
+        max(perf_data$chinook_raw, na.rm = TRUE),
+        min(perf_data$chinook_raw, na.rm = TRUE),
+        min(perf_data$chinook_raw, na.rm = TRUE)
       ),
       `Steelhead Score` = c(
         swing_ranges$worst_case[swing_ranges$objective == "Steelhead"],
