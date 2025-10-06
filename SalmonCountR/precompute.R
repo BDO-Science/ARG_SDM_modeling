@@ -1119,7 +1119,7 @@ tdm_default <- c("exp_WF" = 0.51, "exp_SM" = 0.24, "lin_Martin" = 0.25)
 
 cat("\nCalculating swing weighting ranges using default weights...\n")
 
-# Calculate weighted average spawner abundance for each scenario
+# Calculate weighted average spawner abundance for each scenario (using full 100 years)
 swing_scenario_results <- map_dfr(c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6"), function(scen) {
   
   alts <- get_scenario_alternatives(scen, "all")
@@ -1140,13 +1140,10 @@ swing_scenario_results <- map_dfr(c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "
           filter(env == alt_id, variant == variant_name, year > max(real_years))
         
         if (nrow(variant_results) > 0) {
-          # Calculate the average of the final 20 years of the simulation
-          avg_last_20_years <- variant_results %>%
-            slice_tail(n = 20) %>%
-            summarize(avg_spawners = mean(spawners, na.rm = TRUE)) %>%
-            pull(avg_spawners)
+          # Calculate the MEDIAN across the FULL 100-year forecast period
+          median_spawners <- median(variant_results$spawners, na.rm = TRUE)
           
-          tdm_spawners <- tdm_spawners + avg_last_20_years * tdm_default[variant_name]
+          tdm_spawners <- tdm_spawners + median_spawners * tdm_default[variant_name]
         }
       }
     }
@@ -1227,8 +1224,8 @@ saveRDS(S_seed_fore_list,      here("SalmonCountR","app_data","S_seed_fore_list.
 saveRDS(stoch_SAR_opts,        here("SalmonCountR","app_data","stoch_SAR_opts.rds"))
 saveRDS(sim_years,             here("SalmonCountR","app_data","sim_years.rds"))
 saveRDS(spawn_dates_by_alt,    here("SalmonCountR","app_data","spawn_dates_by_alt.rds"))
-saveRDS(steelhead_metrics, here("SalmonCountR","app_data", "steelhead_metrics.rds"))
-saveRDS(swing_ranges, here("SalmonCountR","app_data","swing_ranges.rds"))
+saveRDS(swing_scenario_results, here("SalmonCountR","app_data","swing_scenario_results.rds"))
+saveRDS(steelhead_scenario_results, here("SalmonCountR","app_data","steelhead_scenario_results.rds"))
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                             END OF PRECOMPUTE SCRIPT                          ║

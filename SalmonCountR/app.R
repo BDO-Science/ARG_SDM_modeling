@@ -864,13 +864,27 @@ server <- function(input, output, session) {
       summarise(chinook_raw = median(spawners), .groups = "drop")
     
     # Calculate weighted steelhead scores if steelhead_metrics exists
+    # Calculate weighted steelhead scores if steelhead_metrics exists
     if(exists("steelhead_metrics")) {
       steelhead_weighted <- map_dfr(input$cmp_scenarios, function(scen) {
         alts <- get_scenario_alternatives(scen, "all")
-        alt_scores <- steelhead_metrics %>% filter(env %in% as.character(alts))
-        alt_scores$hydro_year <- c("2011", "2014", "2017", "2020")
-        weighted_score <- sum(alt_scores$steelhead_score * hydro_w[alt_scores$hydro_year])
-        tibble(scenario = scen, steelhead_raw = weighted_score)
+        hydro_years <- c("2011", "2014", "2017", "2020")
+        
+        combined_steelhead <- 0
+        for (j in seq_along(alts)) {
+          alt_id <- as.character(alts[j])
+          hydro_year <- hydro_years[j]
+          
+          steelhead_score <- steelhead_metrics %>% 
+            filter(env == alt_id) %>% 
+            pull(steelhead_score)
+          
+          if (length(steelhead_score) > 0) {
+            combined_steelhead <- combined_steelhead + (steelhead_score * hydro_w[hydro_year])
+          }
+        }
+        
+        tibble(scenario = scen, steelhead_raw = combined_steelhead)
       })
       
       values$performance_auto <- perf_data_chinook %>%
@@ -1127,27 +1141,30 @@ server <- function(input, output, session) {
   
   # Display objective ranges
   output$swing_ranges_table <- renderTable({
-    
     tibble(
       Objective = c("Fall-run Chinook", "Steelhead", "Hydropower"),
       Direction = c("Maximize", "Maximize", "Minimize"),
       `Worst Case` = c(
         swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"],
-        min(steelhead_metrics$steelhead_score),
+        swing_ranges$worst_case[swing_ranges$objective == "Steelhead"],
         max(hardcoded_hydro_scores)
       ),
       `Best Case` = c(
         swing_ranges$best_case[swing_ranges$objective == "Fall-run Chinook"],
-        max(steelhead_metrics$steelhead_score),
+        swing_ranges$best_case[swing_ranges$objective == "Steelhead"],
         min(hardcoded_hydro_scores)
       )
     ) %>%
-      mutate(across(where(is.numeric), ~round(., 0)))
+      mutate(
+        `Worst Case` = if_else(Objective == "Steelhead", round(`Worst Case`, 2), round(`Worst Case`, 0)),
+        `Best Case` = if_else(Objective == "Steelhead", round(`Best Case`, 2), round(`Best Case`, 0))
+      )
   }, align = 'lccc')
   
   # Display hypothetical alternatives
+  # Display hypothetical alternatives
   output$swing_alternatives_table <- renderTable({
-    req(swing_ranges)  # Use the pre-computed ranges instead
+    req(swing_ranges, swing_scenario_results, steelhead_scenario_results)
     
     tibble(
       Alternative = c("Worst Alternative", "Alt 1: Best Chinook", "Alt 2: Best Steelhead", "Alt 3: Best Hydropower"),
@@ -1158,10 +1175,10 @@ server <- function(input, output, session) {
         swing_ranges$worst_case[swing_ranges$objective == "Fall-run Chinook"]
       ),
       `Steelhead Score` = c(
-        min(steelhead_metrics$steelhead_score),
-        min(steelhead_metrics$steelhead_score),
-        max(steelhead_metrics$steelhead_score),
-        min(steelhead_metrics$steelhead_score)
+        swing_ranges$worst_case[swing_ranges$objective == "Steelhead"],
+        swing_ranges$worst_case[swing_ranges$objective == "Steelhead"],
+        swing_ranges$best_case[swing_ranges$objective == "Steelhead"],
+        swing_ranges$worst_case[swing_ranges$objective == "Steelhead"]
       ),
       `Hydropower Cost` = c(
         max(hardcoded_hydro_scores),
@@ -1170,7 +1187,11 @@ server <- function(input, output, session) {
         min(hardcoded_hydro_scores)
       )
     ) %>%
-      mutate(across(where(is.numeric), ~round(., 0)))
+      mutate(
+        `Chinook Abundance` = round(`Chinook Abundance`, 0),
+        `Steelhead Score` = round(`Steelhead Score`, 2),
+        `Hydropower Cost` = round(`Hydropower Cost`, 0)
+      )
   }, align = 'lccc')
   
   # Calculate and display weights
