@@ -671,6 +671,9 @@ server <- function(input, output, session) {
     hydro_w <- normalize_weights(hydro_weights)
     tdm_w <- normalize_weights(tdm_weights)
     
+    # Use the actual flow-habitat relationship from instream data
+    K_spawners <- get_K_spawners(flow_val)
+    
     # Extract forecast years from results_full
     forecast_data <- results_full %>%
       filter(year >= 2025) %>%
@@ -683,6 +686,11 @@ server <- function(input, output, session) {
     # Initialize accumulator for final results
     final_spawners <- rep(0, n_years)
     years_vec <- sort(unique(forecast_data$year))[1:n_years]
+    
+    # Apply density-dependent scaling based on K change
+    # The default K at 1500 cfs (from the slider default)
+    base_K <- get_K_spawners(1500)
+    K_scalar <- K_spawners / base_K
     
     for (i in seq_along(alts)) {
       alt_id <- as.character(alts[i])
@@ -710,10 +718,15 @@ server <- function(input, output, session) {
         ) %>%
         arrange(year)
       
-      # Apply hydrology weight and accumulate
+      # Apply carrying capacity scaling
       if (nrow(tdm_weighted) > 0) {
-        # Ensure we have the right number of years
         tdm_spawners <- tdm_weighted$spawners[1:min(n_years, length(tdm_weighted$spawners))]
+        
+        # Apply density-dependent adjustment
+        # Beverton-Holt style: population approaches K asymptotically
+        # This better represents actual density dependence than simple scaling
+        tdm_spawners <- tdm_spawners * K_spawners / (base_K + (K_spawners - base_K) * (1 - tdm_spawners/base_K))
+        
         final_spawners[1:length(tdm_spawners)] <- final_spawners[1:length(tdm_spawners)] + 
           tdm_spawners * hydro_w[i]
       }
@@ -723,7 +736,8 @@ server <- function(input, output, session) {
     result <- tibble(
       year = years_vec,
       spawners = final_spawners,
-      scenario = scenario
+      scenario = scenario,
+      K_spawners = K_spawners  # Include K in output
     )
     
     # Add other columns from template for compatibility
@@ -732,9 +746,12 @@ server <- function(input, output, session) {
       slice_head(n = 1) %>%
       select(-year, -spawners, -env, -variant)
     
+    # Don't overwrite K_spawners if it exists in template
     if (ncol(template_cols) > 0) {
       for (col in names(template_cols)) {
-        result[[col]] <- template_cols[[col]][1]
+        if (col != "K_spawners") {
+          result[[col]] <- template_cols[[col]][1]
+        }
       }
     }
     
