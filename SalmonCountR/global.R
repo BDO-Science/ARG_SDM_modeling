@@ -6,21 +6,21 @@ source("functions.R")
 # load precomputed data (fast)
 # NOTE: This script now assumes that the 'env_ext_list.rds' file in the
 # 'app_data' directory contains the real temperature data for all alternatives.
-env_ext_list       <- readRDS(here("app_data","env_ext_list.rds"))
-df_all_orig        <- readRDS(here("app_data", "df_all.rds"))
-egg_summary_orig   <- readRDS(here("app_data", "egg_summary.rds"))
-surv_lookup_full   <- readRDS(here("app_data", "surv_lookup_full.rds"))
-base_P_list        <- readRDS(here("app_data", "base_P_list.rds"))
-base_P             <- readRDS(here("app_data", "base_P.rds"))
-S_seed_calib       <- readRDS(here("app_data", "S_seed_calib.rds"))
-S_seed_fore_list   <- readRDS(here("app_data", "S_seed_fore_list.rds"))
-stoch_SAR_opts     <- readRDS(here("app_data", "stoch_SAR_opts.rds"))
-sim_years          <- readRDS(here("app_data", "sim_years.rds"))
-spawn_dates_by_alt <- readRDS(here("app_data","spawn_dates_by_alt.rds"))
-instream <- readRDS(here("app_data","american_river_instream.rds"))
-steelhead_metrics <- readRDS(here("app_data", "steelhead_metrics.rds"))
-swing_ranges <- readRDS(here("app_data", "swing_ranges.rds"))
-results_full <- readRDS(here("app_data", "results_full.rds"))
+env_ext_list       <- readRDS(here("SalmonCountR", "app_data","env_ext_list.rds"))
+df_all_orig        <- readRDS(here("SalmonCountR", "app_data", "df_all.rds"))
+egg_summary_orig   <- readRDS(here("SalmonCountR", "app_data", "egg_summary.rds"))
+surv_lookup_full   <- readRDS(here("SalmonCountR", "app_data", "surv_lookup_full.rds"))
+base_P_list        <- readRDS(here("SalmonCountR", "app_data", "base_P_list.rds"))
+base_P             <- readRDS(here("SalmonCountR", "app_data", "base_P.rds"))
+S_seed_calib       <- readRDS(here("SalmonCountR", "app_data", "S_seed_calib.rds"))
+S_seed_fore_list   <- readRDS(here("SalmonCountR", "app_data", "S_seed_fore_list.rds"))
+stoch_SAR_opts     <- readRDS(here("SalmonCountR", "app_data", "stoch_SAR_opts.rds"))
+sim_years          <- readRDS(here("SalmonCountR", "app_data", "sim_years.rds"))
+spawn_dates_by_alt <- readRDS(here("SalmonCountR", "app_data","spawn_dates_by_alt.rds"))
+instream <- readRDS(here("SalmonCountR", "app_data","american_river_instream.rds"))
+steelhead_metrics <- readRDS(here("SalmonCountR", "app_data", "steelhead_metrics.rds"))
+swing_ranges <- readRDS(here("SalmonCountR", "app_data", "swing_ranges.rds"))
+results_full <- readRDS(here("SalmonCountR", "app_data", "results_full.rds"))
 
 real_years <- 2011:2024 
 n_sim      <- 114
@@ -157,3 +157,21 @@ if (nrow(df_all) > 0 && "alternative" %in% names(df_all)) {
   }
 }
 
+
+# ---- Pre-computed temperature explorer data (2025 only, climate-labelled) ----
+# Doing year(Date) / month(Date) on the full df_all_orig on every render is
+# the main cause of the 20-second lag in the Temperature Explorer tab.
+# We do it once here at startup instead.
+if (exists("df_all_orig") && is.data.frame(df_all_orig)) {
+  df_temp_2025 <- df_all_orig %>%
+    filter(year(Date) == 2025) %>%
+    mutate(
+      month_num = month(Date),
+      climate = case_when(
+        env %in% as.character(1:9)   ~ "2011",
+        env %in% as.character(10:18) ~ "2014",
+        env %in% as.character(19:27) ~ "2017",
+        env %in% as.character(28:36) ~ "2020"
+      )
+    )
+}

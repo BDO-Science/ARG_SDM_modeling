@@ -237,7 +237,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                      tags$li(HTML("<strong>Density Dependence:</strong> Beverton-Holt at fry stage: dd = 0.347 / (1 + Redds / K)")),
                                      tags$li(HTML("<strong>Carrying Capacity:</strong> K = 12,493 spawners (or flow-dependent if specified)")),
                                      tags$li(HTML("<strong>Fry Production:</strong> Fry = Eggs × S<sub>TDM</sub> × dd")),
-                                     tags$li(HTML("<strong>Smolt Production:</strong> Smolts = Fry × rear_surv (fixed at 0.5419)")),
+                                     tags$li(HTML("<strong>Smolt Production:</strong> Smolts = Fry × rear_surv (fixed at 0.5149)")),
                                      tags$li(HTML("<strong>Non-American River Survival:</strong> SAR = 0.0025 (fixed value representing 0.25% survival from the Sacramento River to returning adults)")),
                                      tags$li(HTML("<strong>Age Structure:</strong> 82.9% age-3, 16.9% age-4, 0.2% age-5 returns (CWT data)")),
                                      tags$li(HTML("<strong>Returns:</strong> Spawners<sub>t+a</sub> = Smolts<sub>t</sub> × SAR × P(age=a)"))
@@ -249,7 +249,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    p("The model uses pre-specified biological parameters rather than statistical calibration:"),
                                    tags$ul(
                                      tags$li(HTML("<strong>Smolt-to-Adult Return (SAR):</strong> 0.0025 (0.25%) - fixed value representing ocean survival")),
-                                     tags$li(HTML("<strong>Rearing Survival:</strong> 0.5419 (54.19%) - fixed freshwater survival from fry to smolt")),
+                                     tags$li(HTML("<strong>Rearing Survival:</strong> 0.5149 (51.49%) - fixed freshwater survival from fry to smolt")),
                                      tags$li(HTML("<strong>Initial Population:</strong> Years 2011-2013 seeded from CDFW GrandTab observed escapement")),
                                      tags$li(HTML("<strong>Forecast Starting Point:</strong> 2022-2024 observed escapement used as initial conditions for 2025+ projections"))
                                    ),
@@ -408,7 +408,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                               # ★★★★★★★★★★★
                               h4("Flow and Capacity"),
                               sliderInput("cmp_flow", "Set Downstream Flow (cfs)",
-                                          min = 500, max = 5000, value = 1500, step = 100),
+                                          min = 500, max = 5000, value = 1000, step = 100),
                               hr(),
                               # ★★★★★★★★★★
                               
@@ -759,50 +759,38 @@ server <- function(input, output, session) {
   }
   
   # Temperature Explorer (FIXED)
+  # Debounced temp weight inputs - prevents re-render on every slider tick
+  temp_w_2011_d <- debounce(reactive(input$temp_w_2011), 300)
+  temp_w_2014_d <- debounce(reactive(input$temp_w_2014), 300)
+  temp_w_2017_d <- debounce(reactive(input$temp_w_2017), 300)
+  temp_w_2020_d <- debounce(reactive(input$temp_w_2020), 300)
+  
+  # Cache the filtered base data - uses df_temp_2025 (pre-filtered in global.R)
+  # so no year(Date)/month(Date) calls happen at render time
+  temp_base_data <- reactive({
+    req(df_temp_2025, input$temp_alternatives, length(input$temp_alternatives) > 0)
+    all_envs <- unlist(lapply(input$temp_alternatives,
+                              function(alt) as.character(get_scenario_alternatives(alt, "all"))))
+    df <- df_temp_2025 %>%
+      filter(env %in% all_envs, site == input$temp_site)
+    if (input$temp_period == "oct_dec") {
+      df <- df %>% filter(month_num %in% c(10, 11, 12))
+    }
+    df
+  })
+  
   output$temp_plot <- renderPlot({
-    req(df_all_orig, input$temp_alternatives, length(input$temp_alternatives) > 0)
-    
-    # Process each selected alternative
+    req(temp_base_data(), length(input$temp_alternatives) > 0)
+    weights <- normalize_weights(c("2011" = temp_w_2011_d(), "2014" = temp_w_2014_d(),
+                                   "2017" = temp_w_2017_d(), "2020" = temp_w_2020_d()))
     plot_data <- map_dfr(input$temp_alternatives, function(alt) {
-      alts <- get_scenario_alternatives(alt, "all")
-      
-      # Filter for selected period
-      if (input$temp_period == "oct_dec") {
-        temp_data <- df_all_orig %>%
-          filter(env %in% as.character(alts),
-                 site == input$temp_site,
-                 month(Date) %in% c(10, 11, 12),
-                 year(Date) == 2025)
-      } else {
-        temp_data <- df_all_orig %>%
-          filter(env %in% as.character(alts),
-                 site == input$temp_site,
-                 year(Date) == 2025)
-      }
-      
-      # Add climate year labels
-      temp_data <- temp_data %>%
-        mutate(climate = case_when(
-          env %in% as.character(1:9) ~ "2011",
-          env %in% as.character(10:18) ~ "2014",
-          env %in% as.character(19:27) ~ "2017",
-          env %in% as.character(28:36) ~ "2020"
-        ))
-      
-      # Calculate weighted average
-      weights <- c("2011" = input$temp_w_2011, "2014" = input$temp_w_2014,
-                   "2017" = input$temp_w_2017, "2020" = input$temp_w_2020)
-      weights <- normalize_weights(weights)
-      
-      # Calculate average for this alternative
-      temp_data %>%
+      alts <- as.character(get_scenario_alternatives(alt, "all"))
+      temp_base_data() %>%
+        filter(env %in% alts) %>%
         group_by(Date) %>%
-        summarise(temp = sum(temp * weights[climate], na.rm = TRUE), 
-                  .groups = "drop") %>%
+        summarise(temp = sum(temp * weights[climate], na.rm = TRUE), .groups = "drop") %>%
         mutate(Alternative = alt)
     })
-    
-    # Create comparison plot
     ggplot(plot_data, aes(x = Date, y = temp, color = Alternative)) +
       geom_line(size = 1.2, alpha = 0.8) +
       scale_color_viridis_d(name = "Alternative") +
@@ -814,54 +802,26 @@ server <- function(input, output, session) {
       theme(legend.position = "bottom")
   })
   
-  # Fix the temperature statistics table with updated threshold:
+  # Temperature statistics table - reuses temp_base_data() so no redundant scan
   output$temp_stats <- renderTable({
-    req(df_all_orig, input$temp_alternatives, length(input$temp_alternatives) > 0)
-    
-    # Calculate stats for each selected alternative
-    stats_list <- map_dfr(input$temp_alternatives, function(alt) {
-      alts <- get_scenario_alternatives(alt, "all")
-      
-      if (input$temp_period == "oct_dec") {
-        temp_data <- df_all_orig %>%
-          filter(env %in% as.character(alts),
-                 site == input$temp_site,
-                 month(Date) %in% c(10, 11, 12),
-                 year(Date) == 2025)
-      } else {
-        temp_data <- df_all_orig %>%
-          filter(env %in% as.character(alts),
-                 site == input$temp_site,
-                 year(Date) == 2025)
-      }
-      
-      temp_data <- temp_data %>%
-        mutate(climate = case_when(
-          env %in% as.character(1:9) ~ "2011",
-          env %in% as.character(10:18) ~ "2014",
-          env %in% as.character(19:27) ~ "2017",
-          env %in% as.character(28:36) ~ "2020"
-        ))
-      
-      weights <- c("2011" = input$temp_w_2011, "2014" = input$temp_w_2014,
-                   "2017" = input$temp_w_2017, "2020" = input$temp_w_2020)
-      weights <- normalize_weights(weights)
-      
-      weighted_temps <- temp_data %>%
+    req(temp_base_data(), length(input$temp_alternatives) > 0)
+    weights <- normalize_weights(c("2011" = temp_w_2011_d(), "2014" = temp_w_2014_d(),
+                                   "2017" = temp_w_2017_d(), "2020" = temp_w_2020_d()))
+    map_dfr(input$temp_alternatives, function(alt) {
+      alts <- as.character(get_scenario_alternatives(alt, "all"))
+      weighted_temps <- temp_base_data() %>%
+        filter(env %in% alts) %>%
         group_by(Date) %>%
         summarise(temp = sum(temp * weights[climate], na.rm = TRUE), .groups = "drop")
-      
       tibble(
         Alternative = alt,
-        `Mean Temp` = round(mean(weighted_temps$temp, na.rm = TRUE), 2),
+        `Mean Temp`   = round(mean(weighted_temps$temp,   na.rm = TRUE), 2),
         `Median Temp` = round(median(weighted_temps$temp, na.rm = TRUE), 2),
-        `Min Temp` = round(min(weighted_temps$temp, na.rm = TRUE), 2),
-        `Max Temp` = round(max(weighted_temps$temp, na.rm = TRUE), 2),
-        `Std Dev` = round(sd(weighted_temps$temp, na.rm = TRUE), 2)
+        `Min Temp`    = round(min(weighted_temps$temp,    na.rm = TRUE), 2),
+        `Max Temp`    = round(max(weighted_temps$temp,    na.rm = TRUE), 2),
+        `Std Dev`     = round(sd(weighted_temps$temp,     na.rm = TRUE), 2)
       )
     })
-    
-    stats_list
   }, rownames = FALSE)
   
   # Compare Alternatives
