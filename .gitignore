@@ -5,3 +5,6 @@
 *.pptx
 *.docx
 *.pdf
+.RData
+.RDataTmp*
+.RHistory
