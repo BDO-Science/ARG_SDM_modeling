@@ -60,7 +60,7 @@ calculate_weighted_spawners <- function(scenario, hydro_weights, tdm_weights) {
 
 # --- 5. Define All Weighting Combinations ---
 scenarios <- c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6")
-tdm_full_names <- c("exp_WF" = "Water Forum (exp)", "exp_SM" = "SALMOD (exp)", "lin_Martin" = "Martin (linear)")
+tdm_full_names <- c("exp_WF" = "Bratovich et al. (2020)", "exp_SM" = "Bartholow & Heasley (2006)", "lin_Martin" = "Martin et al. (2017)")
 
 # Baseline (Status Quo) Weights
 baseline_weights <- list(list(
@@ -126,14 +126,18 @@ baseline_barchart <- ggplot(summary_data_baseline, aes(x = factor(scenario, leve
   labs(
     title = NULL,
     x = "Management Alternative",
-    y = "Forecasted Spawner Abundance"
+    y = "Adult Population Index"
   ) +
   theme_minimal(base_size = 14) +
   theme(
     plot.background = element_rect(fill = "white", colour = NA),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    axis.title = element_text(face = "bold"),
-    panel.border = element_rect(colour = "grey80", fill=NA, size=0.5)
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text   = element_text(face = "bold", size = 11),
+    axis.title  = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    legend.text  = element_text(size = 11),
+    panel.background = element_rect(fill = "white", color = NA),
+    panel.border = element_rect(colour = "black", fill=NA, size=0.5)
   )
 
 # Save the baseline plot
@@ -170,23 +174,27 @@ extreme_barchart <- ggplot(summary_data_extreme, aes(x = factor(scenario, levels
   labs(
     title = NULL,
     x = "Management Alternative",
-    y = "Forecasted Spawner Abundance"
+    y = "Adult Population Index"
   ) +
   theme_minimal(base_size = 14) +
   theme(
     plot.background = element_rect(fill = "white", colour = NA),
-    strip.text = element_text(face = "bold", size = 11),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    axis.title = element_text(face = "bold"),
+    strip.text = element_text(face = "bold", size = 9),
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title  = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    legend.text  = element_text(size = 11),
+    panel.background = element_rect(fill = "white", color = NA),
     panel.grid.minor = element_blank(),
-    panel.border = element_rect(colour = "grey80", fill = NA, size = 0.5)
+    panel.border = element_rect(colour = "black", fill = NA, size = 0.5)
   )
 
 # Save the extreme scenarios plot
 ggsave(
   filename = "spawner_forecast_extremes_barchart.png",
   plot = extreme_barchart,
-  width = 6.5, height = 7, dpi = 300
+  width = 9, height = 7, dpi = 300
 )
 
 # --- End of Script ---

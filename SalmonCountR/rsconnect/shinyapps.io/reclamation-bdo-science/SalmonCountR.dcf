@@ -5,7 +5,7 @@ account: reclamation-bdo-science
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 15245079
-bundleId: 11000293
+bundleId: 11958968
 url: https://reclamation-bdo-science.shinyapps.io/SalmonCountR/
 version: 1
 asMultiple: FALSE

@@ -3,6 +3,8 @@ library(ggplot2)
 library(dplyr)
 library(purrr)
 
+sim_year <- 114
+
 # Load instream flow vs K_spawners data
 load("SalmonCountR/app_data/american_river_instream.rda")  # should load object `instream`
 
@@ -57,9 +59,9 @@ ggplot(dd_plot_df, aes(x = redds, y = survival, color = flow_cfs)) +
 #######################
 # Filter years 2011–2024
 egg_summary_2011_2024 <- egg_summary %>%
-  filter(sim_year >= 2011, sim_year <= 2024)
+  filter(year >= 2011, year <= 2024)
 
-ggplot(egg_summary_2011_2024, aes(x = sim_year, y = mean_cum_surv, color = variant)) +
+ggplot(egg_summary_2011_2024, aes(x = year, y = days_lt_18.3C, color = variant)) +
   geom_line(linewidth = 1) +
   # geom_point(size = 2) +
   scale_color_viridis_d() +
@@ -68,37 +70,41 @@ ggplot(egg_summary_2011_2024, aes(x = sim_year, y = mean_cum_surv, color = varia
     name = "Simulation Year"
   ) +
   scale_y_continuous(
-    limits = c(0, 1),
-    breaks = seq(0, 1, by = 0.1),      # more y-axis ticks
-    name = "Mean Cumulative Egg Survival"
+    name = expression("Days Below 18.3" * degree * "C")
   ) +
   labs(color = "TDM Variant") +
   theme_minimal(base_size = 14) +
   theme(
-    axis.title.x = element_text(face = "bold"),
-    axis.title.y = element_text(face = "bold"),
-    axis.text    = element_text(face = "bold"),
-    legend.title = element_text(face = "bold")
+    axis.title  = element_text(face = "bold"),
+    axis.text   = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    legend.text  = element_text(size = 11),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background  = element_rect(fill = "white", colour = NA),
+    panel.border     = element_rect(colour = "black", fill = NA, size = 0.5)
   )
 
 
 egg_summary_2025 <- egg_summary %>%
-  filter(sim_year == 2025) %>%
-  mutate(env = factor(as.integer(env), levels = 1:10))  # forces numeric order 1–10
+  filter(year == 2025) %>%
+  mutate(alternative = factor(as.integer(alternative), levels = sort(unique(as.integer(alternative)))))
 
-ggplot(egg_summary_2025, aes(x = variant, y = mean_cum_surv, fill = env)) +
+ggplot(egg_summary_2025, aes(x = variant, y = days_lt_18.3C, fill = alternative)) +
   geom_col(position = position_dodge(width = 0.8), width = 0.7) +
   scale_fill_viridis_d(name = "Alternative") +
-  scale_y_continuous(limits = c(0, 1), 
-                     breaks = seq(0, 1, by = 0.1),
-                     name = "Mean Cumulative Egg-to-fry Survival") +
+  scale_y_continuous(
+    name = expression("Days Below 18.3" * degree * "C")
+  ) +
   labs(x = "TDM Variant") +
   theme_minimal(base_size = 14) +
   theme(
-    axis.title.x = element_text(face = "bold"),
-    axis.title.y = element_text(face = "bold"),
-    axis.text    = element_text(face = "bold"),
-    legend.title = element_text(face = "bold")
+    axis.title  = element_text(face = "bold"),
+    axis.text   = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    legend.text  = element_text(size = 11),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background  = element_rect(fill = "white", colour = NA),
+    panel.border     = element_rect(colour = "black", fill = NA, size = 0.5)
   )
 
 
@@ -129,30 +135,25 @@ T_seq <- seq(6, 22, by = 0.1)
 
 # ---- Build tidy curves (color = family, linetype = stage) ----
 curves_daily <- bind_rows(
-  tibble(T = T_seq, family = "Water Forum 2020", stage = "Egg",
+  tibble(T = T_seq, family = "Bratovich et al. (2020)", stage = "Egg",
          S_day = s_day_exp(T_seq, WF_egg$alpha,    WF_egg$beta)),
-  tibble(T = T_seq, family = "Water Forum 2020", stage = "Alevin",
+  tibble(T = T_seq, family = "Bratovich et al. (2020)", stage = "Alevin",
          S_day = s_day_exp(T_seq, WF_alevin$alpha, WF_alevin$beta)),
-  tibble(T = T_seq, family = "SALMOD 2006", stage = "Egg",
+  tibble(T = T_seq, family = "Bartholow & Heasley (2006)", stage = "Egg",
          S_day = s_day_exp(T_seq, SM_egg$alpha,    SM_egg$beta)),
-  tibble(T = T_seq, family = "SALMOD 2006", stage = "Alevin",
+  tibble(T = T_seq, family = "Bartholow & Heasley (2006)", stage = "Alevin",
          S_day = s_day_exp(T_seq, SM_alevin$alpha, SM_alevin$beta)),
-  tibble(T = T_seq, family = "Martin 2017", stage = "Incubation",
+  tibble(T = T_seq, family = "Martin et al. (2017)", stage = "Incubation",
          S_day = s_day_martin(T_seq, Martin$alpha, Martin$beta))
 ) %>%
   mutate(S_day = pmin(pmax(S_day, 0), 1))
 
 # ---- Scales & styling ----
-family_colors <- c(
-  "Water Forum 2020" = "#0072B2",  # blue
-  "SALMOD 2006"      = "#009E73",  # orange
-  "Martin 2017"      = "#E69F00"   # green (safe bluish-green)
-)
-stage_types <- c("Egg" = "solid", "Alevin" = "dashed", "Incubation" = "solid")
+stage_types <- c("Egg" = "solid", "Alevin" = "dashed", "Incubation" = "dotted")
 
 p <- ggplot(curves_daily, aes(T, S_day, color = family, linetype = stage)) +
   geom_line(linewidth = 1.3) +
-  scale_color_manual(values = family_colors, name = "TDM Model") +
+  scale_color_viridis_d(name = "TDM Model") +
   scale_linetype_manual(values = stage_types, name = "Stage") +
   coord_cartesian(xlim = c(6, 22), ylim = c(0, 1)) +
   scale_y_continuous(labels = percent_format(accuracy = 1)) +
@@ -166,12 +167,14 @@ p <- ggplot(curves_daily, aes(T, S_day, color = family, linetype = stage)) +
   theme(
     plot.title    = element_text(face = "bold", size = 18),
     plot.subtitle = element_text(size = 12, margin = margin(b = 10)),
-    axis.title.x  = element_text(face = "bold"),
-    axis.title.y  = element_text(face = "bold"),
+    axis.title    = element_text(face = "bold"),
+    axis.text     = element_text(face = "bold", size = 11),
     legend.position = "right",
     legend.title    = element_text(face = "bold"),
+    legend.text     = element_text(size = 11),
     panel.background = element_rect(fill = "white", color = NA),
-    plot.background  = element_rect(fill = "white", color = NA)
+    plot.background  = element_rect(fill = "white", colour = NA),
+    panel.border     = element_rect(colour = "black", fill = NA, size = 0.5)
   )
 
 print(p)
@@ -236,9 +239,9 @@ scens <- list(
 
 cum_panel <- purrr::imap_dfr(scens, function(Ts, nm) {
   bind_rows(
-    cum_surv_series_exp(Ts, WF_egg, WF_alevin) %>% mutate(model = "Water Forum 2020"),
-    cum_surv_series_exp(Ts, SM_egg, SM_alevin) %>% mutate(model = "SALMOD 2006"),
-    cum_surv_series_martin(Ts, Martin)         %>% mutate(model = "Martin 2017")
+    cum_surv_series_exp(Ts, WF_egg, WF_alevin) %>% mutate(model = "Bratovich et al. (2020)"),
+    cum_surv_series_exp(Ts, SM_egg, SM_alevin) %>% mutate(model = "Bartholow & Heasley (2006)"),
+    cum_surv_series_martin(Ts, Martin)         %>% mutate(model = "Martin et al. (2017)")
   ) %>% mutate(scenario = nm)
 })
 
@@ -246,7 +249,7 @@ cum_panel <- purrr::imap_dfr(scens, function(Ts, nm) {
 p_cum_time <- ggplot(cum_panel, aes(day, S, color = model)) +
   geom_line(linewidth = 1.2) +
   facet_wrap(~ scenario, ncol = 1) +
-  scale_color_manual(values = family_colors, name = "TDM Model") +
+  scale_color_viridis_d(name = "TDM Model") +
   coord_cartesian(ylim = c(0, 1)) +
   scale_y_continuous(labels = percent_format(accuracy = 1)) +
   labs(
@@ -257,10 +260,14 @@ p_cum_time <- ggplot(cum_panel, aes(day, S, color = model)) +
   theme_minimal(base_size = 14) +
   theme(
     plot.title = element_text(face = "bold", size = 18),
-    axis.title.x = element_text(face = "bold"),
-    axis.title.y = element_text(face = "bold"),
+    axis.title    = element_text(face = "bold"),
+    axis.text     = element_text(face = "bold", size = 11),
+    strip.text    = element_text(face = "bold", size = 11),
+    legend.title  = element_text(face = "bold"),
+    legend.text   = element_text(size = 11),
     panel.background = element_rect(fill = "white", color = NA),
-    plot.background  = element_rect(fill = "white", color = NA)
+    plot.background  = element_rect(fill = "white", colour = NA),
+    panel.border     = element_rect(colour = "black", fill = NA, size = 0.5)
   )
 
 print(p_cum_time)

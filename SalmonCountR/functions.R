@@ -24,53 +24,39 @@ NULL
 # ═══════════════════════════════════════════════════════════════════════════════
 # These functions model egg and alevin mortality as a function of water temperature
 
-#' Estimate egg development time (days) from temperature
+#' Estimate days from spawning to hatch from constant temperature
 #'
-#' Computes the number of days required for salmon eggs to reach hatching,
-#' assuming a constant requirement of 958 accumulated thermal units (ATU).
-#' This is based on the principle that development rate is proportional to
-#' temperature above a base threshold (here assumed to be 0°C).
+#' Linear Zeug et al. 2012 development model. Eggs require 400 accumulated
+#' thermal units (ATU, °C·days) from fertilization to hatching. This matches
+#' the SacPAS Fish Model v3 default and applies to all Sacramento Chinook runs.
 #'
-#' @param T Numeric vector of daily mean water temperatures (°C).
-#'
-#' @return Numeric vector of the same length as `T` with days to hatching.
 #' @examples
-#' hatch_model(10)             # ~95.8 days at constant 10°C
-#' hatch_model(c(8, 12))       # Different times for different temperatures
-#' @export
+#' hatch_model(10)         # 40 days at constant 10°C
+#' hatch_model(c(8, 12))   # 50 days at 8°C, 33.3 days at 12°C
 hatch_model <- function(T) {
-  # ATU requirement / daily temperature = days to accumulate required ATUs
-  958 / T
+  400 / T
 }
 
-
-#' Estimate fry emergence time (days) from temperature
+#' Estimate days from hatch to emergence from constant temperature
 #'
-#' Computes days until fry emergence from the alevin stage (post-hatch),
-#' assuming 417 accumulated thermal units (ATU) are required for this
-#' developmental transition.
+#' Linear Zeug et al. 2012. Alevins require 558 ATU from hatch to emergence
+#' (= 958 total ATU minus 400 egg-to-hatch). Cumulative ATU at emergence is
+#' 958, the SacPAS Fish Model v3 default for all Sacramento Chinook runs.
 #'
-#' @param T Numeric vector of daily mean water temperatures (°C).
-#'
-#' @return Numeric vector of the same length as `T` with days to emergence.
 #' @examples
-#' emergence_model(10)           # ~41.7 days at constant 10°C
-#' emergence_model(c(8, 12))     # Faster at warmer temperatures
-#' @export
+#' emergence_model(10)        # 55.8 days at constant 10°C (post-hatch)
+#' hatch_model(10) + emergence_model(10)   # 95.8 days fert→emergence
 emergence_model <- function(T) {
-  # ATU requirement / daily temperature = days to accumulate required ATUs
-  417 / T
+  558 / T
 }
 
-
 # ───────────────────────────────────────────────────────────────────────────────
-# ATU stage boundaries (°C·days) used for egg→hatch→emergence transitions
-# Based on empirical salmon development studies
+# ATU stage boundaries (SacPAS Fish Model v3 / Zeug 2012, all Sac Chinook)
+# Linear model: development rate ∝ T (no nonlinear stage rates)
 # ───────────────────────────────────────────────────────────────────────────────
-egg_ATU   <- 958     # ATUs required from fertilization to hatch
-alev_ATU  <- 417     # ATUs required from hatch to emergence
-total_ATU <- egg_ATU + alev_ATU  # Total ATUs for complete incubation (1375)
-
+egg_ATU   <- 400     # cumulative ATU at hatch (fertilization → hatch)
+alev_ATU  <- 558     # ATU added during alevin stage (hatch → emergence)
+total_ATU <- egg_ATU + alev_ATU     # cumulative ATU at emergence (fertilization → emergence)
 
 #' Locate hatch and emergence day indices from a temperature series
 #'
