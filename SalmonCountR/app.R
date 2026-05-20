@@ -201,14 +201,14 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    ),
                                    
                                    h4("3. Temperature-Dependent Mortality (TDM)"),
-                                   p("Three mortality models calculate egg-to-fry survival from spawn to emergence (1375 ATU):"),
+                                   p("Three mortality models calculate egg-to-fry survival from spawn to emergence (958 ATU):"),
                                    
                                    tags$div(style = "margin-left: 20px;",
                                             tags$h5("Exponential Models:"),
                                             tags$ul(
                                               tags$li(HTML("<strong>Water Forum 2020:</strong> Recent calibration with stage-specific parameters")),
-                                              tags$li(HTML("&nbsp;&nbsp;• Egg stage (0-958 ATU): α = 3.408×10⁻¹¹, β = 1.211")),
-                                              tags$li(HTML("&nbsp;&nbsp;• Alevin stage (958-1375 ATU): α = 1.018×10⁻¹⁰, β = 1.241")),
+                                              tags$li(HTML("&nbsp;&nbsp;• Egg stage (0-400 ATU): α = 3.408×10⁻¹¹, β = 1.211")),
+                                              tags$li(HTML("&nbsp;&nbsp;• Alevin stage (400-958 ATU): α = 1.018×10⁻¹⁰, β = 1.241")),
                                               tags$li(HTML("<strong>SALMOD 2006:</strong> Historical parameters from USFWS model")),
                                               tags$li(HTML("&nbsp;&nbsp;• Egg: α = 1.475×10⁻¹¹, β = 1.392")),
                                               tags$li(HTML("&nbsp;&nbsp;• Alevin: α = 2.521×10⁻¹², β = 1.461"))
@@ -235,26 +235,26 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    tags$ul(
                                      tags$li(HTML("<strong>Egg Production:</strong> Eggs = Spawners × 0.5 (female fraction) × S<sub>pre</sub> × 5,522 (fecundity)")),
                                      tags$li(HTML("<strong>Density Dependence:</strong> Beverton-Holt at fry stage: dd = 0.347 / (1 + Redds / K)")),
-                                     tags$li(HTML("<strong>Carrying Capacity:</strong> K = 12,493 spawners (or flow-dependent if specified)")),
+                                     tags$li(HTML("<strong>Carrying Capacity:</strong> K = 33,185 redds at the 1,000 cfs baseline (flow-dependent via slider)")),
                                      tags$li(HTML("<strong>Fry Production:</strong> Fry = Eggs × S<sub>TDM</sub> × dd")),
-                                     tags$li(HTML("<strong>Smolt Production:</strong> Smolts = Fry × rear_surv (fixed at 0.5149)")),
-                                     tags$li(HTML("<strong>Non-American River Survival:</strong> SAR = 0.0025 (fixed value representing 0.25% survival from the Sacramento River to returning adults)")),
+                                     tags$li(HTML("<strong>Smolt Production:</strong> Smolts = Fry × rear_surv (calibrated at 0.5428)")),
+                                     tags$li(HTML("<strong>Non-American River Survival:</strong> SAR = 0.00269 (calibrated value representing 0.27% survival from the Sacramento River to returning adults)")),
                                      tags$li(HTML("<strong>Age Structure:</strong> 82.9% age-3, 16.9% age-4, 0.2% age-5 returns (CWT data)")),
                                      tags$li(HTML("<strong>Returns:</strong> Spawners<sub>t+a</sub> = Smolts<sub>t</sub> × SAR × P(age=a)"))
                                    ),
                                    
                                    h3("Model Parameters"),
                                    
-                                   h4("Fixed Life-Cycle Parameters:"),
+                                   h4("Calibrated Life-Cycle Parameters:"),
                                    p("The model uses pre-specified biological parameters rather than statistical calibration:"),
                                    tags$ul(
-                                     tags$li(HTML("<strong>Smolt-to-Adult Return (SAR):</strong> 0.0025 (0.25%) - fixed value representing ocean survival")),
-                                     tags$li(HTML("<strong>Rearing Survival:</strong> 0.5149 (51.49%) - fixed freshwater survival from fry to smolt")),
+                                     tags$li(HTML("<strong>Smolt-to-Adult Return (SAR):</strong> 0.00269 (0.27%) - calibrated value representing ocean survival")),
+                                     tags$li(HTML("<strong>Rearing Survival:</strong> 0.5428 (54.28%) - calibrated freshwater survival from fry to smolt")),
                                      tags$li(HTML("<strong>Initial Population:</strong> Years 2011-2013 seeded from CDFW GrandTab observed escapement")),
                                      tags$li(HTML("<strong>Forecast Starting Point:</strong> 2022-2024 observed escapement used as initial conditions for 2025+ projections"))
                                    ),
                                    
-                                   p("These fixed parameters are applied uniformly across all TDM variants, with forecasts driven primarily by temperature-dependent egg-to-fry survival differences between scenarios."),
+                                   p("These calibrated parameters are applied uniformly across all TDM variants, with forecasts driven primarily by temperature-dependent egg-to-fry survival differences between scenarios."),
                                    
                                    h4("Data Sources:"),
                                    tags$ul(
@@ -271,10 +271,10 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                               tags$li(HTML("<strong>ATU Accumulation:</strong> ATU = Σ max(T<sub>daily</sub>, 0)"), 
                                                       br(), tags$small(em("Accumulated thermal units drive developmental timing"))),
                                               
-                                              tags$li(HTML("<strong>Egg Development:</strong> Days to hatch = 958 / T̄"), 
+                                              tags$li(HTML("<strong>Egg Development:</strong> Days to hatch = 400 / T̄"), 
                                                       br(), tags$small(em("Temperature-dependent development rate to reach alevin stage"))),
                                               
-                                              tags$li(HTML("<strong>Alevin Emergence:</strong> Days to emerge = 417 / T̄"), 
+                                              tags$li(HTML("<strong>Alevin Emergence:</strong> Days to emerge = 558 / T̄"), 
                                                       br(), tags$small(em("Additional thermal units from hatch to fry emergence"))),
                                               
                                               tags$li(HTML("<strong>Exponential TDM:</strong> S = exp(-Σ α·exp(β·T<sub>i</sub>))"), 
@@ -474,21 +474,21 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                             wellPanel(
                                               h5("Alternative 1: Best Chinook"),
                                               numericInput("rank_chinook", "Rank (1-3):", value = 1, min = 1, max = 3, step = 1),
-                                              numericInput("score_chinook", "Score (0-100):", value = 100, min = 0, max = 100, step = 1)
+                                              numericInput("score_chinook", "Score (0-100):", value = 80, min = 0, max = 100, step = 1)
                                             )
                                      ),
                                      column(4,
                                             wellPanel(
                                               h5("Alternative 2: Best Steelhead"),
                                               numericInput("rank_steelhead", "Rank (1-3):", value = 3, min = 1, max = 3, step = 1),
-                                              numericInput("score_steelhead", "Score (0-100):", value = 0, min = 0, max = 100, step = 1)
+                                              numericInput("score_steelhead", "Score (0-100):", value = 20, min = 0, max = 100, step = 1)
                                             )
                                      ),
                                      column(4,
                                             wellPanel(
                                               h5("Alternative 3: Best Hydropower"),
                                               numericInput("rank_hydropower", "Rank (1-3):", value = 2, min = 1, max = 3, step = 1),
-                                              numericInput("score_hydropower", "Score (0-100):", value = 30, min = 0, max = 100, step = 1)
+                                              numericInput("score_hydropower", "Score (0-100):", value = 100, min = 0, max = 100, step = 1)
                                             )
                                      )
                                    ),
@@ -689,7 +689,7 @@ server <- function(input, output, session) {
     
     # Apply density-dependent scaling based on K change
     # The default K at 1500 cfs (from the slider default)
-    base_K <- get_K_spawners(1500)
+    base_K <- get_K_spawners(1000)   # was 1500 — now matches both slider default AND precompute
     K_scalar <- K_spawners / base_K
     
     for (i in seq_along(alts)) {

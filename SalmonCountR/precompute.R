@@ -937,11 +937,27 @@ surv_lookup_full <- egg_summary %>%
   tibble::deframe() # Converts to a named list: "env_variant" -> survival vector
 
 # ---- 31.3 Define Base Life-Cycle Parameters ----
+# Load flow-WUA lookup and compute carrying capacity at the 1,000 cfs
+# baseline flow used throughout the analysis (Shiny app default and
+# manuscript reference flow). Same source as global.R.
+instream_pre <- readRDS(here("SalmonCountR", "app_data", "american_river_instream.rds")) %>%
+  mutate(K_spawners = FR_spawn_wua / 9.29)
+
+K_at_1000 <- approx(
+  x    = instream_pre$flow_cfs,
+  y    = instream_pre$K_spawners,
+  xout = 1000,
+  rule = 2
+)$y
+
+cat(sprintf("Baseline carrying capacity at 1,000 cfs: K = %.0f spawners\n", K_at_1000))
+
+# ---- 31.3 Define Base Life-Cycle Parameters ----
 base_P <- list(
   female_fraction = 0.5,
   fec = 5522,               # Fecundity: eggs per female
   S0 = 0.347,               # Base egg survival (pre-TDM)
-  K_spawners = 12493,       # Spawner carrying capacity
+  K_spawners = K_at_1000,   # Spawner carrying capacity at 1,000 cfs (from WUA)
   SAR_mean = NA_real_,      # Smolt-to-Adult Return rate (to be calibrated)
   SAR_sd = 0.00237,         # Std dev of SAR
   lag_probs = c(`3` = 0.828982, `4` = 0.168885, `5` = 0.002105),

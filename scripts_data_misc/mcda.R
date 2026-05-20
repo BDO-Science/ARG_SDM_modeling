@@ -75,7 +75,7 @@ plot_df <- perf_data %>%
 p_mcda <- ggplot(plot_df, aes(x = scenario, y = Contribution, fill = Objective)) +
   geom_col(position = "stack") +
   scale_fill_viridis_d(name = "Objective") +
-  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  scale_y_continuous(limits = c(0, 0.6), breaks = seq(0, 0.6, 0.1)) +
   labs(
     title = NULL,
     x = "Management Alternative",
@@ -83,16 +83,16 @@ p_mcda <- ggplot(plot_df, aes(x = scenario, y = Contribution, fill = Objective))
   ) +
   theme_minimal(base_size = 14) +
   theme(
-    plot.title    = element_text(face = "bold", size = 18),
-    plot.subtitle = element_text(size = 12, margin = margin(b = 10)),
-    axis.title    = element_text(face = "bold"),
-    axis.text     = element_text(face = "bold", size = 11),
+    plot.title    = element_text(face = "bold", size = 18, color = "black"),
+    plot.subtitle = element_text(size = 12, margin = margin(b = 10), color = "black"),
+    axis.title    = element_text(face = "bold", color = "black"),
+    axis.text     = element_text(face = "bold", size = 11, color = "black"),
     legend.position = "right",
-    legend.title    = element_text(face = "bold"),
-    legend.text     = element_text(size = 11),
+    legend.title    = element_text(face = "bold", color = "black"),
+    legend.text     = element_text(size = 11, color = "black"),
     panel.background = element_rect(fill = "white", color = NA),
     plot.background  = element_rect(fill = "white", colour = NA),
-    panel.border     = element_rect(colour = "black", fill = NA, size = 0.5)
+    panel.border     = element_rect(colour = "black", fill = NA, linewidth = 0.5)
   )
 
 print(p_mcda)

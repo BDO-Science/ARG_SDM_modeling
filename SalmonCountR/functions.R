@@ -62,15 +62,15 @@ total_ATU <- egg_ATU + alev_ATU     # cumulative ATU at emergence (fertilization
 #'
 #' Uses cumulative ATU (accumulated thermal units = cumsum(temps)) to find 
 #' the first day at which key developmental milestones are reached:
-#'  - Hatch is reached at >= 958 °C·days
-#'  - Emergence is reached at >= 1375 °C·days (958 + 417)
+#'  - Hatch is reached at >= 400 °C·days
+#'  - Emergence is reached at >= 958 °C·days (400 + 558)
 #'
 #' This function is used internally to split temperature series into
 #' egg and alevin stages for stage-specific mortality calculations.
 #'
 #' @param temps Numeric vector of daily mean temperatures (°C).
-#' @param egg_atu Numeric, ATU threshold for hatching (default 958).
-#' @param total_atu Numeric, ATU threshold for emergence (default 1375).
+#' @param egg_atu Numeric, ATU threshold for hatching (default 400).
+#' @param total_atu Numeric, ATU threshold for emergence (default 958).
 #' 
 #' @return List with integer elements:
 #'   \item{hatch}{Index of hatch day (1-based)}
@@ -239,8 +239,8 @@ tdm_lin_martin <- function(temps, α = 0.026, β = 12.14) {
 #' Used internally to determine the exact incubation window.
 #' 
 #' @param temps Numeric vector of daily temperatures
-#' @param egg_atu ATU threshold for hatch (default 958)
-#' @param total_atu ATU threshold for emergence (default 1375)
+#' @param egg_atu ATU threshold for hatch (default 400)
+#' @param total_atu ATU threshold for emergence (default 958)
 #' @return Integer vector of indices to include in incubation period
 #' @keywords internal
 .slice_by_atu <- function(temps, egg_atu = egg_ATU, total_atu = total_ATU) {
@@ -263,7 +263,7 @@ tdm_lin_martin <- function(temps, α = 0.026, β = 12.14) {
 #' This function provides the most accurate survival calculation by:
 #' 1. Starting from the actual redd (spawning) date
 #' 2. Marching forward through realized daily temperatures
-#' 3. Accumulating ATUs until reaching hatch (958) and emergence (1375)
+#' 3. Accumulating ATUs until reaching hatch (400) and emergence (958)
 #' 4. Applying the TDM model to exactly that temperature window
 #' 
 #' This approach accounts for variable development rates due to

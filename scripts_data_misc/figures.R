@@ -2,6 +2,7 @@
 library(tidyverse)
 library(scales)
 library(here)
+library(ggh4x)
 
 # --- 1. Load Pre-computed Model Results ---
 # This file contains the full 100-year forecasts for all 36 environment combinations
@@ -170,7 +171,7 @@ extreme_barchart <- ggplot(summary_data_extreme, aes(x = factor(scenario, levels
   geom_errorbar(aes(ymin = p25, ymax = p75), width = 0.25, linewidth = 0.7) +
   scale_y_continuous(labels = comma, limits = c(0, NA)) +
   scale_fill_viridis_d(guide = "none") +
-  facet_grid(climate_year ~ tdm_model) +
+  facet_grid2(climate_year ~ tdm_model, scales = "free_y", independent = "y") +
   labs(
     title = NULL,
     x = "Management Alternative",
@@ -179,16 +180,18 @@ extreme_barchart <- ggplot(summary_data_extreme, aes(x = factor(scenario, levels
   theme_minimal(base_size = 14) +
   theme(
     plot.background = element_rect(fill = "white", colour = NA),
-    strip.text = element_text(face = "bold", size = 9),
-    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
-    axis.text.y = element_text(face = "bold"),
-    axis.title  = element_text(face = "bold"),
-    legend.title = element_text(face = "bold"),
-    legend.text  = element_text(size = 11),
+    strip.text = element_text(face = "bold", size = 9, color = "black"),
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold", color = "black"),
+    axis.text.y = element_text(face = "bold", color = "black"),
+    axis.title  = element_text(face = "bold", color = "black"),
+    legend.title = element_text(face = "bold", color = "black"),
+    legend.text  = element_text(size = 11, color = "black"),
     panel.background = element_rect(fill = "white", color = NA),
     panel.grid.minor = element_blank(),
-    panel.border = element_rect(colour = "black", fill = NA, size = 0.5)
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.5)
   )
+
+print(extreme_barchart)
 
 # Save the extreme scenarios plot
 ggsave(
