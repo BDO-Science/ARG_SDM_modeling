@@ -37,6 +37,230 @@ Supporting numbers, if a caption needs them:
 `output/tdm_weight_sensitivity_martin_sweep.csv` (A1),
 `output/mcda_composite_scores_v2.csv` (A3).
 
+------------------------------------------------------------------------
+
+## A-bis. Where each exhibit goes, what number it gets, and what has to change
+
+Numbering follows order of first mention, which is what the journal
+copyeditor checks. Current first-mention order is Table 1 (§2.3), Table
+2 (§2.4), Table 3 (§3.1), Figure 1 (§2.1), Figure 2 (§2.5), Figure 3
+(§2.5.3), Figure 4 (§3.1.2), Figure 5 (§3.2).
+
+| Exhibit | Number | Effect on existing numbering |
+|----|----|----|
+| TDM model comparison table (A2) | **Table 3** (new) | Current Table 3 becomes **Table 4** |
+| TDM weight sensitivity figure (A1) | **Figure 6** (new) | None |
+| Replotted TDM curves (B1) | Figure 3, unchanged | Caption becomes two-panel |
+| MCDA composite scores (A3) | Figure 5, unchanged | None |
+| Panelist weights (A4) | Table S2-7, already numbered | None |
+| Panelist justifications (A4) | Table S2-8, already numbered | None |
+| Front-loading decomposition (optional) | **Figure S2-1** (new) | None |
+| Calibration observed vs predicted (D1) | **Figure S2-2** (new) | None |
+
+### Table 3 (new) — TDM model comparison
+
+Tables are numbered by first mention, and the comparison table is first
+mentioned in §2.5.2, which precedes §3.1. It therefore takes the number
+3, and the consequence table becomes Table 4.
+
+**Insert:** at the end of new Section 2.5.2 (Temperature-Dependent
+Mortality Model Weighting), immediately after the paragraph describing
+the Delphi allocation and the final weights, so the table sits directly
+above the weights it explains. That placement is what Reviewer 2 asked
+for.
+
+**Add this callout** at the end of that paragraph:
+
+> Table 3 summarizes the three formulations by data source, run type,
+> calibration range, temperature sensitivity, assigned weight and
+> principal limitation.
+
+**Caption:**
+
+> **Table 3.** Comparison of the three temperature-dependent mortality
+> (TDM) formulations evaluated for the lower American River, showing
+> data source, functional form, run type represented, development
+> context, calibration temperature range, relative stage sensitivity,
+> principal limitation, and the weight assigned by expert elicitation
+> (Section 2.5.2).
+
+**Second callout, in the Discussion:** append "(Table 3)" to the
+sentence identifying the 12.14 °C threshold as a winter-run field
+estimate.
+
+**Renumbering checklist — current Table 3 becomes Table 4.** Four
+callouts in the manuscript and two in the SI, plus the caption itself:
+
+| Document | Location | Current text |
+|----|----|----|
+| MS | §3.1, first paragraph | "…biological benefits and economic costs (Table 3)." |
+| MS | §3.1.3 Hydropower Costs | "…scaled directly with bypass volume (Table 2, Table 3)…" |
+| MS | §3.1.2 | "…worst to best alternative for Chinook salmon (Table 3)." |
+| MS | §3.2 | "…little contribution from fish benefits (Table 3, Figure 5)." |
+| SI | S2 | "…four meteorological scenarios as seen in Table 3 in the main text." |
+| SI | S2 | "…in contrast to 7,600-11,073 seen in Table 3)." |
+
+If these are Word cross-reference fields they update on F9; if plain
+text, change all six by hand.
+
+### Figure 6 (new) — TDM weight sensitivity
+
+First mention falls in §3.2, after Figure 5, so no renumbering.
+
+**Insert:** Section 3.2 (Trade-off Evaluation), immediately after the
+paragraph reporting the composite scores and before the paragraph on
+Reclamation's selection of PB4.
+
+**Add this paragraph** as the callout:
+
+> Because the TDM model weights were elicited rather than estimated, we
+> evaluated how sensitive the composite ranking is to them (Figure 6).
+> PB1 remained the top-ranked alternative under the Bratovich-only,
+> Bartholow-only, equal and elicited weightings. Holding the other two
+> formulations at their elicited ratio and increasing the weight on
+> Martin et al. (2017) from 0 to 1, PB1 retained the top rank up to a
+> weight of 0.988. The no-bypass alternative took the top rank only at a
+> weight of 1.000, where the projected adult population index spans just
+> 3.6 to 84.8 spawners across all nine alternatives, so the Chinook
+> objective is normalized across a range of a few dozen fish and the
+> ranking is decided almost entirely by the hydropower objective.
+
+**Caption:**
+
+> **Figure 6.** Sensitivity of the multi-criteria decision analysis to
+> the expert-elicited temperature-dependent mortality model weights. (a)
+> Composite score for each of the nine management alternatives under
+> five weighting schemes: each formulation weighted alone, equal
+> weighting, and the elicited weighting (0.51 Bratovich et al. 2020,
+> 0.24 Bartholow and Heasley 2006, 0.25 Martin et al. 2017); the
+> top-ranked alternative in each scheme is highlighted. (b) Composite
+> score as the weight on Martin et al. (2017) is increased from 0 to 1
+> with the other two formulations held at their elicited ratio.
+> Objective weights are held at 0.40 Chinook salmon, 0.50 hydropower and
+> 0.10 steelhead throughout, and meteorological scenarios at equal
+> probability.
+
+**Third callout, in the Discussion:** add "(Figure 6)" alongside the
+existing robustness sentence.
+
+### Figure 3 — replace image, rewrite caption
+
+No number change. Swap the image and replace the caption, which
+currently describes a single panel.
+
+**Caption:**
+
+> **Figure 3.** Temperature-dependent mortality (TDM) formulations for
+> Chinook salmon early life stages. (a) Daily instantaneous mortality
+> rate. The Martin et al. (2017) linear-threshold model (yellow) begins
+> accruing mortality at 12.14 °C, the lowest threshold of the three
+> formulations; the Bartholow and Heasley (2006) exponential model
+> (green) and the Bratovich et al. (2020) exponential model (blue) begin
+> at higher temperatures. Dashed lines indicate alevin-stage parameters.
+> (b) Cumulative egg-to-fry survival at constant temperature, using
+> accumulated thermal unit stage durations. The shaded band is the 5th
+> to 95th percentile of modelled October to November daily water
+> temperature at Hazel Avenue across all alternatives and meteorological
+> years (14.1 to 18.2 °C). Dotted lines mark where each exponential
+> formulation's cumulative survival falls below that of Martin et al.
+> (2017), at 16.59 °C and 17.25 °C.
+
+The existing callout in §2.5.3 needs no change, but add a pointer to
+panel (b) in the sentence describing the three formulations, since panel
+(b) is what carries the argument.
+
+### Figure 5 — replace image only
+
+No number or caption change. The caption already promises the numeric
+bar labels, and the new image already has them and reflects the current
+run.
+
+### SI Tables S2-7 and S2-8
+
+Both are already referenced in the SI text; only the tables are missing.
+
+**Insert both** in Section S2.5, immediately after Table S2-6 and after
+the paragraph beginning "Individual weightings are reported in Table
+S2-7."
+
+**Captions:**
+
+> *Table S2-7. Individual expert weightings of the three
+> temperature-dependent mortality formulations. Weights were allocated
+> independently in a single round, each summing to 1.0. The panel mean
+> is the weighting used in the analysis.*
+
+> *Table S2-8. Written justifications recorded by each panelist
+> alongside their weight allocation, reproduced verbatim.*
+
+Resolve **D2 and D5 before inserting S2-8.** Panelist 5's prose states
+45/20/35 against a recorded row of 40/30/30, which becomes visible the
+moment the justification appears beside the table.
+
+### SI cross-reference fix (B2)
+
+Section S2.8 reads "Final calibrated parameter values are presented in
+Table S2-7." That number now belongs to the panelist weighting table.
+Change to **Table S2-9**, then delete the `[EDITORIAL]` note on the S2-9
+caption.
+
+### Figure S2-1 (optional) — front-loading decomposition
+
+Worth adding because the Discussion now asserts the front-loading
+mechanism as a result rather than a conjecture, and nothing in the paper
+shows it.
+
+**Insert:** Section S2.4, or a short new subsection following the TDM
+formulations.
+
+**Caption:**
+
+> *Figure S2-1. Decomposition of the front-loading effect. (a) Daily
+> water temperature at Hazel Avenue relative to the no-bypass
+> alternative. (b) Egg-to-fry survival by spawn date under the Martin et
+> al. (2017) formulation for the no-bypass alternative. (c) The same
+> curves expressed as a difference from no bypass, showing November
+> cohorts losing and October cohorts gaining. (d) Change in incubation
+> mortality relative to no bypass, split at each alternative's crossover
+> date into the cooling benefit earned before and the warming penalty
+> paid after. (e) Cohort decomposition of the difference between PB6 and
+> PB4.*
+
+Panel (c) carries the argument: it shows the sign reversal by spawn date
+and that December onward is exactly zero.
+
+### Figure S2-2 — calibration observed versus predicted
+
+Only under **D1 option 1**, that is, reporting the regenerated
+statistics rather than deleting them.
+
+**Insert:** Section S2.8, with the revised fit statistics.
+
+**Caption:**
+
+> *Figure S2-2. Observed versus predicted in-river escapement over the
+> 2014–2024 calibration period, TDM-weighted. The model reproduces the
+> general magnitude of escapement but not its interannual variation;
+> residuals are largest in 2016, 2023 and 2024.*
+
+Under D1 option 2, skip this figure. A plot showing a flat trajectory
+against the 2023–2024 surge invites exactly the question that deleting
+the statistics is meant to avoid.
+
+### Filling the response placeholders
+
+Once the above are in, replace throughout the response letter:
+
+| Placeholder | Becomes |
+|----|----|
+| "Sensitivity figure. Added as Figure [N]" | Figure 6 |
+| "Side-by-side model table. Added as Table [N]" | Table 3 |
+| "new Table [N]" in the TDM characterization paragraph | Table 3 |
+| "new Figure [N]" in the RSU response | Figure 6 |
+| "Appendix [S\_]" (×2) | Section S2.5, Tables S2-7 and S2-8 |
+| "[Consequence Models]" | Consequence Models, brackets removed |
+| "within Section 2.5.1" (B4) | a new Section 2.5.2 |
+
 ## B. Internal inconsistencies that a reviewer would catch
 
 | \# | Issue | Where the fix lives |
@@ -215,21 +439,19 @@ copies live alongside the repo by design.
 
 ## Suggested order
 
-1.  **A4 and A2 first.** Both are tables and both are copy-paste from
-    files that already exist. A4 is the direct answer to the
-    elicitation-rigour complaint.
-2.  **B1, A1, A3.** All three images are rendered and current in
-    `figures/`; they need inserting and captioning. A3 also fixes the
-    stale bar values.
-3.  **D1.** Decide before anything else goes to the editor — this is now
-    a known-unreproducible number in a manuscript whose code is public.
-4.  **B6, B3, B2, B4, C.** Cleanup, with B6 falling out of whatever D1
-    decides.
-5.  **G1–G4** before the repository URL goes live at acceptance. G1 is
-    the only one that needs a real decision; the rest are small fixes.
-
-Sections **E** and **F** need no action — E records what is already done
-so it is not redone, and F lists verified arguments held in reserve.
+1.  **Resolve D1 first.** It determines whether Figure S2-2 exists and
+    what Section S2.8 says, and it is the only item that changes the
+    scientific claims rather than the presentation.
+2.  **A4, then A2.** Both are tables and both are copy-paste from files
+    that already exist. Resolve D2 and D5 before Table S2-8 goes in. A4
+    is the direct answer to the elicitation-rigour complaint. Fix the
+    S2-9 cross-reference (B2) at the same time.
+3.  **Table 3 and the six-callout renumbering** (current Table 3 becomes
+    Table 4).
+4.  **B1, A3, A1.** Swap Figures 3 and 5, insert Figure 6, and add the
+    two callout paragraphs.
+5.  **B6, B3, B4, C.** Cleanup, with B6 falling out of whatever D1
+    decides, and the response placeholders filled last.
 
 Once A1 through A4 are in, every `[N]` and `[S_]` in the response can be
 filled with a real number, and the response stops making claims the

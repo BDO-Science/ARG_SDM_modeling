@@ -53,6 +53,7 @@ suppressPackageStartupMessages({
 })
 
 source(here("SalmonCountR", "functions.R"))
+source(here("analysis", "figure_theme.R"))
 
 env_ext_list <- readRDS(here("SalmonCountR", "app_data", "env_ext_list.rds"))
 egg_summary  <- readRDS(here("SalmonCountR", "app_data", "egg_summary.rds"))
@@ -404,24 +405,20 @@ print(as.data.frame(mm[, .(scenario, adult_index = round(idx, 1),
 write.csv(by_variant, here("output", "frontloading_index_by_variant.csv"), row.names = FALSE)
 
 # ---- 6. Figure --------------------------------------------------------------
-pal <- c(NB = "#440154", PB4 = "#1F9E89", PB6 = "#D55E00")
+pal <- ALT_COLS   # viridis, shared across figures (see analysis/figure_theme.R)
 
 pA <- ggplot(daily[scenario != "NB"], aes(doy, delta, group = scenario)) +
-  geom_hline(yintercept = 0, colour = "grey40", linewidth = 0.4) +
-  geom_line(colour = "grey82", linewidth = 0.5) +
+  geom_hline(yintercept = 0, colour = "grey30", linewidth = 0.5) +
+  geom_line(colour = GREY_CTX, linewidth = 0.6) +
   geom_line(data = daily[scenario %in% c("PB4", "PB6")],
-            aes(colour = scenario), linewidth = 0.9) +
+            aes(colour = scenario), linewidth = 1.1) +
   scale_colour_manual(values = pal[c("PB4", "PB6")], name = NULL) +
   scale_x_continuous(breaks = c(1, 16, 32, 47, 61),
                      labels = c("Oct 1", "Oct 16", "Nov 1", "Nov 16", "Nov 30"),
                      expand = c(0.01, 0)) +
   labs(subtitle = "(a) Hazel Avenue daily temperature minus no-bypass (grey: other alternatives)",
-       x = NULL, y = expression(Delta*" temperature ("*degree*"C)")) +
-  theme_minimal(base_size = 11) +
-  theme(panel.grid.minor = element_blank(),
-        panel.border = element_rect(colour = "grey70", fill = NA, linewidth = 0.4),
-        plot.subtitle = element_text(face = "bold", size = 10.5),
-        legend.position = "top")
+       x = NULL, y = expression(bold(Delta*" temperature ("*degree*"C)"))) +
+  theme_arg(base_size = 14, legend = "top")
 
 md_lv <- sort(unique(surv_by_md$md))
 md_ord <- md_lv[order(ifelse(substr(md_lv, 1, 2) == "01", paste0("13", substr(md_lv, 4, 5)),
@@ -436,15 +433,12 @@ x_labs   <- c("Oct 1", "Nov 1", "Dec 1", "Jan 1")
 # December onwards. Only NB is drawn, because at this scale the three
 # alternatives are visually identical - which is the point panel (c) makes.
 pB <- ggplot(sm[scenario == "NB"], aes(x, S)) +
-  geom_line(linewidth = 0.9, colour = pal[["NB"]]) +
+  geom_line(linewidth = 1.2, colour = pal[["NB"]]) +
   scale_x_continuous(breaks = x_breaks, labels = x_labs, expand = c(0.01, 0)) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(subtitle = "(b) Martin egg-to-fry survival by spawn date under no-bypass, Hazel Avenue (mean of 100 forecast seasons)",
        x = NULL, y = "Egg-to-fry survival") +
-  theme_minimal(base_size = 11) +
-  theme(panel.grid.minor = element_blank(),
-        panel.border = element_rect(colour = "grey70", fill = NA, linewidth = 0.4),
-        plot.subtitle = element_text(face = "bold", size = 10.5))
+  theme_arg(base_size = 14, legend = "none")
 
 # Differences, which are what the decomposition acts on and are far too small
 # to read off panel (b).
@@ -453,56 +447,47 @@ sm_d <- merge(sm[scenario != "NB", .(scenario, x, S)],
 sm_d[, dS := S - S_nb]
 
 pC <- ggplot(sm_d, aes(x, dS, colour = scenario)) +
-  geom_hline(yintercept = 0, colour = "grey40", linewidth = 0.4) +
-  geom_line(linewidth = 0.9) +
+  geom_hline(yintercept = 0, colour = "grey30", linewidth = 0.5) +
+  geom_line(linewidth = 1.1) +
   scale_colour_manual(values = pal[c("PB4", "PB6")], name = NULL) +
   scale_x_continuous(breaks = x_breaks, labels = x_labs, expand = c(0.01, 0)) +
   labs(subtitle = "(c) Same curves minus no-bypass: cohorts spawning in November lose, cohorts spawning in October gain",
-       x = NULL, y = expression(Delta*" survival vs NB")) +
-  theme_minimal(base_size = 11) +
-  theme(panel.grid.minor = element_blank(),
-        panel.border = element_rect(colour = "grey70", fill = NA, linewidth = 0.4),
-        plot.subtitle = element_text(face = "bold", size = 10.5),
-        legend.position = "top")
+       x = NULL, y = expression(bold(Delta*" survival vs NB"))) +
+  theme_arg(base_size = 14, legend = "top")
 
 pD <- overlap_summary[weighting == "observed",
                       .(scenario, Before = d_nll_pre, After = d_nll_post)] |>
   melt(id.vars = "scenario", variable.name = "period", value.name = "d_nll") |>
   ggplot(aes(scenario, d_nll, fill = period)) +
-  geom_hline(yintercept = 0, colour = "grey40", linewidth = 0.4) +
-  geom_col(colour = "grey25", linewidth = 0.3, width = 0.72) +
-  scale_fill_manual(values = c(Before = "#1F9E89", After = "#D55E00"),
+  geom_hline(yintercept = 0, colour = "grey30", linewidth = 0.5) +
+  geom_col(colour = "grey20", linewidth = 0.35, width = 0.72) +
+  scale_fill_manual(values = setNames(PAIR_COLS, c("Before", "After")),
                     name = "relative to crossover") +
   labs(subtitle = "(d) Change in Martin -log(survival) vs no-bypass, split at the crossover date",
-       x = NULL, y = expression(Delta*" -log S")) +
-  theme_minimal(base_size = 11) +
-  theme(panel.grid.major.x = element_blank(), panel.grid.minor = element_blank(),
-        panel.border = element_rect(colour = "grey70", fill = NA, linewidth = 0.4),
-        plot.subtitle = element_text(face = "bold", size = 10.5),
-        legend.position = "top")
+       x = NULL, y = expression(bold(Delta*" -log S"))) +
+  theme_arg(base_size = 14, legend = "top") +
+  theme(panel.grid.major.x = element_blank())
 
 coh_plot <- cohorts[weighting == "observed" & comparison == "PB6 - PB4"]
 pad <- 0.35 * diff(range(c(0, coh_plot$contrib)))
 
 pE <- ggplot(coh_plot, aes(cohort, contrib)) +
-  geom_hline(yintercept = 0, colour = "grey40", linewidth = 0.4) +
-  geom_col(fill = "#D55E00", colour = "grey25", linewidth = 0.3, width = 0.72) +
+  geom_hline(yintercept = 0, colour = "grey30", linewidth = 0.5) +
+  geom_col(fill = PAIR_COLS[2], colour = "grey20", linewidth = 0.35, width = 0.72) +
   geom_text(aes(label = sprintf("%.0f%%", 100 * share_of_gap)),
-            vjust = -0.6, size = 3, colour = "grey15") +
+            vjust = -0.7, size = 4, fontface = "bold", colour = "black") +
   scale_y_continuous(limits = c(min(coh_plot$contrib) - pad, pad)) +
   labs(subtitle = "(e) PB6 minus PB4 egg-to-fry survival by spawn cohort (Martin); labels are each cohort's share of the gap",
        x = "Spawn cohort", y = "Contribution to the gap") +
-  theme_minimal(base_size = 11) +
-  theme(panel.grid.major.x = element_blank(), panel.grid.minor = element_blank(),
-        panel.border = element_rect(colour = "grey70", fill = NA, linewidth = 0.4),
-        plot.subtitle = element_text(face = "bold", size = 10.5))
+  theme_arg(base_size = 14, legend = "none") +
+  theme(panel.grid.major.x = element_blank())
 
 fig <- pA / pB / pC / pD / pE + plot_layout(heights = c(1, 0.8, 0.9, 0.9, 0.9))
 
 dir.create(here("figures"), showWarnings = FALSE)
 dir.create(here("output"),  showWarnings = FALSE)
 ggsave(here("figures", "frontloading_cohort_decomposition.png"), fig,
-       width = 10, height = 15, dpi = 300, bg = "white")
+       width = 13, height = 18, dpi = 300, bg = "white")
 
 cat("\nWrote output/frontloading_crossover_dates.csv,",
     "output/frontloading_survival_by_spawn_date.csv,",

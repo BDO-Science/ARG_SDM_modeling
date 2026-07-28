@@ -21,6 +21,7 @@ library(dplyr); library(tidyr); library(ggplot2); library(patchwork)
 library(scales); library(here); library(lubridate)
 
 source(here("SalmonCountR", "functions.R"))
+source(here("analysis", "figure_theme.R"))
 
 # ---- 1. Operational temperature range, Oct-Nov at Hazel Avenue --------------
 env_ext_list <- readRDS(here("SalmonCountR", "app_data", "env_ext_list.rds"))
@@ -63,12 +64,13 @@ curves_daily <- bind_rows(
   tibble(T = T_seq, family = "Martin et al. (2017)",       stage = "Incubation",
          S_day = s_day_martin(T_seq))
 ) %>%
-  mutate(S_day = pmin(pmax(S_day, 0), 1))
+  mutate(S_day = pmin(pmax(S_day, 0), 1),
+         # Order the legend TDM.1, TDM.2, TDM.3 as the text numbers them,
+         # rather than letting ggplot sort it alphabetically.
+         family = factor(family, levels = names(TDM_COLS)))
 
-# purple / teal / vermillion — CVD-safe trio, all >=3:1 on white
-fam_cols <- c("Bratovich et al. (2020)"    = "#440154",
-              "Bartholow & Heasley (2006)" = "#1F9E89",
-              "Martin et al. (2017)"       = "#D55E00")
+# Viridis, matching every other figure in the manuscript (see analysis/figure_theme.R)
+fam_cols <- TDM_COLS
 stage_types <- c("Egg" = "solid", "Alevin" = "dashed", "Incubation" = "dotted")
 
 # Build a fresh layer per panel — a single layer object cannot be shared
@@ -87,22 +89,18 @@ pA <- ggplot(curves_daily, aes(T, S_day, colour = family, linetype = stage)) +
   annotate("text", x = mean(as.numeric(op_range)), y = 0.30,
            label = sprintf("Lower American River\nOct-Nov range\n(%.1f-%.1f °C)",
                            op_range[1], op_range[2]),
-           size = 3, colour = "grey20", lineheight = 0.95) +
+           size = 4, fontface = "bold", colour = "black", lineheight = 0.95) +
   geom_vline(xintercept = 12.14, linetype = "dotdash",
-             colour = "grey35", linewidth = 0.4) +
-  annotate("text", x = 12.14, y = 0.06, label = "Martin threshold 12.14",
-           hjust = -0.05, size = 3, colour = "grey25") +
-  geom_line(linewidth = 1.1) +
+             colour = "grey25", linewidth = 0.5) +
+  annotate("text", x = 12.14, y = 0.06, label = "Martin threshold 12.14 °C",
+           hjust = -0.05, size = 3.8, fontface = "bold", colour = "black") +
+  geom_line(linewidth = 1.2) +
   scale_colour_manual(values = fam_cols, name = "TDM model") +
   scale_linetype_manual(values = stage_types, name = "Stage") +
   scale_x_continuous(limits = c(10, 18), breaks = seq(10, 18, 1), expand = c(0, 0)) +
   scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
   labs(subtitle = "(a) Daily survival rate", x = NULL, y = "Daily survival") +
-  theme_minimal(base_size = 12) +
-  theme(panel.grid.minor = element_blank(),
-        panel.border  = element_rect(colour = "grey40", fill = NA, linewidth = 0.5),
-        plot.subtitle = element_text(face = "bold"),
-        legend.position = "right")
+  theme_arg(base_size = 14)
 
 # ---- 3. Panel (b): cumulative egg-to-fry survival ---------------------------
 # Uses the shipped implementation so the panel matches what the life cycle runs:
@@ -117,7 +115,8 @@ curves_cum <- tibble(T = T_seq) %>%
   mutate(`Bratovich et al. (2020)`    = vapply(T, S_cum, 0, "WaterForum2020"),
          `Bartholow & Heasley (2006)` = vapply(T, S_cum, 0, "SALMOD2006"),
          `Martin et al. (2017)`       = vapply(T, S_cum, 0, "martin")) %>%
-  pivot_longer(-T, names_to = "family", values_to = "S")
+  pivot_longer(-T, names_to = "family", values_to = "S") %>%
+  mutate(family = factor(family, levels = names(TDM_COLS)))
 
 # Crossovers: where each exponential model becomes harsher than Martin
 cross <- sapply(c("WaterForum2020", "SALMOD2006"), function(m) {
@@ -131,23 +130,20 @@ cat(sprintf("\nCrossover (exponential model drops below Martin): Bratovich %.2f 
 
 pB <- ggplot(curves_cum, aes(T, S, colour = family)) +
   shade() +
-  geom_line(linewidth = 1.1) +
+  geom_line(linewidth = 1.2) +
   geom_vline(xintercept = as.numeric(cross), linetype = "dotted",
-             colour = "grey30", linewidth = 0.45) +
+             colour = "grey25", linewidth = 0.5) +
   annotate("text", x = cross[["SALMOD2006"]], y = 0.62,
            label = sprintf("exponential models fall\nbelow Martin: %.1f / %.1f °C",
                            cross[["SALMOD2006"]], cross[["WaterForum2020"]]),
-           hjust = 1.06, size = 3, colour = "grey20", lineheight = 0.95) +
+           hjust = 1.06, size = 4, fontface = "bold", colour = "black",
+           lineheight = 0.95) +
   scale_colour_manual(values = fam_cols, name = "TDM model") +
   scale_x_continuous(limits = c(10, 18), breaks = seq(10, 18, 1), expand = c(0, 0)) +
   scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
   labs(subtitle = "(b) Cumulative egg-to-fry survival at constant temperature",
        x = "Temperature (°C)", y = "Egg-to-fry survival") +
-  theme_minimal(base_size = 12) +
-  theme(panel.grid.minor = element_blank(),
-        panel.border  = element_rect(colour = "grey40", fill = NA, linewidth = 0.5),
-        plot.subtitle = element_text(face = "bold"),
-        legend.position = "right")
+  theme_arg(base_size = 14)
 
 fig <- pA / pB + plot_layout(guides = "collect") &
   theme(legend.position = "right")
@@ -155,7 +151,7 @@ fig <- pA / pB + plot_layout(guides = "collect") &
 dir.create(here("figures"), showWarnings = FALSE)
 dir.create(here("output"),  showWarnings = FALSE)
 ggsave(here("figures", "figure3_tdm_curves.png"), fig,
-       width = 9.5, height = 8, dpi = 300, bg = "white")
+       width = 11, height = 9, dpi = 300, bg = "white")
 
 # ---- 4. Companion table -----------------------------------------------------
 tbl <- tibble(T_C = seq(10, 18, 0.5)) %>%

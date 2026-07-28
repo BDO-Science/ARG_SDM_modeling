@@ -43,6 +43,7 @@ suppressPackageStartupMessages({
 })
 
 source(here("SalmonCountR", "functions.R"))
+source(here("analysis", "figure_theme.R"))
 
 app <- function(...) here("SalmonCountR", "app_data", ...)
 
@@ -192,29 +193,33 @@ plot_df <- all_pred %>%
                           labels = c("TDM-weighted", "Bratovich (2020)",
                                      "Bartholow & Heasley (2006)", "Martin et al. (2017)")))
 
-p <- ggplot(plot_df, aes(year)) +
+series_cols <- setNames(PAIR_COLS, c("Observed escapement", "Model prediction"))
+
+plot_long <- plot_df %>%
+  select(year, variant, Observed = observed, Predicted = predicted) %>%
+  pivot_longer(c(Observed, Predicted), names_to = "series", values_to = "spawners") %>%
+  mutate(series = factor(series, levels = c("Observed", "Predicted"),
+                         labels = names(series_cols)))
+
+p <- ggplot(plot_long, aes(year, spawners, colour = series)) +
   annotate("rect", xmin = min(real_years) - 0.5,
            xmax = real_years[length(S_seed_calib)] + 0.5,
-           ymin = -Inf, ymax = Inf, fill = "grey90") +
+           ymin = -Inf, ymax = Inf, fill = "grey88") +
   annotate("text", x = mean(real_years[1:length(S_seed_calib)]),
-           y = Inf, label = "seed years", vjust = 1.6, size = 2.9, colour = "grey35") +
-  geom_line(aes(y = observed), colour = "grey20", linewidth = 0.9) +
-  geom_point(aes(y = observed), colour = "grey20", size = 1.6) +
-  geom_line(aes(y = predicted), colour = "#D55E00", linewidth = 0.9) +
-  geom_point(aes(y = predicted), colour = "#D55E00", size = 1.6) +
+           y = Inf, label = "seed years", vjust = 1.5, size = 3.6,
+           fontface = "bold", colour = "black") +
+  geom_line(linewidth = 1.1) +
+  geom_point(size = 2.1) +
   facet_wrap(~ variant, ncol = 2) +
+  scale_colour_manual(values = series_cols, name = NULL) +
   scale_y_continuous(labels = scales::comma) +
   scale_x_continuous(breaks = seq(2011, 2024, 3)) +
-  labs(subtitle = "Calibration fit: observed escapement (grey) vs predicted spawners (orange)",
+  labs(subtitle = "Calibration fit, 2011-2024: observed escapement vs predicted spawners",
        x = NULL, y = "Spawners") +
-  theme_minimal(base_size = 11) +
-  theme(panel.grid.minor = element_blank(),
-        panel.border = element_rect(colour = "grey70", fill = NA, linewidth = 0.4),
-        strip.text = element_text(face = "bold"),
-        plot.subtitle = element_text(face = "bold"))
+  theme_arg(base_size = 14, legend = "top")
 
 ggsave(here("figures", "calibration_observed_vs_predicted.png"), p,
-       width = 9, height = 6.5, dpi = 300, bg = "white")
+       width = 12, height = 8.5, dpi = 300, bg = "white")
 
 cat("\nWrote output/calibration_fit_statistics.csv,",
     "output/calibration_predictions.csv,",

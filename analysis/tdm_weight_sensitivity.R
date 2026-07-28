@@ -21,6 +21,8 @@
 library(dplyr); library(tidyr); library(purrr); library(tibble)
 library(ggplot2); library(patchwork); library(here)
 
+source(here("analysis", "figure_theme.R"))
+
 # ---- 1. Inputs --------------------------------------------------------------
 results_full               <- readRDS(here("SalmonCountR","app_data","results_full.rds"))
 steelhead_scenario_results <- readRDS(here("SalmonCountR","app_data","steelhead_scenario_results.rds"))
@@ -126,21 +128,20 @@ pA <- ggplot(all_scores, aes(x = scenario, y = score)) +
   geom_col(aes(fill = is_top), colour = "grey25", linewidth = 0.3, width = 0.75) +
   # Labels are set vertically: at nine bars per facet, horizontal labels collide.
   geom_text(aes(label = sprintf("%.3f", score)),
-            hjust = -0.12, size = 2.4, colour = "grey15", angle = 90) +
+            hjust = -0.10, size = 3.1, fontface = "bold",
+            colour = "black", angle = 90) +
   facet_wrap(~ weighting, nrow = 1) +
-  scale_fill_manual(values = c(`TRUE` = "#31688E", `FALSE` = "grey88"),
+  scale_fill_manual(values = c(`TRUE` = arg_pal(2)[1], `FALSE` = "grey85"),
                     breaks = "TRUE", labels = "Top-ranked", name = NULL) +
-  scale_y_continuous(limits = c(0, 0.82), breaks = seq(0, 0.8, 0.2), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 0.86), breaks = seq(0, 0.8, 0.2), expand = c(0, 0)) +
   labs(subtitle = "(a) Composite score under alternative TDM model weightings",
        x = NULL, y = "Composite score") +
-  theme_minimal(base_size = 11) +
+  theme_arg(base_size = 14, legend = "top") +
   theme(panel.grid.major.x = element_blank(),
-        panel.grid.minor   = element_blank(),
-        panel.border  = element_rect(colour = "grey70", fill = NA, linewidth = 0.4),
-        strip.text    = element_text(face = "bold", size = 8.5, lineheight = 1.05),
-        axis.text.x   = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 7.5),
-        plot.subtitle = element_text(face = "bold", size = 11),
-        legend.position = "top")
+        strip.text  = element_text(face = "bold", size = 11, lineheight = 1.05,
+                                   colour = "black"),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1,
+                                   face = "bold", size = 10, colour = "black"))
 
 # Panel B: continuous Martin-weight sweep. Only the alternatives that ever take
 # the top rank somewhere on the sweep are coloured; the rest are grey. Three
@@ -149,8 +150,8 @@ pA <- ggplot(all_scores, aes(x = scenario, y = score)) +
 focal <- sweep %>% group_by(w_martin) %>%
   slice_max(score, n = 1, with_ties = FALSE) %>% ungroup() %>%
   distinct(scenario) %>% pull(scenario)
-# purple / teal / vermillion — a CVD-safe trio, all >=3:1 on a white surface
-focal_cols <- setNames(c("#440154", "#1F9E89", "#D55E00")[seq_along(focal)], focal)
+# Viridis, matching every other figure (see analysis/figure_theme.R)
+focal_cols <- setNames(arg_pal(length(focal), begin = 0.10, end = 0.80), focal)
 
 sweep_plot <- sweep %>%
   mutate(grp = ifelse(scenario %in% focal, scenario, "Other"),
@@ -161,31 +162,29 @@ ends <- sweep_plot %>% filter(w_martin == max(w_martin), scenario %in% focal)
 pB <- ggplot() +
   geom_line(data = filter(sweep_plot, grp == "Other"),
             aes(w_martin, score, group = scenario),
-            colour = "grey82", linewidth = 0.5) +
+            colour = GREY_CTX, linewidth = 0.6) +
   geom_line(data = filter(sweep_plot, grp != "Other"),
-            aes(w_martin, score, colour = grp), linewidth = 0.9) +
-  geom_vline(xintercept = 0.25, linetype = "dashed", colour = "grey35", linewidth = 0.4) +
+            aes(w_martin, score, colour = grp), linewidth = 1.1) +
+  geom_vline(xintercept = 0.25, linetype = "dashed", colour = "grey25", linewidth = 0.5) +
   annotate("text", x = 0.25, y = 0.66, label = "elicited\nMartin weight = 0.25",
-           hjust = -0.08, size = 2.8, colour = "grey25", lineheight = 0.95) +
+           hjust = -0.08, size = 3.8, fontface = "bold", colour = "black",
+           lineheight = 0.95) +
   ggrepel::geom_text_repel(data = ends, aes(w_martin, score, label = scenario, colour = grp),
                            direction = "y", hjust = 0, nudge_x = 0.02,
-                           segment.size = 0.2, size = 3, show.legend = FALSE) +
+                           segment.size = 0.2, size = 4, fontface = "bold",
+                           show.legend = FALSE) +
   scale_colour_manual(values = focal_cols, name = NULL) +
   scale_x_continuous(limits = c(0, 1.09), breaks = seq(0, 1, 0.25), expand = c(0, 0)) +
   labs(subtitle = "(b) Composite score across the Martin weight (Bratovich : Bartholow held at 0.51 : 0.24)",
        x = "Weight on Martin et al. (2017) TDM model", y = "Composite score") +
-  theme_minimal(base_size = 11) +
-  theme(panel.grid.minor = element_blank(),
-        panel.border  = element_rect(colour = "grey70", fill = NA, linewidth = 0.4),
-        plot.subtitle = element_text(face = "bold", size = 11),
-        legend.position = "top")
+  theme_arg(base_size = 14, legend = "top")
 
 fig <- pA / pB + plot_layout(heights = c(1, 0.95))
 
 dir.create(here("figures"), showWarnings = FALSE)
 dir.create(here("output"),  showWarnings = FALSE)
 ggsave(here("figures","tdm_weight_sensitivity.png"), fig,
-       width = 10, height = 8.5, dpi = 300, bg = "white")
+       width = 13, height = 10, dpi = 300, bg = "white")
 
 # ---- 7. Tables --------------------------------------------------------------
 write.csv(
