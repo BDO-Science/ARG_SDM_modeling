@@ -17,20 +17,22 @@ shiny::runApp("SalmonCountR")   # Launch the app
 ## Requirements
 
 * **R** ≥ 4.0
-* Packages:
 
-  ```r
-  tidyverse
-  lubridate
-  here
-  data.table
-  furrr
-  future         # parallel backend for furrr
-  compiler
-  shiny
-  DT
-  # optional: ordinal (for CLM helpers in functions.R)
-  ```
+Install everything in one go:
+
+```r
+install.packages(c(
+  # app  (app.R + global.R)
+  "shiny", "shinyjs", "shinyWidgets", "DT", "tidyverse", "scales", "ggrepel", "here",
+  # precompute.R additionally
+  "furrr", "future", "data.table", "MASS", "ordinal", "ggridges", "readxl",
+  # manuscript figure/table scripts in scripts_data_misc/
+  "patchwork", "viridis", "janitor"
+))
+```
+
+`compiler` ships with R. **`shinyWidgets` is required for the app to start and
+`furrr` for `precompute.R` to run** — check both before a season kickoff.
 
 ---
 
@@ -42,23 +44,35 @@ SalmonCountR/
 ├── global.R            # Loads app_data and exposes helpers/constants
 ├── functions.R         # Core modeling library (TDM, survival, lifecycle, utilities)
 ├── precompute.R        # Builds inputs, runs calibration, writes app_data
-└── app_data/
-    ├── env_ext_list.rds
-    ├── df_all.rds
-    ├── egg_summary.rds
+└── app_data/           # written by precompute.R, read by global.R
+    ├── env_ext_list.rds            # per-alternative daily temps (Date, site, temp, alt)
+    ├── df_all.rds                  # same, long form with `env`
+    ├── egg_summary.rds             # cumulative egg survival by env × variant × year
     ├── surv_lookup_full.rds
-    ├── base_P_list.rds
-    ├── calib_results.rds
-    ├── calib_pred_by_variant.rds
-    ├── S_seed_calib.rds
-    ├── S_seed_fore_list.rds
+    ├── base_P.rds, base_P_list.rds # life-cycle parameters (calibrated)
+    ├── calib_results.rds           # calibrated SAR_mean and rear_surv
+    ├── S_seed_calib.rds            # 2011-2013 observed escapement (calibration seed)
+    ├── S_seed_fore_list.rds        # 2022-2024 observed escapement (forecast seed)
     ├── stoch_SAR_opts.rds
     ├── sim_years.rds
-    ├── spawn_dates_by_env.rds
-    └── american_river_instream.rds   # WUA (m²) & flow → K_spawners lookup
+    ├── spawn_dates_by_alt.rds
+    ├── results_full.rds            # the 114-year projection, all 36 env × 3 variants
+    ├── steelhead_metrics.rds       # days < 18.3 °C in Oct/Nov, by env
+    ├── swing_scenario_results.rds  # Chinook metric per alternative (default weights)
+    ├── steelhead_scenario_results.rds
+    ├── swing_ranges.rds            # worst/best case per objective, for swing weighting
+    └── american_river_instream.rds # WUA (m²) & flow → K_spawners lookup
 ```
 
 > **Terminology:** In code and data, **`env`** means “power-bypass alternative.”
+> There are 36 of them: 9 alternatives (NB, PB1, PB2, PB2b, PB2c, PB3–PB6) ×
+> 4 meteorological years (2011, 2014, 2017, 2020). `env` 1–9 are the 2011 met
+> year, 10–18 are 2014, 19–27 are 2017, 28–36 are 2020; within each block the
+> order is NB, PB1, PB2, PB2b, PB2c, PB3, PB4, PB5, PB6.
+
+> **Year labels in `results_full`:** this object is one continuous 114-year
+> projection seeded from the observed 2022–2024 escapement, but its `year`
+> column is labelled 2011–2124. Treat it as projection year, not calendar year.
 
 ---
 
@@ -105,6 +119,26 @@ SalmonCountR/
 
 * **`env_ext_list.rds`**: per-env, per-site daily temps (Date, temp); used for ATU, Oct/Nov summaries, and degree-days.
 * **`american_river_instream.rds`**: flow (cfs), **FR\_spawn\_wua** (m²). `global.R` computes `K_spawners = FR_spawn_wua / 9.29` and interpolates to arbitrary flows.
+
+---
+
+## Manuscript figures and tables
+
+Standalone scripts in `scripts_data_misc/`, each reading `SalmonCountR/app_data/`
+and writing to `figures/` and `output/`:
+
+| Script | Produces |
+|---|---|
+| `mcda.R` | Figure 5 — composite MCDA scores, stacked by objective, with numeric bar labels |
+| `figure3_tdm_curves.R` | Figure 3 — TDM daily survival and cumulative egg-to-fry survival, 10–18 °C |
+| `tdm_weight_sensitivity.R` | TDM weight sensitivity of the composite score, plus the Martin-weight sweep |
+| `elicitation_tables.R` | SI Tables S2-7 and S2-8 from the TDM elicitation scoresheet |
+
+`elicitation_tables.R` reads a scoresheet that lives with the manuscript rather
+than in this repo; point it there with the `ARG_SCORESHEET` environment variable.
+
+All four read precomputed `.rds` files, so they run in seconds without
+re-running `precompute.R`.
 
 ---
 

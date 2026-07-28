@@ -71,11 +71,27 @@ plot_df <- perf_data %>%
     Objective = factor(Objective, levels = c("Hydropower", "Steelhead", "Chinook"))
   )
 
+# --- 6b. Composite totals for the bar labels ---
+# The revised Figure 5 caption promises numeric labels: the top-five alternatives
+# are separated by only a few thousandths, which the bar heights cannot resolve.
+composite_totals <- plot_df %>%
+  group_by(scenario) %>%
+  summarise(Composite = sum(Contribution), .groups = "drop")
+
 # --- 7. Plot ---
 p_mcda <- ggplot(plot_df, aes(x = scenario, y = Contribution, fill = Objective)) +
   geom_col(position = "stack") +
+  geom_text(
+    data = composite_totals,
+    aes(x = scenario, y = Composite, label = sprintf("%.3f", Composite)),
+    inherit.aes = FALSE,
+    vjust = -0.6, size = 4, fontface = "bold", colour = "black"
+  ) +
   scale_fill_viridis_d(name = "Objective") +
-  scale_y_continuous(limits = c(0, 0.6), breaks = seq(0, 0.6, 0.1)) +
+  scale_y_continuous(
+    limits = c(0, max(composite_totals$Composite) * 1.12),
+    breaks = seq(0, 0.7, 0.1)
+  ) +
   labs(
     title = NULL,
     x = "Management Alternative",
@@ -96,4 +112,16 @@ p_mcda <- ggplot(plot_df, aes(x = scenario, y = Contribution, fill = Objective))
   )
 
 print(p_mcda)
-ggsave("mcda_composite_scores.png", p_mcda, width = 9, height = 7, dpi = 300, bg = "white")
+
+# Write into figures/ rather than the working directory, so reruns do not leave
+# stray copies at the repo root.
+dir.create(here("figures"), showWarnings = FALSE)
+ggsave(here("figures", "mcda_composite_scores.png"), p_mcda,
+       width = 9, height = 7, dpi = 300, bg = "white")
+
+# --- 8. Companion table (values behind the bars) ---
+dir.create(here("output"), showWarnings = FALSE)
+perf_data %>%
+  left_join(composite_totals, by = "scenario") %>%
+  arrange(desc(Composite)) %>%
+  write.csv(here("output", "mcda_composite_scores_v2.csv"), row.names = FALSE)

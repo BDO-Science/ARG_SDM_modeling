@@ -1,11 +1,15 @@
+# RStudio / R session state
 .Rproj.user
 .Rhistory
+.RHistory
 .RData
 .Ruserdata
+.RDataTmp*
+
+# Documents are kept alongside the repo, not in it
 *.pptx
 *.docx
 *.pdf
-.RData
-.RDataTmp*
-.RHistory
-.RDataTmp*
+
+# Figures belong in figures/ ; keep stray root-level renders out
+/*.png

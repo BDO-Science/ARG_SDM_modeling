@@ -770,6 +770,20 @@ tdm_lin_c        <- cmpfun(tdm_lin_martin)
 setDT(sim_redds)
 
 # Split data by simulation year for parallel processing
+#
+# ⚠️ KNOWN ISSUE — do not "fix" without re-running and re-deriving every result.
+# This overwrites the alternative-specific split built at line 659
+# (split by mgt_alt AND sim_year) with a split by sim_year only, pooling all 36
+# alternatives' redds into a single set per year. eval_year() then evaluates
+# that pooled set under every alternative's temperatures, so the CLM's
+# temperature-driven shift in spawn timing is computed and then averaged away
+# before it can affect any result. Nothing else consumes the line-659 object,
+# which suggests this was unintended rather than a modelling choice.
+#
+# Consequence: the published results treat spawn timing as common to all
+# alternatives. Correcting it would change every downstream number, so it is
+# left as-is and documented rather than silently changed. See
+# output/MANUSCRIPT_REVISION_HANDOFF.md section 7.
 sim_redds_split <- split(sim_redds[, .(spawn_dt, site)], sim_redds$sim_year)
 
 # Step 2: Cache management alternative assets for fast access
@@ -1243,8 +1257,27 @@ saveRDS(S_seed_fore_list,      here("SalmonCountR","app_data","S_seed_fore_list.
 saveRDS(stoch_SAR_opts,        here("SalmonCountR","app_data","stoch_SAR_opts.rds"))
 saveRDS(sim_years,             here("SalmonCountR","app_data","sim_years.rds"))
 saveRDS(spawn_dates_by_alt,    here("SalmonCountR","app_data","spawn_dates_by_alt.rds"))
+
+# The simulated redd set is a random draw (section 17). It is reproducible —
+# set.seed(123) at the top of this script covers it, and nothing consumes the
+# RNG stream in parallel before section 17 — but only if the script is run
+# start to finish in one session. Re-running a chunk interactively shifts the
+# stream and changes the draw. Saving it means the redd set behind a given set
+# of results can be recovered without re-running the whole pipeline.
+# This also keeps sim_redds.rds current: before this line existed the file on
+# disk was a stale artifact from an older pipeline version, with a different
+# schema, and it did not reproduce egg_summary.rds.
+saveRDS(sim_redds,             here("SalmonCountR","app_data","sim_redds.rds"))
+saveRDS(sim_future,            here("SalmonCountR","app_data","sim_future.rds"))
 saveRDS(swing_scenario_results, here("SalmonCountR","app_data","swing_scenario_results.rds"))
 saveRDS(steelhead_scenario_results, here("SalmonCountR","app_data","steelhead_scenario_results.rds"))
+
+# global.R loads these two, but they were previously computed here and never
+# written, so app_data held stale copies from an earlier run. (The stale
+# swing_ranges.rds carried a Chinook range of 18,521-21,728 against a current
+# range of 7,600-11,073.) Always write what global.R reads.
+saveRDS(swing_ranges,      here("SalmonCountR","app_data","swing_ranges.rds"))
+saveRDS(steelhead_metrics, here("SalmonCountR","app_data","steelhead_metrics.rds"))
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                             END OF PRECOMPUTE SCRIPT                          ║
