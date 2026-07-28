@@ -26,7 +26,7 @@ install.packages(c(
   "shiny", "shinyjs", "shinyWidgets", "DT", "tidyverse", "scales", "ggrepel", "here",
   # precompute.R additionally
   "furrr", "future", "data.table", "MASS", "ordinal", "ggridges", "readxl",
-  # manuscript figure/table scripts in scripts_data_misc/
+  # manuscript figure/table scripts in analysis/
   "patchwork", "viridis", "janitor"
 ))
 ```
@@ -39,6 +39,19 @@ install.packages(c(
 ## Repository layout
 
 ```
+analysis/               # standalone analysis & figure scripts (see below)
+│   └── additions/      # exploratory one-offs
+data_raw/               # raw inputs consumed by analysis/ scripts
+│   ├── american_river_data/
+│   ├── juvenile_data/          # rotary screw trap catch, efficiency, operations
+│   └── *.xlsx, *.csv           # temperature modelling, swing weighting, CWT, HCI
+figures/                # publication figures (written by analysis/)
+output/                 # tables and reports (written by analysis/)
+archive/                # superseded, kept for provenance — nothing here is live
+│   ├── calibration/    # BT-SPAS-X MCMC output (CODA chains, TSPDE results, .stan)
+│   ├── old_scripts/    # earlier life-cycle and ETF survival implementations
+│   ├── review/         # external review copies of the app and precompute
+│   └── legacy_outputs/ # outputs from earlier versions of analysis/age_dist.R
 SalmonCountR/
 ├── app.R               # Shiny UI & server
 ├── global.R            # Loads app_data and exposes helpers/constants
@@ -124,7 +137,7 @@ SalmonCountR/
 
 ## Manuscript figures and tables
 
-Standalone scripts in `scripts_data_misc/`, each reading `SalmonCountR/app_data/`
+Standalone scripts in `analysis/`, each reading `SalmonCountR/app_data/`
 and writing to `figures/` and `output/`:
 
 | Script | Produces |
@@ -133,12 +146,26 @@ and writing to `figures/` and `output/`:
 | `figure3_tdm_curves.R` | Figure 3 — TDM daily survival and cumulative egg-to-fry survival, 10–18 °C |
 | `tdm_weight_sensitivity.R` | TDM weight sensitivity of the composite score, plus the Martin-weight sweep |
 | `elicitation_tables.R` | SI Tables S2-7 and S2-8 from the TDM elicitation scoresheet |
+| `evpi.R` | Expected value of perfect information under both objective weight sets |
+| `frontloading_cohort_decomposition.R` | Front-loading mechanism: crossover dates, hazard split, spawn-cohort decomposition |
 
 `elicitation_tables.R` reads a scoresheet that lives with the manuscript rather
 than in this repo; point it there with the `ARG_SCORESHEET` environment variable.
 
-All four read precomputed `.rds` files, so they run in seconds without
+All of these read precomputed `.rds` files, so they run in seconds without
 re-running `precompute.R`.
+
+The remaining scripts in `analysis/` derive model parameters from raw data in
+`data_raw/` (age structure, CWT returns, flow, spawning habitat, juvenile
+abundance, temperature scenarios). They document provenance and are not part of
+the app pipeline.
+
+### Revision reports
+
+| File | Purpose |
+|---|---|
+| `output/MANUSCRIPT_REVISION_HANDOFF.md` | Findings organised as manuscript/SI/response edits — the one to hand to someone making revisions |
+| `output/REVISION_FINDINGS.md` | The same work as an analysis record, with method detail |
 
 ---
 

@@ -13,3 +13,12 @@
 
 # Figures belong in figures/ ; keep stray root-level renders out
 /*.png
+
+# Quarto/knitr render output — regenerate from the .qmd sources in analysis/
+*_files/
+/analysis/*.html
+/analysis/math.html
+/analysis/equations.html
+
+# Stray device output from headless Rscript runs
+Rplots.pdf

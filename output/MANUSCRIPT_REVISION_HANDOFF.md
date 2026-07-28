@@ -691,12 +691,12 @@ by running these scripts, except where marked UNRESOLVED:
 
 | Script | Produces |
 |---|---|
-| `scripts_data_misc/tdm_weight_sensitivity.R` | §4.1 |
-| `scripts_data_misc/mcda.R` | §2.1, §5.2 |
-| `scripts_data_misc/figure3_tdm_curves.R` | §4.2, §5.1 |
-| `scripts_data_misc/elicitation_tables.R` | §3.5, §3.6 |
-| `scripts_data_misc/evpi.R` | §4.3 |
-| `scripts_data_misc/frontloading_cohort_decomposition.R` | §2.2, §2.3, §2.4, §2.5, §4.1 (item 2), §5.4 |
+| `analysis/tdm_weight_sensitivity.R` | §4.1 |
+| `analysis/mcda.R` | §2.1, §5.2 |
+| `analysis/figure3_tdm_curves.R` | §4.2, §5.1 |
+| `analysis/elicitation_tables.R` | §3.5, §3.6 |
+| `analysis/evpi.R` | §4.3 |
+| `analysis/frontloading_cohort_decomposition.R` | §2.2, §2.3, §2.4, §2.5, §4.1 (item 2), §5.4 |
 
 **One methodological note on §2.3–2.5.** The redd set behind the published
 `egg_summary.rds` was never saved (§7 item 6), so those results do not use it.
