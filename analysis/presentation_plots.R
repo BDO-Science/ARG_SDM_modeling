@@ -19,6 +19,8 @@ library(tidyr)
 library(scales)
 library(tibble)
 
+source(here("analysis", "figure_theme.R"))
+
 # ============================================================
 # 1) DENSITY DEPENDENCE CURVES (flow-dependent K)
 # ============================================================
@@ -54,14 +56,9 @@ p_dd <- ggplot(dd_plot_df, aes(x = redds, y = survival, color = flow_cfs)) +
   ) +
   scale_color_viridis_d(option = "D", begin = 0.2, end = 0.85) +
   scale_y_continuous(limits = c(0, 0.35), expand = c(0, 0)) +
-  theme_minimal(base_size = 14) +
-  theme(
-    plot.title   = element_text(face = "bold", size = 16, hjust = 0.5),
-    axis.title   = element_text(face = "bold", size = 14),
-    axis.text    = element_text(face = "bold", size = 12),
-    legend.title = element_text(face = "bold", size = 13),
-    legend.text  = element_text(size = 11)
-  )
+  theme_arg(base_size = 14, border = FALSE) +
+  theme(plot.title = element_text(face = "bold", size = 16, hjust = 0.5,
+                                  colour = "black"))
 
 print(p_dd)
 
@@ -91,16 +88,7 @@ p_etf_ts <- ggplot(egg_summary_2011_2024,
     limits = c(0, 1)
   ) +
   labs(color = "TDM Variant") +
-  theme_minimal(base_size = 14) +
-  theme(
-    axis.title       = element_text(face = "bold"),
-    axis.text        = element_text(face = "bold"),
-    legend.title     = element_text(face = "bold"),
-    legend.text      = element_text(size = 11),
-    panel.background = element_rect(fill = "white", color = NA),
-    plot.background  = element_rect(fill = "white", colour = NA),
-    panel.border     = element_rect(colour = "black", fill = NA, linewidth = 0.5)
-  )
+  theme_arg(base_size = 14)
 
 print(p_etf_ts)
 
@@ -126,16 +114,7 @@ p_etf_alt <- ggplot(egg_summary_2025,
     limits = c(0, 1)
   ) +
   labs(x = "TDM Variant") +
-  theme_minimal(base_size = 14) +
-  theme(
-    axis.title       = element_text(face = "bold"),
-    axis.text        = element_text(face = "bold"),
-    legend.title     = element_text(face = "bold"),
-    legend.text      = element_text(size = 11),
-    panel.background = element_rect(fill = "white", color = NA),
-    plot.background  = element_rect(fill = "white", colour = NA),
-    panel.border     = element_rect(colour = "black", fill = NA, linewidth = 0.5)
-  )
+  theme_arg(base_size = 14)
 
 print(p_etf_alt)
 
@@ -160,16 +139,7 @@ p_sh <- ggplot(sh_by_alt, aes(x = alternative, y = steelhead_score, fill = clima
   scale_fill_viridis_d(name = "Climate Year") +
   scale_y_continuous(name = expression("Days Below 18.3" * degree * "C (Oct-Nov)")) +
   labs(x = "Management Alternative") +
-  theme_minimal(base_size = 14) +
-  theme(
-    axis.title       = element_text(face = "bold"),
-    axis.text        = element_text(face = "bold"),
-    legend.title     = element_text(face = "bold"),
-    legend.text      = element_text(size = 11),
-    panel.background = element_rect(fill = "white", color = NA),
-    plot.background  = element_rect(fill = "white", colour = NA),
-    panel.border     = element_rect(colour = "black", fill = NA, linewidth = 0.5)
-  )
+  theme_arg(base_size = 14)
 
 print(p_sh)
 
@@ -211,20 +181,10 @@ p_daily <- ggplot(curves_daily, aes(T, S_day, color = family, linetype = stage))
   coord_cartesian(xlim = c(6, 22), ylim = c(0, 1)) +
   scale_y_continuous(labels = percent_format(accuracy = 1)) +
   labs(x = "Temperature (deg C)", y = "Daily survival rate") +
-  theme_minimal(base_size = 14) +
-  theme(
-    axis.title       = element_text(face = "bold"),
-    axis.text        = element_text(face = "bold", size = 11),
-    legend.position  = "right",
-    legend.title     = element_text(face = "bold"),
-    legend.text      = element_text(size = 11),
-    panel.background = element_rect(fill = "white", color = NA),
-    plot.background  = element_rect(fill = "white", colour = NA),
-    panel.border     = element_rect(colour = "black", fill = NA, linewidth = 0.5)
-  )
+  theme_arg(base_size = 14, legend = "right")
 
 print(p_daily)
-ggsave("tdm_daily_survival.png", p_daily, width = 11, height = 7, dpi = 300, bg = "white")
+ggsave(here("figures", "tdm_daily_survival.png"), p_daily, width = 11, height = 7, dpi = 300, bg = "white")
 
 # ============================================================
 # 6) CUMULATIVE TDM SURVIVAL OVER TIME (illustrative scenarios)
@@ -295,17 +255,7 @@ p_cum_time <- ggplot(cum_panel, aes(day, S, color = model)) +
   coord_cartesian(ylim = c(0, 1)) +
   scale_y_continuous(labels = percent_format(accuracy = 1)) +
   labs(x = "Incubation day", y = "Cumulative survival") +
-  theme_minimal(base_size = 14) +
-  theme(
-    axis.title       = element_text(face = "bold"),
-    axis.text        = element_text(face = "bold", size = 11),
-    strip.text       = element_text(face = "bold", size = 11),
-    legend.title     = element_text(face = "bold"),
-    legend.text      = element_text(size = 11),
-    panel.background = element_rect(fill = "white", color = NA),
-    plot.background  = element_rect(fill = "white", colour = NA),
-    panel.border     = element_rect(colour = "black", fill = NA, linewidth = 0.5)
-  )
+  theme_arg(base_size = 14)
 
 print(p_cum_time)
-ggsave("tdm_cumulative_over_time.png", p_cum_time, width = 12, height = 7, dpi = 300, bg = "white")
+ggsave(here("figures", "tdm_cumulative_over_time.png"), p_cum_time, width = 12, height = 7, dpi = 300, bg = "white")

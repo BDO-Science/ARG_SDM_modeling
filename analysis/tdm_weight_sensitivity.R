@@ -131,7 +131,7 @@ pA <- ggplot(all_scores, aes(x = scenario, y = score)) +
             hjust = -0.10, size = 3.1, fontface = "bold",
             colour = "black", angle = 90) +
   facet_wrap(~ weighting, nrow = 1) +
-  scale_fill_manual(values = c(`TRUE` = arg_pal(2)[1], `FALSE` = "grey85"),
+  scale_fill_manual(values = c(`TRUE` = "black", `FALSE` = "grey85"),
                     breaks = "TRUE", labels = "Top-ranked", name = NULL) +
   scale_y_continuous(limits = c(0, 0.86), breaks = seq(0, 0.8, 0.2), expand = c(0, 0)) +
   labs(subtitle = "(a) Composite score under alternative TDM model weightings",
@@ -150,8 +150,16 @@ pA <- ggplot(all_scores, aes(x = scenario, y = score)) +
 focal <- sweep %>% group_by(w_martin) %>%
   slice_max(score, n = 1, with_ties = FALSE) %>% ungroup() %>%
   distinct(scenario) %>% pull(scenario)
-# Viridis, matching every other figure (see analysis/figure_theme.R)
-focal_cols <- setNames(arg_pal(length(focal), begin = 0.10, end = 0.80), focal)
+# Viridis, matching every other figure (see analysis/figure_theme.R). Stop at 0.70
+# rather than the usual 0.88: the yellow end of the ramp has too little contrast
+# on white for a line this thin.
+#
+# NB and PB2c are not merely similar colours -- their curves genuinely coincide,
+# both sitting flat at ~0.50 across the whole sweep (NB is 0.500 by construction,
+# PB2c 0.502). Colour alone cannot separate overplotted lines, so linetype does
+# the work and the annotation below says so outright.
+focal_cols  <- setNames(arg_pal(length(focal), begin = 0, end = 0.70), focal)
+focal_types <- setNames(c("solid", "longdash", "dotted")[seq_along(focal)], focal)
 
 sweep_plot <- sweep %>%
   mutate(grp = ifelse(scenario %in% focal, scenario, "Other"),
@@ -164,16 +172,20 @@ pB <- ggplot() +
             aes(w_martin, score, group = scenario),
             colour = GREY_CTX, linewidth = 0.6) +
   geom_line(data = filter(sweep_plot, grp != "Other"),
-            aes(w_martin, score, colour = grp), linewidth = 1.1) +
+            aes(w_martin, score, colour = grp, linetype = grp), linewidth = 1.2) +
   geom_vline(xintercept = 0.25, linetype = "dashed", colour = "grey25", linewidth = 0.5) +
   annotate("text", x = 0.25, y = 0.66, label = "elicited\nMartin weight = 0.25",
            hjust = -0.08, size = 3.8, fontface = "bold", colour = "black",
            lineheight = 0.95) +
+  annotate("text", x = 0.02, y = 0.478,
+           label = "NB and PB2c coincide (0.500 and 0.502)",
+           hjust = 0, size = 3.6, fontface = "italic", colour = "grey25") +
   ggrepel::geom_text_repel(data = ends, aes(w_martin, score, label = scenario, colour = grp),
                            direction = "y", hjust = 0, nudge_x = 0.02,
                            segment.size = 0.2, size = 4, fontface = "bold",
                            show.legend = FALSE) +
   scale_colour_manual(values = focal_cols, name = NULL) +
+  scale_linetype_manual(values = focal_types, name = NULL) +
   scale_x_continuous(limits = c(0, 1.09), breaks = seq(0, 1, 0.25), expand = c(0, 0)) +
   labs(subtitle = "(b) Composite score across the Martin weight (Bratovich : Bartholow held at 0.51 : 0.24)",
        x = "Weight on Martin et al. (2017) TDM model", y = "Composite score") +

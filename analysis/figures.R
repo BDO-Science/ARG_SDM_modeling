@@ -4,6 +4,8 @@ library(scales)
 library(here)
 library(ggh4x)
 
+source(here("analysis", "figure_theme.R"))
+
 # --- 1. Load Pre-computed Model Results ---
 # This file contains the full 100-year forecasts for all 36 environment combinations
 # and all 3 TDM model variants.
@@ -129,23 +131,15 @@ baseline_barchart <- ggplot(summary_data_baseline, aes(x = factor(scenario, leve
     x = "Management Alternative",
     y = "Adult Population Index"
   ) +
-  theme_minimal(base_size = 14) +
-  theme(
-    plot.background = element_rect(fill = "white", colour = NA),
-    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
-    axis.text   = element_text(face = "bold", size = 11),
-    axis.title  = element_text(face = "bold"),
-    legend.title = element_text(face = "bold"),
-    legend.text  = element_text(size = 11),
-    panel.background = element_rect(fill = "white", color = NA),
-    panel.border = element_rect(colour = "black", fill=NA, size=0.5)
-  )
+  theme_arg(base_size = 14, legend = "none") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, face = "bold",
+                                   colour = "black"))
 
 # Save the baseline plot
 ggsave(
-  filename = "spawner_forecast_baseline_barchart.png",
+  filename = here("figures", "spawner_forecast_baseline_barchart.png"),
   plot = baseline_barchart,
-  width = 6.5, height = 7, dpi = 300
+  width = 6.5, height = 7, dpi = 300, bg = "white"
 )
 
 # --- 8. Generate and Save the EXTREME SCENARIOS PLOT ---
@@ -177,27 +171,20 @@ extreme_barchart <- ggplot(summary_data_extreme, aes(x = factor(scenario, levels
     x = "Management Alternative",
     y = "Adult Population Index"
   ) +
-  theme_minimal(base_size = 14) +
-  theme(
-    plot.background = element_rect(fill = "white", colour = NA),
-    strip.text = element_text(face = "bold", size = 9, color = "black"),
-    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold", color = "black"),
-    axis.text.y = element_text(face = "bold", color = "black"),
-    axis.title  = element_text(face = "bold", color = "black"),
-    legend.title = element_text(face = "bold", color = "black"),
-    legend.text  = element_text(size = 11, color = "black"),
-    panel.background = element_rect(fill = "white", color = NA),
-    panel.grid.minor = element_blank(),
-    panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.5)
-  )
+  theme_arg(base_size = 14, legend = "none") +
+  # 4 x 3 facet grid with long TDM names: hold strip text at 10 rather than the
+  # theme default of 12, which crowds the panel headers.
+  theme(strip.text  = element_text(face = "bold", size = 10, colour = "black"),
+        axis.text.x = element_text(angle = 45, hjust = 1, face = "bold",
+                                   colour = "black"))
 
 print(extreme_barchart)
 
 # Save the extreme scenarios plot
 ggsave(
-  filename = "spawner_forecast_extremes_barchart.png",
+  filename = here("figures", "spawner_forecast_extremes_barchart.png"),
   plot = extreme_barchart,
-  width = 9, height = 7, dpi = 300
+  width = 9, height = 7, dpi = 300, bg = "white"
 )
 
 # --- End of Script ---

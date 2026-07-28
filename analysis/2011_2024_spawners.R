@@ -1,6 +1,8 @@
 library(tidyverse)
 library(here)
 
+source(here("analysis", "figure_theme.R"))
+
 # Load data
 source(here("SalmonCountR", "functions.R"))
 env_ext_list <- readRDS(here("SalmonCountR", "app_data", "env_ext_list.rds"))
@@ -99,11 +101,10 @@ p1 <- ggplot(plot_data, aes(x = year)) +
     y = "Spawner Abundance",
     caption = "Black line = Observed | Colored lines = Predicted with fixed parameters"
   ) +
-  theme_minimal(base_size = 14) +
-  theme(legend.position = "bottom")
+  theme_arg(base_size = 14, legend = "bottom")
 
 print(p1)
-ggsave(here("output", "fixed_params_vs_observed.png"), p1, width = 12, height = 7, dpi = 300)
+ggsave(here("figures", "fixed_params_vs_observed.png"), p1, width = 12, height = 7, dpi = 300)
 
 # Plot 2: Predicted vs Observed scatter
 p2 <- plot_data %>%
@@ -125,10 +126,10 @@ p2 <- plot_data %>%
     x = "Observed Spawners",
     y = "Predicted Spawners"
   ) +
-  theme_minimal(base_size = 14)
+  theme_arg(base_size = 14)
 
 print(p2)
-ggsave(here("output", "fixed_params_scatter.png"), p2, width = 12, height = 5, dpi = 300)
+ggsave(here("figures", "fixed_params_scatter.png"), p2, width = 12, height = 5, dpi = 300)
 
 # Plot 3: Residuals over time
 p3 <- plot_data %>%
@@ -147,10 +148,9 @@ p3 <- plot_data %>%
     x = "Year",
     y = "Residual (Predicted - Observed)"
   ) +
-  theme_minimal(base_size = 14) +
-  theme(legend.position = "bottom")
+  theme_arg(base_size = 14, legend = "bottom")
 
 print(p3)
-ggsave(here("output", "fixed_params_residuals.png"), p3, width = 12, height = 6, dpi = 300)
+ggsave(here("figures", "fixed_params_residuals.png"), p3, width = 12, height = 6, dpi = 300)
 
-cat("\nPlots saved to output/ directory\n")
+cat("\nPlots saved to figures/ directory\n")
