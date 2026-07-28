@@ -133,11 +133,16 @@ pB <- ggplot(curves_cum, aes(T, S, colour = family)) +
   geom_line(linewidth = 1.2) +
   geom_vline(xintercept = as.numeric(cross), linetype = "dotted",
              colour = "grey25", linewidth = 0.5) +
-  annotate("text", x = cross[["SALMOD2006"]], y = 0.62,
-           label = sprintf("exponential models fall\nbelow Martin: %.1f / %.1f °C",
+  # Sits in the bottom-right, where every curve is already below ~0.05, so it is
+  # clear of the lines it describes while staying next to the crossover markers.
+  # Drawn as a label rather than plain text: the two dotted crossover rules run
+  # the full height of the panel and would otherwise strike through it.
+  annotate("label", x = 17.92, y = 0.52, hjust = 1, vjust = 0.5,
+           label = sprintf("exponential models\nfall below Martin\n%.1f / %.1f °C",
                            cross[["SALMOD2006"]], cross[["WaterForum2020"]]),
-           hjust = 1.06, size = 4, fontface = "bold", colour = "black",
-           lineheight = 0.95) +
+           size = 4, fontface = "bold", colour = "black", lineheight = 1.05,
+           fill = "white", alpha = 0.9, label.size = 0, label.r = unit(0, "pt"),
+           label.padding = unit(4, "pt")) +
   scale_colour_manual(values = fam_cols, name = "TDM model") +
   scale_x_continuous(limits = c(10, 18), breaks = seq(10, 18, 1), expand = c(0, 0)) +
   scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
