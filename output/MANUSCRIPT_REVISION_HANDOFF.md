@@ -34,13 +34,55 @@ Confidence labels used below:
 
 ---
 
-## 1. Read first — the manuscript currently mixes two model runs
+## 0. Status as of 2026-07-28, after editing the 07-28 document versions
 
-**DECISION REQUIRED. Nothing else in this package is safe to apply until this is
-settled, because several edits depend on which run is authoritative.**
+Audited against `FolsomBypass_manuscript_2026-07-28_revised.docx`,
+`FolsomBypass_SupportingInformation_2026-07-28_revised.docx` and
+`Response_to_Reviewers_RiverResearchandApps_v3.docx`.
 
-The repo has been re-run twice since the MCDA numbers in Section 3.2 were
-written:
+**The mixed-run problem (§1) is closed in the documents.** Every run-dependent
+number now traces to commit `26d61b8`. No value from a superseded run (12,493,
+0.004161, 17,245, 18,396, 18,953, 0.537, 0.499, 0.491) survives anywhere in
+either document. The one exception is the calibration fit statistics, which come
+from a pipeline version that no longer exists — see §7 item 2.
+
+| Item | State |
+|---|---|
+| §2.1 Composite scores → 0.573 / 0.534 / 0.530 | applied by author |
+| §2.5 Consequence table, K, calibrated SAR, `rear_surv` | already current-run |
+| §5.1 Figure 3 caption 12.8 → 12.14 | applied by author |
+| §3.3 SAR sentence and bootstrap-CI note | applied by author |
+| §4.2 Crossovers, operational band 14.1–18.2 °C | applied by author |
+| §4.3 EVPI range in the **Discussion** | applied by author |
+| §4.3 EVPI in the **Results** — was still a point estimate | **edited this pass** |
+| Spearman rho 0.95 → 0.96 (recomputed, 0.9624) | **edited this pass** |
+| SI Table S2-7 duplicate number → renumbered S2-9 | **edited this pass** |
+| SI table labelled inputs as "Calibrated Value" | **edited this pass** |
+| §7.2 R² = 0.72 / RMSE = 8,240 unreproducible | **flagged in place, needs your decision** |
+| §7.3 SAR range source, §7.4 Panelist 5 weights | still open |
+
+**Edits made in this pass are highlighted bright green** in the three `.docx`
+files, to distinguish them from the yellow and cyan highlighting already in the
+documents. Pre-edit copies are in `manuscript_backup/`. One caveat: the Spearman
+sentence already carried a yellow highlight, which is now green.
+
+Two further problems found during the audit and fixed:
+
+- **SI Table S2-7 was used twice** — once for the new panelist-weighting table in
+  S2.5, once for "Calibrated life-cycle model parameters" in S2.8. The latter is
+  now **Table S2-9**; cross-references to it still need updating.
+- **That table labelled empirical inputs as calibrated values**, directly
+  contradicting the S2.8 prose that says the calibrated values are 0.00269 and
+  0.543. Header and cells corrected.
+
+---
+
+## 1. The mixed-run problem — RESOLVED in the documents, retained for the record
+
+**This section is now history.** It is kept because it explains why several
+numbers changed and which run is authoritative. See §0 for current status.
+
+The repo was re-run twice after the MCDA numbers in Section 3.2 were written:
 
 | Commit | What changed | K (spawners) | Calibrated SAR | NB adult index |
 |---|---|---|---|---|
@@ -54,11 +96,10 @@ the pre-rerun run.** The two are not mutually consistent, and a reviewer
 comparing them will see it. Four of the five quoted scores match `e0cd8c8` to
 three decimals, which is what identifies it as the source run.
 
-**Recommendation: adopt the current run (`26d61b8`) throughout.** The consequence
-table, which is the more prominent artifact, already uses it, and the current
-run's composite scores are independently reproduced in §2 below. Every edit in
-this document assumes that choice. If you instead re-run everything from a single
-earlier commit, most numbers here will change and this package must be regenerated.
+**Resolution: the current run (`26d61b8`) was adopted throughout, and the
+documents now reflect it.** Verified by string audit of all three `.docx` files —
+see §0. If you later re-run everything from a different commit, most numbers here
+will change and this package must be regenerated.
 
 ---
 
