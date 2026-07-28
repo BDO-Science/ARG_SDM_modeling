@@ -8,9 +8,19 @@ End-to-end R workflow and Shiny app to simulate American River fall-run Chinook 
 
 ```r
 # From the repo root:
-source("precompute.R")           # (run first time or whenever inputs change)
-shiny::runApp("SalmonCountR")   # Launch the app
+source("SalmonCountR/precompute.R")   # rebuild app_data (first run, or when inputs change)
+shiny::runApp("SalmonCountR")         # launch the app
 ```
+
+**Run `precompute.R` start to finish in a clean session.** The simulated redd set
+is drawn from `set.seed(123)` at the top of the script; re-executing a chunk
+interactively shifts the RNG stream and changes the draw. The script saves
+`sim_redds` and `sim_future` so the redd set behind a given set of results can be
+recovered without a full re-run.
+
+Reproducing the manuscript figures and tables does **not** require re-running
+`precompute.R` — the scripts in `analysis/` read the saved `app_data/*.rds` and
+finish in seconds.
 
 ---
 
@@ -148,6 +158,7 @@ and writing to `figures/` and `output/`:
 | `elicitation_tables.R` | SI Tables S2-7 and S2-8 from the TDM elicitation scoresheet |
 | `evpi.R` | Expected value of perfect information under both objective weight sets |
 | `frontloading_cohort_decomposition.R` | Front-loading mechanism: crossover dates, hazard split, spawn-cohort decomposition |
+| `calibration_fit_statistics.R` | Calibration predictions and fit statistics; repopulates `calib_pred_by_variant.rds` |
 
 `elicitation_tables.R` reads a scoresheet that lives with the manuscript rather
 than in this repo; point it there with the `ARG_SCORESHEET` environment variable.

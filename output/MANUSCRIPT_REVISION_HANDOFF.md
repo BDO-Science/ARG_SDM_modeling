@@ -651,19 +651,51 @@ Listed in the order they block work.
 **1. Which model run is authoritative.** See §1. Everything else assumes the
 current run (`26d61b8`).
 
-**2. The calibration fit statistics cannot be regenerated.** The reported
-**R² = 0.72, RMSE = 8,240 spawners over 2014–2024** cannot be reproduced from the
-current repo. `precompute.R:1041-1042` reads:
+**2. The calibration fit statistics — NOW REGENERATED, and they are much worse
+than published.**
 
-```r
-# Since we're not calibrating, create empty calib_pred_by_variant for compatibility
-calib_pred_by_variant <- list()
-```
+*Script:* `analysis/calibration_fit_statistics.R` → `output/calibration_fit_statistics.csv`,
+`output/calibration_predictions.csv`, `figures/calibration_observed_vs_predicted.png`
 
-and `calib_pred_by_variant.rds` is 0 bytes. Those statistics come from an earlier
-version of the pipeline. **Either restore the calibration-prediction step and
-recompute them, or remove them from the manuscript.** As it stands they cannot be
-defended if a reviewer asks. This is the second-most serious exposure after §1.
+The calibration-prediction step that `precompute.R` §33 stopped producing is
+restored, and `app_data/calib_pred_by_variant.rds` is no longer 0 bytes. The
+statistics are now reproducible from saved artifacts without re-running
+`precompute.R`, so no published number was disturbed.
+
+**The reproduction is exact:** re-running the optimiser on the reconstructed
+objective returns the saved parameters to machine precision (SAR 0.0026852,
+`rear_surv` 0.5427946; difference 0.00e+00 on both).
+
+| Statistic, TDM-weighted, 2014–2024 | SI says | Regenerated |
+|---|---|---|
+| R² (squared correlation) | 0.72 | **0.13** |
+| R² (Nash–Sutcliffe) | — | **−0.59** |
+| RMSE | 8,240 | **13,345** |
+| MAPE | 24% | **51%** |
+
+**The published values cannot be recovered under any variant tested** — not over
+all 14 years (R² = 0.31, RMSE = 11,829), not per-variant, and not by reverting
+the carrying capacity to the pre-rerun 12,493 (R² = 0.064, RMSE = 11,812,
+MAPE = 53%). They belong to a structurally different earlier pipeline.
+
+A negative Nash–Sutcliffe means the model predicts observed escapement worse than
+the mean of the observations would. The model produces a nearly flat
+17,000–25,000 trajectory and misses the 2023–2024 surge entirely (2024: observed
+45,541, predicted 16,942).
+
+**This also falsifies a claim in the same SI paragraph** — that the model
+"captured the magnitude and general temporal dynamics… including major peaks in
+2015, 2018, and 2023–2024." 2023 and 2024 are the two worst-fit years in the
+record.
+
+**Recommendation: replace the statistics with the regenerated values and reframe
+the claim** — the model is a *relative* comparison across alternatives under a
+fixed climatology, not a predictive hindcast; two parameters are fitted to
+reproduce general magnitude, and interannual variation is driven by ocean
+conditions the model does not represent. The alternative is to delete the fit
+statistics and the temporal-dynamics claim altogether and describe the
+calibration as magnitude-matching. **Do not quote R² = 0.72 — it is not
+reproducible and the code is public.**
 
 **3. The 0.05%–0.68% observed SAR range.** Not reproducible from
 `SAR LAR Releases.xlsx` under any of twelve aggregations, and the accompanying
