@@ -184,6 +184,7 @@ and writing to `figures/` and `output/`:
 | `evpi.R` | Expected value of perfect information under both objective weight sets |
 | `frontloading_cohort_decomposition.R` | Front-loading mechanism: crossover dates, hazard split, spawn-cohort decomposition |
 | `calibration_fit_statistics.R` | Calibration predictions and fit statistics; repopulates `calib_pred_by_variant.rds` |
+| `sar_from_cwt.R` | SAR from American River CWT release groups — the provenance for every SAR figure quoted in SI §S2.6, with the text checked against the data |
 
 `elicitation_tables.R` reads a scoresheet that lives with the manuscript rather
 than in this repo; point it there with the `ARG_SCORESHEET` environment variable.

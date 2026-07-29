@@ -271,6 +271,7 @@ Once the above are in, replace throughout the response letter:
 | B4 | Response says the panel weighting moved "within Section 2.5.1". It is actually a new **Section 2.5.2**. | Edit in the response |
 | B5 | Response claims components not bearing on temperature were "condensed". Only one duplicated paragraph in 3.1.2 was struck. Either condense or soften the claim. | Edit in the response |
 | B6 | **SI S2.8 claims the model "captured the magnitude and general temporal dynamics… including major peaks in 2015, 2018, and 2023–2024".** It does not — see D1. 2023 and 2024 are the two worst-fit years in the record, under by 20,152 and 28,599 spawners. | `output/calibration_predictions.csv` |
+| B7 | **The SAR paragraph in SI §S2.6 mixes two brood-year windows.** The group count, mean and standard deviation are over brood years 2008–2019 (n = 27, mean 0.25%, sd 0.0024) — all three reproduce exactly. The stated *range*, "0.02% (brood year 2017) to 0.56% (brood year 2016)", is the range over brood years **2011–2019 only**. Over the window the sentence actually claims, the maximum is **0.95% in brood year 2010**; BY2016 is second. **Fix:** change the range to 0.02% (BY2017) to 0.95% (BY2010) and keep the window. Restricting the window instead would make n = 24 and the mean 0.22%, which breaks the sentence tying the mean to the 0.0025 optimizer starting value. | `analysis/sar_from_cwt.R`, `output/sar_by_brood.csv` |
 
 ## C. Placeholders still in the text
 
@@ -286,7 +287,28 @@ Once the above are in, replace throughout the response letter:
 
 ## D. Decisions that need a human
 
-### D1. Calibration fit statistics — **RESOLVED, and the answer is bad news**
+### D1. Calibration fit statistics — **DECIDED 2026-07-29: option 2, deleted**
+
+The author reports having deleted the fit statistics from the SI. That is
+option 2 below, and it is a defensible choice: the published values were
+not reproducible under any variant tested, which is consistent with their
+coming from a structurally earlier pipeline. **Figure S2-2 is therefore
+not needed.**
+
+Three things to confirm in the live SI, since only the pre-edit backups
+are in the repo and none of this could be verified here:
+
+1.  The fit-statistics sentence is gone (R² 0.72, RMSE 8,240, MAPE 24%).
+2.  **B6 is gone with it** — the separate claim that the model "captured
+    the magnitude and general temporal dynamics… including major peaks in
+    2015, 2018, and 2023–2024". It is a different sentence and deleting
+    the statistics does not remove it.
+3.  The `[EDITORIAL — DECISION NEEDED]` note on §S2.8 is deleted.
+
+The analysis below is kept because the numbers are real and a reviewer may
+ask why no fit statistics are reported.
+
+### D1, background — why the published values could not be kept
 
 *Script:* `analysis/calibration_fit_statistics.R` *Outputs:*
 `output/calibration_fit_statistics.csv`,
@@ -350,7 +372,7 @@ The model produces a nearly flat 17,000–25,000 trajectory and misses the
 | \# | Item |
 |----|----|
 | D2 | **Panelist 5's weights**: prose says 45/20/35, recorded row says 40/30/30. Visible the moment Table S2-8 reproduces the justification verbatim. Source: `output/table_S2-8_justifications.md` |
-| D3 | **The 0.05%–0.68% SAR range** was replaced with verified brood-year values. Not reproducible from `app_data/SAR LAR Releases.xlsx` under any of twelve aggregations. If it came from another dataset, cite that. |
+| D3 | **RESOLVED 2026-07-29.** The replacement SAR text *is* reproducible — from `app_data/SAR LAR Releases.xlsx` filtered to American River release groups, `SAR = expanded returns / number released`, which is exactly the derivation the author described. `analysis/sar_from_cwt.R` reproduces every number in the paragraph and checks the text against the data. The old 0.05%–0.68% remains unreproducible from this workbook under any aggregation and is now out of the SI, so no citation is owed for it. **One error survives in the replacement text — see B7.** |
 | D4 | **Acknowledgments** omit one panel member and spell another differently from the scoresheet. |
 | D5 | **Anonymise or name the panelists** in Tables S2-7/S2-8. If named, we need consent; the justifications are candid. |
 | D6 | **Three highlight colours** now layer in the manuscript (yellow, cyan, green) with no key. Green marks the 2026-07-28 automated edits. Collapse or add a legend before this goes to Brian or the editor. |
@@ -423,15 +445,15 @@ no longer 0 bytes.
 
 ## Where everything lives
 
-|   | Path |
-|----|----|
-| Figures for the manuscript and SI | `figures/` |
-| Tables and supporting numbers | `output/` |
-| Scripts that regenerate them | `analysis/` |
-| Full findings, organised as edits | `MANUSCRIPT_REVISION_HANDOFF.md` |
-| Full findings, as an analysis record | `REVISION_FINDINGS.md` |
-| Options memo for the app data question | `APP_DATA_UPDATE_OPTIONS.md` |
-| Pre-edit copies of the three documents | `manuscript_backup/` |
+|                                        | Path                             |
+|----------------------------------------|----------------------------------|
+| Figures for the manuscript and SI      | `figures/`                       |
+| Tables and supporting numbers          | `output/`                        |
+| Scripts that regenerate them           | `analysis/`                      |
+| Full findings, organised as edits      | `MANUSCRIPT_REVISION_HANDOFF.md` |
+| Full findings, as an analysis record   | `REVISION_FINDINGS.md`           |
+| Options memo for the app data question | `APP_DATA_UPDATE_OPTIONS.md`     |
+| Pre-edit copies of the three documents | `manuscript_backup/`             |
 
 **Note:** the live `.docx` files are no longer in the repo root — only
 the pre-edit backups are. `.gitignore` excludes `*.docx`, so the working
