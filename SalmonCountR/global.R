@@ -40,7 +40,50 @@ steelhead_metrics <- readRDS(here("SalmonCountR", "app_data", "steelhead_metrics
 swing_ranges <- readRDS(here("SalmonCountR", "app_data", "swing_ranges.rds"))
 results_full <- readRDS(here("SalmonCountR", "app_data", "results_full.rds"))
 
-real_years <- 2011:2024 
+# ---- Data vintage -----------------------------------------------------------
+# Written by analysis/refresh_data_year.R --apply. Absent until the first applied
+# refresh, which is not an error: the app says "not recorded" and carries on.
+# Surfacing it here is what closes G4 -- app_data/*.rds otherwise carry no record
+# of which data vintage or commit produced them.
+data_vintage <- NULL
+try({
+  dv <- here("SalmonCountR", "app_data", "data_vintage.rds")
+  if (file.exists(dv)) data_vintage <- readRDS(dv)
+}, silent = TRUE)
+
+#' One-line provenance stamp, for the app footer and the head of every export
+data_vintage_label <- function() {
+  if (is.null(data_vintage)) {
+    return("Data vintage: not recorded (run analysis/refresh_data_year.R --apply)")
+  }
+  cmt <- data_vintage$git_commit
+  paste0("Data vintage: refreshed ",
+         format(as.POSIXct(data_vintage$refreshed), "%Y-%m-%d"),
+         if (!is.null(cmt) && !is.na(cmt)) paste0(", commit ", cmt) else "")
+}
+
+#' Snapshot rows that are actually on disk, or NULL
+data_vintage_sources <- function() {
+  s <- data_vintage$sources
+  if (is.null(s) || !is.data.frame(s)) return(NULL)
+  s <- s[!is.na(s$file), , drop = FALSE]
+  if (!nrow(s)) NULL else s
+}
+
+#' The stamp plus per-source detail as `#` comment lines, to head a CSV export
+data_vintage_lines <- function(extra = character()) {
+  hdr <- c(paste0("# ", data_vintage_label()),
+           paste0("# Exported ", format(Sys.time(), "%Y-%m-%d %H:%M")))
+  src <- data_vintage_sources()
+  if (!is.null(src)) {
+    hdr <- c(hdr, "# Snapshots:",
+             sprintf("#   %s: %s (%s)", src$source, src$file,
+                     format(as.POSIXct(src$modified), "%Y-%m-%d")))
+  }
+  c(hdr, if (length(extra)) paste0("# ", extra))
+}
+
+real_years <- 2011:2024
 n_sim      <- 114
 sim_years_full <- real_years[1] + seq(0, n_sim - 1)   # e.g. 2011:2060
 

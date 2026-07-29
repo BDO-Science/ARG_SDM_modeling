@@ -412,7 +412,7 @@ decisions, not housekeeping.
 | G1 | **Alternative-specific spawn timing is computed and then discarded.** `SalmonCountR/precompute.R:659` splits redds by alternative and year; line 773 overwrites that with a split by year only, pooling all 36 alternatives. The CLM's temperature-driven shift in spawn timing therefore never affects any result. Flagged with a comment in the code; **not changed**, because correcting it would move every downstream number. Decide whether to disclose, fix, or defend it as holding spawn timing constant so differences are attributable to incubation exposure alone. | flagged in code |
 | G2 | **Forecast temperatures are misaligned in leap years.** The forecast series is built by day-of-year, so leap years shift by one day against non-leap years — up to 1.08 °C on a given calendar date. Immaterial to the conclusions, but it is a real defect someone reading the code will find. | not fixed |
 | G3 | **`sar_percent` in `app_data/SAR LAR Releases.xlsx` is identical to `sar`** — never multiplied by 100. Anyone reading that column as a percentage gets values 100× too small. | not fixed |
-| G4 | **`app_data/*.rds` carry no provenance.** Nothing in the files records which data vintage or which commit produced them, which is the root cause of the mixed-run problem. See `output/APP_DATA_UPDATE_OPTIONS.md` §Option 2. | not fixed |
+| G4 | **`app_data/*.rds` carry no provenance.** Nothing in the files records which data vintage or which commit produced them, which is the root cause of the mixed-run problem. See `APP_DATA_UPDATE_OPTIONS.md` §Option 2. | **plumbed 2026-07-29.** `refresh_data_year.R --apply` writes `app_data/data_vintage.rds`; `global.R` reads it and the app shows it in the footer, on the About tab, and at the head of every CSV export. Needs one applied refresh to populate — until then it reads "not recorded" |
 
 *Fixed already:* `app_data/sim_redds.rds` was a stale artifact from an
 older pipeline that did not reproduce `egg_summary.rds`; `precompute.R`
@@ -428,9 +428,9 @@ no longer 0 bytes.
 | Figures for the manuscript and SI | `figures/` |
 | Tables and supporting numbers | `output/` |
 | Scripts that regenerate them | `analysis/` |
-| Full findings, organised as edits | `output/MANUSCRIPT_REVISION_HANDOFF.md` |
-| Full findings, as an analysis record | `output/REVISION_FINDINGS.md` |
-| Options memo for the app data question | `output/APP_DATA_UPDATE_OPTIONS.md` |
+| Full findings, organised as edits | `MANUSCRIPT_REVISION_HANDOFF.md` |
+| Full findings, as an analysis record | `REVISION_FINDINGS.md` |
+| Options memo for the app data question | `APP_DATA_UPDATE_OPTIONS.md` |
 | Pre-edit copies of the three documents | `manuscript_backup/` |
 
 **Note:** the live `.docx` files are no longer in the repo root — only

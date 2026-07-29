@@ -60,8 +60,46 @@ get_scenario_alternatives <- function(scenario, hydro_year) {
   }
 }
 
+# Provenance block for the About tab. Static: the vintage is fixed at startup,
+# so this is plain UI rather than a render function.
+data_vintage_ui <- function() {
+  if (is.null(data_vintage)) {
+    return(tagList(
+      p(strong("No data vintage recorded.")),
+      p("The files in ", code("app_data/"), " carry no record of which data ",
+        "vintage or repository commit produced them. Run ",
+        code("Rscript analysis/refresh_data_year.R --apply"), " to write one; ",
+        "until then the numbers in this app cannot be tied to a dated snapshot.")
+    ))
+  }
+  src <- data_vintage_sources()
+  tagList(
+    tags$ul(
+      tags$li(strong("Last refreshed:"),
+              format(as.POSIXct(data_vintage$refreshed), "%B %d, %Y")),
+      tags$li(strong("Repository commit:"),
+              if (is.na(data_vintage$git_commit)) "unknown" else code(data_vintage$git_commit))
+    ),
+    if (!is.null(src)) tags$table(
+      class = "table table-striped table-condensed",
+      tags$thead(tags$tr(tags$th("Source"), tags$th("Snapshot"), tags$th("Modified"))),
+      tags$tbody(lapply(seq_len(nrow(src)), function(i) tags$tr(
+        tags$td(src$source[i]),
+        tags$td(code(src$file[i])),
+        tags$td(format(as.POSIXct(src$modified[i]), "%Y-%m-%d"))
+      )))
+    ),
+    p(tags$small(em("Every source and how to fetch it is registered in analysis/data_sources.R.")))
+  )
+}
+
 ui <- navbarPage("Lower American River Power Bypass Decision Support",
-                 useShinyjs(), 
+                 useShinyjs(),
+                 footer = tags$div(
+                   style = paste("border-top:1px solid #ddd; margin-top:20px;",
+                                 "padding:6px 14px; color:#555; font-size:12px;"),
+                   data_vintage_label()
+                 ),
                  
                  # ---- About Tab ----
                  tabPanel("About",
@@ -304,7 +342,8 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                      tags$li(strong("Temperature Explorer:"), "Visualize and compare weighted temperature patterns across multiple alternatives and climatological years"),
                                      tags$li(strong("Alternative Comparison:"), "Side-by-side evaluation of multiple alternatives with customizable climatology and TDM weighting"),
                                      tags$li(strong("Swing Weighting:"), "Interactive preference elicitation tool to determine objective importance through hypothetical alternative rankings"),
-                                     tags$li(strong("Decision Support:"), "Multi-objective analysis with consequence tables, trade-off plots, and weighted performance scores")
+                                     tags$li(strong("Decision Support:"), "Multi-objective analysis with consequence tables, trade-off plots, and weighted performance scores"),
+                                     tags$li(strong("Add a Year:"), "Upload a new temperature modelling deliverable and get consequence-table and MCDA results back, without R and without re-running precompute.R. Nothing is saved server-side")
                                    ),
                                    
                                    h4("Weighting Options:"),
@@ -312,7 +351,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                      tags$li(strong("Climatology Weights:"), "Adjust relative importance of 4 climate year types (sum to 1.0)"),
                                      tags$li(strong("TDM Model Weights:"), "Combine 3 mortality models with custom weights (sum to 1.0)"),
                                      tags$li(strong("Objective Weights:"), "Three methods: (1) Equal weights (33.3% each), (2) Manual slider adjustment, or (3) Derive from Swing Weighting tab"),
-                                     tags$li(strong("Default Weights:"), "TDM: 51% Water Forum, 24% SALMOD, 25% Martin; Climatology: 25% each; Objectives: 40% Chinook, 30% Steelhead, 30% Hydropower")
+                                     tags$li(strong("Default Weights:"), "TDM: 51% Water Forum, 24% SALMOD, 25% Martin; Climatology: 25% each; Objectives: 40% Chinook, 10% Steelhead, 50% Hydropower")
                                    ),
                                    
                                    h3("Technical Implementation"),
@@ -328,13 +367,17 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    
                                    h4("File Structure:"),
                                    tags$ul(
-                                     tags$li(strong("temperature_data.R:"), "Processes USGS gauge data and SDM forecasts"),
+                                     tags$li(strong("analysis/temperature_data.R:"), "Processes USGS gauge data and SDM forecasts"),
                                      tags$li(strong("precompute.R:"), "Calibrates models and generates population forecasts"),
                                      tags$li(strong("functions.R:"), "Core TDM and life-cycle simulation functions"),
+                                     tags$li(strong("scenario_engine.R:"), "Evaluates an uploaded deliverable end to end, without precompute.R (the 'Add a Year' tab)"),
                                      tags$li(strong("global.R:"), "Loads pre-computed RDS files for app startup"),
                                      tags$li(strong("app.R:"), "Shiny interface and reactive logic")
                                    ),
                                    
+                                   h3("Data Provenance"),
+                                   data_vintage_ui(),
+
                                    h3("References"),
                                    tags$ul(
                                      tags$li("Bartholow, J.M. & Heasley, J. (2006). Evaluation of Shasta Dam Alternatives Using a Salmon Production Model. USGS Open-File Report 2004-1351."),
@@ -903,11 +946,24 @@ server <- function(input, output, session) {
   })
 
   # -- Downloads --------------------------------------------------------------
+  # Every export carries the data vintage in `#` comment lines above the header,
+  # so a downloaded CSV can be traced back to the snapshot that produced it.
+  write_csv_with_vintage <- function(df, file, note = character()) {
+    writeLines(data_vintage_lines(note), file)
+    suppressWarnings(
+      write.table(df, file, sep = ",", row.names = FALSE, col.names = TRUE,
+                  append = TRUE, qmethod = "double")
+    )
+  }
+
   output$newyear_dl_scores <- downloadHandler(
     filename = function() sprintf("scenario_scores_%s.csv", Sys.Date()),
     content = function(file) {
       req(ny$res)
-      write.csv(ny$res$scores, file, row.names = FALSE)
+      write_csv_with_vintage(
+        ny$res$scores, file,
+        note = paste("Composite scores come from the scenario engine and are NOT",
+                     "interchangeable with the published composite scores."))
     })
 
   output$newyear_dl_detail <- downloadHandler(
@@ -917,7 +973,10 @@ server <- function(input, output, session) {
       out <- ny$res$projection %>%
         left_join(ny$res$survival, by = c("met_year", "scenario", "variant")) %>%
         left_join(ny$res$steelhead, by = c("met_year", "scenario"))
-      write.csv(out, file, row.names = FALSE)
+      write_csv_with_vintage(
+        out, file,
+        note = paste("Scenario engine output. Survival and return rates are the",
+                     "published calibration; this run did not re-calibrate."))
     })
 
   # -- Documentation ----------------------------------------------------------

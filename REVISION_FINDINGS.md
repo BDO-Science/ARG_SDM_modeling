@@ -13,7 +13,7 @@ otherwise. Scripts that regenerate each result are named per section.
 
 **Status: all twelve tasks complete.** For the version organised as manuscript
 edits rather than as an analysis record — which is the one to hand to someone
-making the revisions — see `output/MANUSCRIPT_REVISION_HANDOFF.md`.
+making the revisions — see `MANUSCRIPT_REVISION_HANDOFF.md`.
 
 ---
 
@@ -244,7 +244,7 @@ data in it.
 **Verified replacement:** mean 0.25% (SD 0.0024) across 27 American River release
 groups, brood years 2008–2019; pooled brood-year SARs range 0.02% (BY2017) to
 0.56% (BY2016). Full brood-year table in
-`output/MANUSCRIPT_REVISION_HANDOFF.md` §3.3.
+`MANUSCRIPT_REVISION_HANDOFF.md` §3.3.
 
 **Spreadsheet bug:** `sar_percent` in `SAR LAR Releases.xlsx` is identical to
 `sar` — never multiplied by 100.

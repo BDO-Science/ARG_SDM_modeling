@@ -4,7 +4,7 @@
 *River Research and Applications*
 **Prepared:** 2026-07-28
 **Analysis source of truth:** `ARG_SDM_modeling` repo at commit `26d61b8`
-**Companion:** `output/REVISION_FINDINGS.md` (the same work organised as an
+**Companion:** `REVISION_FINDINGS.md` (the same work organised as an
 analysis record, with method detail and script names)
 
 ---

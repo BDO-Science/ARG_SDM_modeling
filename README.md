@@ -67,6 +67,7 @@ SalmonCountR/
 ├── global.R            # Loads app_data and exposes helpers/constants
 ├── functions.R         # Core modeling library (TDM, survival, lifecycle, utilities)
 ├── precompute.R        # Builds inputs, runs calibration, writes app_data
+├── scenario_engine.R   # Evaluates an uploaded deliverable (the "Add a Year" tab)
 └── app_data/           # written by precompute.R, read by global.R
     ├── env_ext_list.rds            # per-alternative daily temps (Date, site, temp, alt)
     ├── df_all.rds                  # same, long form with `env`
@@ -84,7 +85,9 @@ SalmonCountR/
     ├── swing_scenario_results.rds  # Chinook metric per alternative (default weights)
     ├── steelhead_scenario_results.rds
     ├── swing_ranges.rds            # worst/best case per objective, for swing weighting
-    └── american_river_instream.rds # WUA (m²) & flow → K_spawners lookup
+    ├── american_river_instream.rds # WUA (m²) & flow → K_spawners lookup
+    ├── spawn_timing_model.rds      # CLM behind "Add a Year" (analysis/build_spawn_timing_model.R)
+    └── data_vintage.rds            # provenance stamp (analysis/refresh_data_year.R --apply)
 ```
 
 > **Terminology:** In code and data, **`env`** means “power-bypass alternative.”
@@ -129,12 +132,34 @@ SalmonCountR/
 * Reads all `app_data/*.rds`.
 * Computes **`K_spawners`** from **`american_river_instream.rds`**: `K_spawners = FR_spawn_wua / 9.29` (m² per redd per SIT DSM).
 * Exposes helper `get_K_spawners(flow_cfs)`.
+* Loads `data_vintage.rds` and exposes `data_vintage_label()`, `data_vintage_sources()`
+  and `data_vintage_lines()` — see **Data provenance** below.
 
 ### `app.R`
 
-* Tabs: **About**, **Calibration**, **Single Alternative**, **Compare Alternatives**.
+* Tabs: **About**, **Temperature Explorer**, **Compare Alternatives**, **Swing Weighting**, **Decision Support**, **Add a Year**.
 * Deterministic vs **stochastic SAR** (Normal/Lognormal/Beta/Gamma) with **all/block/pulse** timing.
 * Outputs: tables (CSV export), time series, distributions, fry×DD, heatmaps, and boxplots.
+* Default objective weights are 0.40 Chinook, 0.10 steelhead, 0.50 hydropower — the
+  elicited set used in the manuscript.
+
+---
+
+## Data provenance
+
+`analysis/refresh_data_year.R --apply` writes `app_data/data_vintage.rds`: when the
+refresh ran, the repo commit at the time, and the size and modification date of every
+snapshot it found. The app surfaces it in three places, so a number on screen or in a
+downloaded file can be traced back to the data behind it:
+
+* a one-line stamp in the footer of **every** tab;
+* a **Data Provenance** section on the About tab, listing each snapshot;
+* `#` comment lines at the head of every CSV export, which `read.csv(..., comment.char = "#")`
+  and `readr::read_csv(..., comment = "#")` both skip.
+
+The file is absent until the first `--apply` run. That is not an error — the app reports
+"not recorded" and runs normally, but nothing then ties `app_data/` to a dated snapshot
+(`OUTSTANDING_ITEMS.md` G4).
 
 ---
 

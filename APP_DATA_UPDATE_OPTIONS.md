@@ -25,7 +25,7 @@ The recommendation below was adopted. What now exists:
 | Regression test | `analysis/test_scenario_engine.R` | passing |
 | **Job B** — annual refresh | `analysis/refresh_data_year.R` | built, dry-run tested |
 | Source register | `analysis/data_sources.R` | built — SacPAS URLs **not yet filled in** |
-| Data vintage stamp | `app_data/data_vintage.rds` | written by the refresh |
+| Data vintage stamp | `app_data/data_vintage.rds` | written by the refresh; shown in the app footer, on the About tab, and at the head of every CSV export |
 
 **Measured:** a full run over four meteorological years × nine scenarios
 takes **1.7 seconds**. The server-load concern does not materialise, for
@@ -43,8 +43,10 @@ and the min-max normalisation both differ. An upload is therefore
 compared against the published years *re-run through the same engine*.
 The app says so on screen and the regression test asserts it.
 
-Option 2 is partly done: the vintage stamp is written, but not yet shown
-on every screen and export.
+Option 2 is done as far as it can be without a refresh having run: the
+stamp is written by `refresh_data_year.R --apply`, and `global.R` reads
+it and exposes it to every screen and export. Until the first `--apply`
+run the app honestly reports "not recorded" — which is itself the point.
 
 ------------------------------------------------------------------------
 
