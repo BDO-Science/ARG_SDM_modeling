@@ -69,11 +69,27 @@ TEMP_PLAUSIBLE <- c(4, 30)
 #' @param path Path to the .xlsx.
 #' @return list(temps, met_years, scenarios, sheets, path, read_errors)
 read_deliverable <- function(path) {
-  stopifnot(file.exists(path))
-  sheets <- readxl::excel_sheets(path)
+  empty <- function(errs) list(temps = tibble(), met_years = character(),
+                               scenarios = character(), sheets = character(),
+                               path = path, read_errors = errs)
+
+  if (!file.exists(path)) return(empty("The file could not be found."))
+
+  # A user can upload anything. Fail with a message rather than an R error.
+  sheets <- tryCatch(readxl::excel_sheets(path), error = function(e) NULL)
+  if (is.null(sheets)) {
+    return(empty(paste("This is not a readable Excel workbook. Save the deliverable",
+                       "as .xlsx and upload it again.")))
+  }
 
   # Year sheets are those named as a four-digit year
   year_sheets <- sheets[grepl("^\\d{4}$", sheets)]
+  if (!length(year_sheets)) {
+    return(empty(sprintf(paste("No sheet is named as a four-digit year. Sheets found:",
+                               "%s. Each meteorological year needs its own sheet,",
+                               "named for example '2026'."),
+                         paste(sheets, collapse = ", "))))
+  }
   read_errors <- character()
 
   temps <- purrr::map_dfr(year_sheets, function(sh) {
@@ -344,8 +360,10 @@ scenario_spawn_weights <- function(series, spawn_model) {
                 select(.row, met_year, scenario, site), by = ".row") %>%
     select(-.row)
 
+  # Deliberately many-to-many: each bin spans several days, and every series
+  # carries a probability for every bin.
   probs_long %>%
-    inner_join(bin_days, by = "period") %>%
+    inner_join(bin_days, by = "period", relationship = "many-to-many") %>%
     mutate(w = p * share) %>%
     select(met_year, scenario, site, md, w) %>%
     mutate(w = w * unname(site_w[site])) %>%

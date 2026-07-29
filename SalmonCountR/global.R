@@ -3,6 +3,24 @@
 library(tidyverse); library(lubridate); library(here)
 source("functions.R")
 
+# ---- Scenario engine (the "Add a Year" tab) ---------------------------------
+# Loaded defensively: if either the engine or the spawn-timing model is absent
+# the rest of the app must still start, and the tab reports the problem rather
+# than erroring on launch.
+scenario_engine_loaded <- FALSE
+spawn_timing_model     <- NULL
+try({
+  source(here("SalmonCountR", "scenario_engine.R"))
+  stm <- here("SalmonCountR", "app_data", "spawn_timing_model.rds")
+  if (file.exists(stm)) {
+    spawn_timing_model     <- readRDS(stm)
+    scenario_engine_loaded <- TRUE
+  } else {
+    warning("app_data/spawn_timing_model.rds not found; the 'Add a Year' tab will be disabled. ",
+            "Run analysis/build_spawn_timing_model.R to create it.")
+  }
+}, silent = TRUE)
+
 # load precomputed data (fast)
 # NOTE: This script now assumes that the 'env_ext_list.rds' file in the
 # 'app_data' directory contains the real temperature data for all alternatives.

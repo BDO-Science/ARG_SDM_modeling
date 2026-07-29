@@ -552,16 +552,412 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                               width = 9
                             )
                           )
+                 ),
+
+                 # ---- Add a Year Tab -------------------------------------------
+                 # Lets a non-R user drop in a new temperature modelling
+                 # deliverable and get results, without touching precompute.R.
+                 tabPanel("Add a Year",
+                          sidebarLayout(
+                            sidebarPanel(
+                              width = 3,
+                              h4("1. Upload"),
+                              helpText(
+                                "Upload the temperature modelling spreadsheet exactly as it ",
+                                "arrives from the modelling team. No reformatting needed."
+                              ),
+                              fileInput("newyear_file", NULL,
+                                        accept = c(".xlsx", ".xls"),
+                                        buttonLabel = "Choose file...",
+                                        placeholder = "No file selected"),
+                              tags$hr(),
+                              h4("2. Settings"),
+                              sliderInput("newyear_flow", "Reference flow (cfs)",
+                                          min = 500, max = 3000, value = 1000, step = 100),
+                              helpText("Sets spawning carrying capacity. 1,000 cfs is the value used throughout the analysis."),
+                              tags$hr(),
+                              h4("3. Run"),
+                              actionButton("newyear_run", "Run analysis",
+                                           class = "btn-primary", width = "100%",
+                                           icon = icon("play")),
+                              tags$br(), tags$br(),
+                              uiOutput("newyear_status"),
+                              tags$hr(),
+                              h4("4. Download"),
+                              downloadButton("newyear_dl_scores", "Scores (CSV)",
+                                             style = "width:100%; margin-bottom:6px;"),
+                              downloadButton("newyear_dl_detail", "Full detail (CSV)",
+                                             style = "width:100%;")
+                            ),
+                            mainPanel(
+                              width = 9,
+                              tabsetPanel(
+                                tabPanel(
+                                  "File check",
+                                  br(),
+                                  p(strong("Every upload is checked before anything is computed."),
+                                    " Errors stop the run; warnings do not."),
+                                  DTOutput("newyear_report"),
+                                  br(),
+                                  uiOutput("newyear_help")
+                                ),
+                                tabPanel(
+                                  "Results",
+                                  br(),
+                                  uiOutput("newyear_headline"),
+                                  br(),
+                                  h4("Composite scores"),
+                                  plotOutput("newyear_score_plot", height = "420px"),
+                                  br(),
+                                  h4("Consequence table"),
+                                  DTOutput("newyear_scores")
+                                ),
+                                tabPanel(
+                                  "Against the baseline",
+                                  br(),
+                                  div(
+                                    style = "background:#eef4fa; border-left:4px solid #31688E; padding:10px 14px; margin-bottom:12px;",
+                                    strong("Like-for-like comparison. "),
+                                    "The baseline below is the published four meteorological years ",
+                                    "re-run through this same engine, not the numbers printed in the ",
+                                    "manuscript. Comparing an upload against published figures would ",
+                                    "mix two different calculations."
+                                  ),
+                                  DTOutput("newyear_vs_base"),
+                                  br(),
+                                  plotOutput("newyear_vs_base_plot", height = "400px")
+                                ),
+                                tabPanel(
+                                  "Temperatures",
+                                  br(),
+                                  p("Daily temperature at Hazel Avenue, each uploaded scenario minus no-bypass."),
+                                  plotOutput("newyear_temp_plot", height = "480px")
+                                ),
+                                tabPanel(
+                                  "What this does",
+                                  br(),
+                                  uiOutput("newyear_doc")
+                                )
+                              )
+                            )
+                          )
                  )
 )
 
 server <- function(input, output, session) {
-  
+
   # Hard-coded Hydropower Scores
   hardcoded_hydro_scores <- c(
     "NB"  = 0, "PB1" = 111422, "PB2" = 370826, "PB2b" = 470090, "PB2c" = 433215,
     "PB3" = 201552, "PB4" = 241590, "PB5" = 199382, "PB6" = 348806
   )
+
+  # ===========================================================================
+  # "Add a Year" tab
+  # ===========================================================================
+  # Session-scoped: everything lives in this reactiveValues and dies with the
+  # session. Nothing is written to disk and no global is modified, which matters
+  # because shinyapps.io shares one R process across sessions.
+
+  ny <- reactiveValues(res = NULL, base = NULL, error = NULL, ran = FALSE)
+
+  ny_ready <- reactive({
+    isTRUE(exists("scenario_engine_loaded")) && isTRUE(exists("spawn_timing_model")) &&
+      !is.null(spawn_timing_model)
+  })
+
+  # Baseline: the published deliverable through the SAME engine, computed once
+  # per session and cached, so uploads are compared like for like.
+  ny_baseline <- function() {
+    if (!is.null(ny$base)) return(ny$base)
+    p <- here::here("data_raw", "SDM Power Bypass Temperature Modeling Results.xlsx")
+    if (!file.exists(p)) return(NULL)
+    out <- try(run_scenario_deliverable(
+      path = p, env_ext_list = env_ext_list, spawn_model = spawn_timing_model,
+      base_P_list = base_P_list, S_seed_fore_list = S_seed_fore_list,
+      sim_years = sim_years, hydro_loss = hardcoded_hydro_scores,
+      flow_cfs = input$newyear_flow, K_fn = get_K_spawners), silent = TRUE)
+    if (inherits(out, "try-error") || !isTRUE(out$ok)) return(NULL)
+    ny$base <- out
+    out
+  }
+
+  # -- Validate as soon as a file arrives, before any Run click ---------------
+  ny_parsed <- reactive({
+    req(input$newyear_file)
+    read_deliverable(input$newyear_file$datapath)
+  })
+
+  ny_report <- reactive({
+    p <- ny_parsed()
+    validate_deliverable(p)
+  })
+
+  output$newyear_report <- renderDT({
+    rep <- ny_report()
+    icon_for <- function(s) switch(s,
+      ok      = '<span style="color:#1a7f37;font-weight:bold;">&#10003; OK</span>',
+      warning = '<span style="color:#9a6700;font-weight:bold;">&#9888; Check</span>',
+      error   = '<span style="color:#b42318;font-weight:bold;">&#10007; Problem</span>')
+    df <- data.frame(
+      Status = vapply(rep$status, icon_for, character(1)),
+      Check  = rep$check,
+      Detail = rep$message,
+      stringsAsFactors = FALSE
+    )
+    datatable(df, escape = FALSE, rownames = FALSE,
+              options = list(dom = "t", paging = FALSE, ordering = FALSE,
+                             columnDefs = list(list(width = "110px", targets = 0),
+                                               list(width = "170px", targets = 1))))
+  })
+
+  output$newyear_help <- renderUI({
+    if (is.null(input$newyear_file)) {
+      return(div(style = "color:#555;",
+                 p(strong("No file uploaded yet.")),
+                 p("The spreadsheet should have one sheet per meteorological year, ",
+                   "named as a four-digit year. Scenario names go on the first row, ",
+                   "and ", code("AveWatt"), " / ", code("AveHazel"),
+                   " column headers on the second.")))
+    }
+    rep <- ny_report()
+    if (any(rep$status == "error")) {
+      div(style = "background:#fdf2f0; border-left:4px solid #b42318; padding:10px 14px;",
+          strong("This file cannot be used yet. "),
+          "Fix the items marked Problem above and upload again. ",
+          "Items marked Check are safe to ignore if you expected them.")
+    } else {
+      div(style = "background:#eefaf0; border-left:4px solid #1a7f37; padding:10px 14px;",
+          strong("File looks good. "), "Click ", strong("Run analysis"), " to compute results.")
+    }
+  })
+
+  # -- Run --------------------------------------------------------------------
+  observeEvent(input$newyear_run, {
+    req(input$newyear_file)
+    ny$error <- NULL; ny$res <- NULL; ny$ran <- FALSE
+
+    if (!ny_ready()) {
+      ny$error <- paste("The scenario engine is not available in this deployment.",
+                        "app_data/spawn_timing_model.rds is missing -- run",
+                        "analysis/build_spawn_timing_model.R and redeploy.")
+      return(invisible(NULL))
+    }
+    if (any(ny_report()$status == "error")) {
+      ny$error <- "The uploaded file has problems that must be fixed first. See the File check tab."
+      return(invisible(NULL))
+    }
+
+    withProgress(message = "Running", value = 0, {
+      out <- try(run_scenario_deliverable(
+        path = input$newyear_file$datapath,
+        env_ext_list = env_ext_list, spawn_model = spawn_timing_model,
+        base_P_list = base_P_list, S_seed_fore_list = S_seed_fore_list,
+        sim_years = sim_years, hydro_loss = hardcoded_hydro_scores,
+        flow_cfs = input$newyear_flow, K_fn = get_K_spawners,
+        progress = function(f, m) setProgress(value = f, detail = m)
+      ), silent = TRUE)
+
+      if (inherits(out, "try-error")) {
+        ny$error <- paste("The analysis failed:", conditionMessage(attr(out, "condition")))
+      } else if (!isTRUE(out$ok)) {
+        ny$error <- "The file did not pass validation."
+      } else {
+        ny$res <- out; ny$ran <- TRUE
+        setProgress(value = 0.97, detail = "Preparing the baseline comparison")
+        ny_baseline()
+      }
+    })
+  })
+
+  output$newyear_status <- renderUI({
+    if (!is.null(ny$error))
+      return(div(style = "color:#b42318;", strong("Could not run. "), ny$error))
+    if (!ny$ran)
+      return(div(style = "color:#555;", "Upload a file, then click Run analysis."))
+    div(style = "color:#1a7f37;", strong("Done. "), "See the Results tab.")
+  })
+
+  # -- Headline ---------------------------------------------------------------
+  output$newyear_headline <- renderUI({
+    req(ny$res)
+    s <- ny$res$scores
+    top <- s$scenario[1]
+    gap <- if (nrow(s) > 1) s$composite[1] - s$composite[2] else NA_real_
+    yrs <- paste(ny$res$parsed$met_years, collapse = ", ")
+    div(style = "background:#eef4fa; border-left:4px solid #31688E; padding:12px 16px;",
+        h4(style = "margin-top:0;",
+           sprintf("Top-ranked alternative: %s", top)),
+        p(sprintf("Composite score %.3f, ahead of %s by %.3f. Meteorological years in this file: %s.",
+                  s$composite[1], s$scenario[2], gap, yrs)),
+        p(style = "margin-bottom:0; color:#444;",
+          "Scores are computed with the elicited weights (0.40 Chinook, 0.50 hydropower, ",
+          "0.10 steelhead) and the published calibration. Hydropower revenue loss uses the ",
+          "published per-scenario values."))
+  })
+
+  output$newyear_scores <- renderDT({
+    req(ny$res)
+    df <- ny$res$scores %>%
+      transmute(Rank = rank, Alternative = scenario,
+                `Adult index` = round(adult_index),
+                `Steelhead (days < 18.3C)` = round(steelhead_score, 1),
+                `Revenue loss ($)` = round(hydro_raw),
+                `Composite` = round(composite, 4))
+    datatable(df, rownames = FALSE, options = list(dom = "t", paging = FALSE))
+  })
+
+  output$newyear_score_plot <- renderPlot({
+    req(ny$res)
+    d <- ny$res$scores %>% mutate(scenario = factor(scenario, levels = scenario))
+    ggplot(d, aes(scenario, composite, fill = rank == 1)) +
+      geom_col(colour = "grey20", linewidth = 0.35, width = 0.75) +
+      geom_text(aes(label = sprintf("%.3f", composite)), vjust = -0.5,
+                fontface = "bold", size = 4.5) +
+      scale_fill_manual(values = c(`TRUE` = "black", `FALSE` = "grey85"),
+                        guide = "none") +
+      scale_y_continuous(limits = c(0, max(d$composite) * 1.15), expand = c(0, 0)) +
+      labs(x = "Management alternative", y = "Composite score") +
+      theme_minimal(base_size = 14) +
+      theme(axis.title = element_text(face = "bold", colour = "black"),
+            axis.text  = element_text(face = "bold", size = 11, colour = "black"),
+            panel.grid.major.x = element_blank(), panel.grid.minor = element_blank(),
+            panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.5))
+  })
+
+  # -- Against the baseline ---------------------------------------------------
+  ny_compare <- reactive({
+    req(ny$res)
+    b <- ny_baseline()
+    validate(need(!is.null(b),
+                  paste("The baseline could not be computed in this deployment;",
+                        "data_raw/SDM Power Bypass Temperature Modeling Results.xlsx",
+                        "is missing.")))
+    ny$res$scores %>%
+      select(scenario, new_index = adult_index, new_comp = composite, new_rank = rank) %>%
+      left_join(b$scores %>% select(scenario, base_index = adult_index,
+                                    base_comp = composite, base_rank = rank),
+                by = "scenario") %>%
+      mutate(d_index = new_index - base_index,
+             d_comp  = new_comp - base_comp,
+             d_rank  = base_rank - new_rank) %>%
+      arrange(new_rank)
+  })
+
+  output$newyear_vs_base <- renderDT({
+    d <- ny_compare()
+    df <- d %>% transmute(
+      Alternative = scenario,
+      `Rank (new)` = new_rank, `Rank (baseline)` = base_rank,
+      `Rank change` = ifelse(d_rank > 0, paste0("+", d_rank), as.character(d_rank)),
+      `Adult index (new)` = round(new_index),
+      `Adult index (baseline)` = round(base_index),
+      `Change` = sprintf("%+.0f", d_index),
+      `Composite change` = sprintf("%+.4f", d_comp))
+    datatable(df, rownames = FALSE, options = list(dom = "t", paging = FALSE))
+  })
+
+  output$newyear_vs_base_plot <- renderPlot({
+    d <- ny_compare()
+    dd <- d %>%
+      select(scenario, New = new_comp, Baseline = base_comp) %>%
+      pivot_longer(-scenario, names_to = "run", values_to = "composite") %>%
+      mutate(run = factor(run, levels = c("Baseline", "New")),
+             scenario = factor(scenario, levels = d$scenario))
+    ggplot(dd, aes(scenario, composite, fill = run)) +
+      geom_col(position = position_dodge(width = 0.78), width = 0.7,
+               colour = "grey20", linewidth = 0.3) +
+      scale_fill_viridis_d(begin = 0.2, end = 0.75, name = NULL) +
+      labs(x = "Management alternative", y = "Composite score") +
+      theme_minimal(base_size = 14) +
+      theme(axis.title = element_text(face = "bold", colour = "black"),
+            axis.text  = element_text(face = "bold", size = 11, colour = "black"),
+            legend.text = element_text(size = 11, colour = "black"),
+            legend.position = "top",
+            panel.grid.major.x = element_blank(), panel.grid.minor = element_blank(),
+            panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.5))
+  })
+
+  # -- Temperatures -----------------------------------------------------------
+  output$newyear_temp_plot <- renderPlot({
+    req(ny$res)
+    s <- ny$res$series %>%
+      filter(site == "AveHazel", lubridate::month(Date) %in% c(10, 11))
+    nb <- s %>% filter(scenario == "NB") %>% select(met_year, Date, nb_temp = temp)
+    d  <- s %>% filter(scenario != "NB") %>%
+      left_join(nb, by = c("met_year", "Date")) %>%
+      mutate(delta = temp - nb_temp)
+    ggplot(d, aes(Date, delta, colour = scenario)) +
+      geom_hline(yintercept = 0, colour = "grey30", linewidth = 0.5) +
+      geom_line(linewidth = 0.9) +
+      facet_wrap(~ met_year) +
+      scale_colour_viridis_d(begin = 0.05, end = 0.9, name = NULL) +
+      scale_x_date(date_labels = "%b %d") +
+      labs(x = NULL, y = "Difference from no-bypass (deg C)") +
+      theme_minimal(base_size = 14) +
+      theme(axis.title = element_text(face = "bold", colour = "black"),
+            axis.text  = element_text(face = "bold", size = 10, colour = "black"),
+            strip.text = element_text(face = "bold", size = 12, colour = "black"),
+            legend.position = "top", panel.grid.minor = element_blank(),
+            panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.5))
+  })
+
+  # -- Downloads --------------------------------------------------------------
+  output$newyear_dl_scores <- downloadHandler(
+    filename = function() sprintf("scenario_scores_%s.csv", Sys.Date()),
+    content = function(file) {
+      req(ny$res)
+      write.csv(ny$res$scores, file, row.names = FALSE)
+    })
+
+  output$newyear_dl_detail <- downloadHandler(
+    filename = function() sprintf("scenario_detail_%s.csv", Sys.Date()),
+    content = function(file) {
+      req(ny$res)
+      out <- ny$res$projection %>%
+        left_join(ny$res$survival, by = c("met_year", "scenario", "variant")) %>%
+        left_join(ny$res$steelhead, by = c("met_year", "scenario"))
+      write.csv(out, file, row.names = FALSE)
+    })
+
+  # -- Documentation ----------------------------------------------------------
+  output$newyear_doc <- renderUI({
+    tagList(
+      h4("What happens when you press Run"),
+      tags$ol(
+        tags$li(strong("Your file is read and checked."), " Nothing runs until it passes."),
+        tags$li(strong("Daily temperature series are built."),
+                " Your scenario temperatures replace the modelled window (18 October to 31 December); ",
+                "everything outside it keeps the long-term average, exactly as the published model does."),
+        tags$li(strong("Spawn timing is predicted"),
+                " from your October and November temperatures, using the same model the published analysis uses."),
+        tags$li(strong("Egg-to-fry survival is computed"),
+                " under all three temperature-dependent mortality formulations."),
+        tags$li(strong("The population is projected"),
+                " using the published calibration, and alternatives are scored.")
+      ),
+      h4("What this does not do"),
+      tags$ul(
+        tags$li("It does ", strong("not"), " re-calibrate the model. Survival and return rates ",
+                "stay at their published values, which were fitted to observed escapement. ",
+                "Adding new carcass or escapement years is a separate annual job."),
+        tags$li("It does ", strong("not"), " save anything. Results disappear when you close ",
+                "this tab, so download anything you want to keep."),
+        tags$li("It does ", strong("not"), " change what anyone else sees.")
+      ),
+      h4("Why the numbers differ slightly from the manuscript"),
+      p("The published run draws a random sample of redds each year; this engine weights every ",
+        "spawn date by its probability instead. That removes run-to-run noise but shifts values ",
+        "by a few percent. For that reason the ", strong("Against the baseline"),
+        " tab compares your upload against the published years re-run through this same engine, ",
+        "not against the printed tables."),
+      h4("Rough guide to reading the result"),
+      p("The composite score combines three objectives with the elicited weights: 0.40 Chinook, ",
+        "0.50 hydropower, 0.10 steelhead. Each objective is rescaled 0 to 1 across the ",
+        "alternatives in your file, so scores are ", strong("relative"),
+        " and only comparable within a single run.")
+    )
+  })
   
   # Reactive Values
   values <- reactiveValues(
