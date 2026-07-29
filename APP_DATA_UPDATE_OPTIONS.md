@@ -13,6 +13,41 @@ request through one person?
 
 ------------------------------------------------------------------------
 
+## ✅ Status: Options 1 and 3 are built — 2026-07-29
+
+The recommendation below was adopted. What now exists:
+
+| Piece | Where | State |
+|----|----|----|
+| **Job A** — upload a scenario, explore, download | "Add a Year" tab in `SalmonCountR/app.R` | built, tested |
+| Scenario engine | `SalmonCountR/scenario_engine.R` | built, regression-tested |
+| Spawn-timing model *(the blocker)* | `analysis/build_spawn_timing_model.R` → `app_data/spawn_timing_model.rds` | built |
+| Regression test | `analysis/test_scenario_engine.R` | passing |
+| **Job B** — annual refresh | `analysis/refresh_data_year.R` | built, dry-run tested |
+| Source register | `analysis/data_sources.R` | built — SacPAS URLs **not yet filled in** |
+| Data vintage stamp | `app_data/data_vintage.rds` | written by the refresh |
+
+**Measured:** a full run over four meteorological years × nine scenarios
+takes **1.7 seconds**. The server-load concern does not materialise, for
+the reasons in "What we established this week" below.
+
+**One action left for a human:** the SacPAS query links in
+`analysis/data_sources.R` are still `NA`. Generating each takes about a
+minute — tick *"Generate Query Result Link Only"* on the query page and
+paste in the link. Until then the refresh reports on the bundled
+snapshots and downloads nothing.
+
+**A constraint that must not be forgotten:** the engine's composite score
+is **not** comparable with the published composite — the steelhead level
+and the min-max normalisation both differ. An upload is therefore
+compared against the published years *re-run through the same engine*.
+The app says so on screen and the regression test asserts it.
+
+Option 2 is partly done: the vintage stamp is written, but not yet shown
+on every screen and export.
+
+------------------------------------------------------------------------
+
 ## The short version
 
 The request "let non-R users load new data and get results" is really

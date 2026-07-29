@@ -171,12 +171,36 @@ The remaining scripts in `analysis/` derive model parameters from raw data in
 abundance, temperature scenarios). They document provenance and are not part of
 the app pipeline.
 
+### Adding a new year of temperature modelling
+
+The app has an **Add a Year** tab: upload the temperature deliverable exactly as
+the modelling team sends it, and get consequence-table and MCDA results back. No
+R, no `precompute.R`, nothing saved server-side. A full run over four
+meteorological years and nine scenarios takes under two seconds.
+
+| Script | Purpose |
+|---|---|
+| `SalmonCountR/scenario_engine.R` | The engine. Pure functions, no global state. |
+| `analysis/build_spawn_timing_model.R` | Refits and saves the spawn-timing CLM. **Required** — the tab is disabled without it. |
+| `analysis/test_scenario_engine.R` | Regression test against the published deliverable. |
+| `analysis/refresh_data_year.R` | Annual data refresh. Safe by default; `--apply` to commit. |
+| `analysis/data_sources.R` | Register of every external input and how to fetch it. |
+
+Full rationale and the options that were considered:
+`APP_DATA_UPDATE_OPTIONS.md`.
+
+> **Comparing runs:** the engine weights every spawn date by its probability
+> where `precompute.R` draws a finite sample of redds, so its composite scores
+> are not interchangeable with the published ones. Compare an upload against the
+> baseline **re-run through the same engine** — which is what the app's "Against
+> the baseline" tab does.
+
 ### Revision reports
 
 | File | Purpose |
 |---|---|
-| `output/MANUSCRIPT_REVISION_HANDOFF.md` | Findings organised as manuscript/SI/response edits — the one to hand to someone making revisions |
-| `output/REVISION_FINDINGS.md` | The same work as an analysis record, with method detail |
+| `MANUSCRIPT_REVISION_HANDOFF.md` | Findings organised as manuscript/SI/response edits — the one to hand to someone making revisions |
+| `REVISION_FINDINGS.md` | The same work as an analysis record, with method detail |
 
 ---
 
