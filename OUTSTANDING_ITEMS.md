@@ -4,7 +4,7 @@ editor_options:
     wrap: 72
 ---
 
-# What is still missing, updated 2026-07-28
+# What is still missing, updated 2026-07-29
 
 Audited the three current files against every promise made in the
 response to reviewers. The prose is in good shape. **The gap is almost
@@ -14,6 +14,13 @@ the reviewers and none of them are in the documents yet.**
 Confirmed by file inspection: the five images embedded in the manuscript
 are byte-identical to the 2026-07-21 original, so no figure has been
 replaced or added.
+
+**Closed since the 07-28 pass and removed from this file:** D1 (fit
+statistics — decided by deletion, so Figure S2-2 is no longer needed),
+D3 (SAR provenance — reproducible, see B7 for the one error it exposed),
+G4 (provenance stamp — built, needs one refresh run), and the itemised
+07-28 correction list in section E. Anything still listed here is still
+open.
 
 **Every exhibit named below already exists in this repo and is
 current.** The repo path is given for each one so nothing has to be
@@ -55,7 +62,6 @@ copyeditor checks. Current first-mention order is Table 1 (§2.3), Table
 | Panelist weights (A4) | Table S2-7, already numbered | None |
 | Panelist justifications (A4) | Table S2-8, already numbered | None |
 | Front-loading decomposition (optional) | **Figure S2-1** (new) | None |
-| Calibration observed vs predicted (D1) | **Figure S2-2** (new) | None |
 
 ### Table 3 (new) — TDM model comparison
 
@@ -229,24 +235,6 @@ formulations.
 Panel (c) carries the argument: it shows the sign reversal by spawn date
 and that December onward is exactly zero.
 
-### Figure S2-2 — calibration observed versus predicted
-
-Only under **D1 option 1**, that is, reporting the regenerated
-statistics rather than deleting them.
-
-**Insert:** Section S2.8, with the revised fit statistics.
-
-**Caption:**
-
-> *Figure S2-2. Observed versus predicted in-river escapement over the
-> 2014–2024 calibration period, TDM-weighted. The model reproduces the
-> general magnitude of escapement but not its interannual variation;
-> residuals are largest in 2016, 2023 and 2024.*
-
-Under D1 option 2, skip this figure. A plot showing a flat trajectory
-against the 2023–2024 surge invites exactly the question that deleting
-the statistics is meant to avoid.
-
 ### Filling the response placeholders
 
 Once the above are in, replace throughout the response letter:
@@ -282,97 +270,45 @@ Once the above are in, replace throughout the response letter:
 | Response | All `[INTERNAL: ...]` notes — delete before submission |
 | SI | `[citation to be added]` for the Hazel Avenue statistics → the WTMP deliverable |
 | SI | `[EDITORIAL: ...]` note on Table S2-9 numbering — delete once B2 is resolved |
-| SI | `[EDITORIAL — DECISION NEEDED]` note on the fit statistics — replace per D1 |
+| SI | `[EDITORIAL — DECISION NEEDED]` note on the fit statistics — delete; D1 is decided |
 | Manuscript | `[*add repository URL upon acceptance*]` — normal, leave until acceptance |
 
 ## D. Decisions that need a human
 
-### D1. Calibration fit statistics — **DECIDED 2026-07-29: option 2, deleted**
+### D1. Calibration fit statistics — **DECIDED 2026-07-29: deleted**
 
-The author reports having deleted the fit statistics from the SI. That is
-option 2 below, and it is a defensible choice: the published values were
-not reproducible under any variant tested, which is consistent with their
-coming from a structurally earlier pipeline. **Figure S2-2 is therefore
-not needed.**
+The author reports having deleted the fit statistics from the SI, and
+describing the calibration as magnitude-matching instead. Defensible: the
+published values were not reproducible under any variant tested, which is
+consistent with their coming from a structurally earlier pipeline.
 
-Three things to confirm in the live SI, since only the pre-edit backups
-are in the repo and none of this could be verified here:
+**All that is left is confirmation.** Only the pre-edit backups are in
+the repo, so none of the following could be verified here — three things
+to check in the live SI:
 
 1.  The fit-statistics sentence is gone (R² 0.72, RMSE 8,240, MAPE 24%).
 2.  **B6 is gone with it** — the separate claim that the model "captured
-    the magnitude and general temporal dynamics… including major peaks in
-    2015, 2018, and 2023–2024". It is a different sentence and deleting
-    the statistics does not remove it.
+    the magnitude and general temporal dynamics… including major peaks
+    in 2015, 2018, and 2023–2024". It is a different sentence and
+    deleting the statistics does not remove it.
 3.  The `[EDITORIAL — DECISION NEEDED]` note on §S2.8 is deleted.
 
-The analysis below is kept because the numbers are real and a reviewer may
-ask why no fit statistics are reported.
+**Keep these numbers to hand** in case a reviewer asks why no fit
+statistics are reported. Regenerated from
+`analysis/calibration_fit_statistics.R`, TDM-weighted, 2014–2024: R²
+0.13 (published 0.72), Nash–Sutcliffe **−0.59**, RMSE 13,345 (published
+8,240), MAPE 51% (published 24%). A negative Nash–Sutcliffe means the
+model predicts observed escapement worse than the mean of the
+observations would; it produces a nearly flat 17,000–25,000 trajectory
+and misses the 2023–2024 surge entirely (2024 under by 28,599). The
+published values are not recoverable under any variant tested, so the
+defensible framing is magnitude-matching, not hindcast skill.
 
-### D1, background — why the published values could not be kept
-
-*Script:* `analysis/calibration_fit_statistics.R` *Outputs:*
-`output/calibration_fit_statistics.csv`,
-`output/calibration_predictions.csv`,
-`figures/calibration_observed_vs_predicted.png`, and
-`app_data/calib_pred_by_variant.rds` (no longer 0 bytes)
-
-The calibration-prediction step is restored and the statistics are now
-reproducible from saved artifacts, without re-running `precompute.R`.
-
-**The reproduction is exact.** Re-running the optimiser on the
-reconstructed objective returns the saved parameters to machine
-precision — SAR 0.0026852 and `rear_surv` 0.5427946, difference 0.00e+00
-on both. So the numbers below are what this model actually does.
-
-| Statistic, TDM-weighted, 2014–2024 | SI currently says | Regenerated |
-|------------------------------------|-------------------|-------------|
-| R² (squared correlation)           | 0.72              | **0.13**    |
-| R² (Nash–Sutcliffe)                | —                 | **−0.59**   |
-| RMSE                               | 8,240             | **13,345**  |
-| MAPE                               | 24%               | **51%**     |
-
-**The published values cannot be recovered under any variant tested.**
-Not with all 14 years instead of 11 (R² = 0.31, RMSE = 11,829). Not
-per-variant. And not by reverting the carrying capacity to the pre-rerun
-12,493, which gives R² = 0.064, RMSE = 11,812, MAPE = 53%. They belong
-to a structurally different earlier version of the pipeline, not to a
-different parameterisation of this one.
-
-A negative Nash–Sutcliffe means the model predicts observed escapement
-**worse than the mean of the observations would**. The year-by-year
-residuals show why:
-
-| Year | Observed | Predicted | Residual    |
-|------|----------|-----------|-------------|
-| 2016 | 14,473   | 34,148    | +19,675     |
-| 2023 | 37,321   | 17,169    | −20,152     |
-| 2024 | 45,541   | 16,942    | **−28,599** |
-
-The model produces a nearly flat 17,000–25,000 trajectory and misses the
-2023–2024 surge entirely.
-
-**What to do — pick one:**
-
-1.  **Replace the sentence with the regenerated statistics and reframe
-    the claim.** Honest and defensible if paired with the framing we
-    already adopted for the projections: this is a *relative* comparison
-    across alternatives under a fixed climatology, not a predictive
-    hindcast. Two parameters are fitted to reproduce general magnitude;
-    interannual variation is driven by ocean conditions the model does
-    not represent. **This is my recommendation.**
-2.  **Delete the fit statistics and the "captured the temporal dynamics"
-    claim (B6) entirely**, and describe the calibration as a
-    magnitude-matching exercise. Safest, loses the least defensible
-    content.
-3.  Do not quote R² = 0.72. It is not reproducible and the code is
-    public.
-
-### D2–D7, unchanged
+### D2, D4–D7
 
 | \# | Item |
 |----|----|
 | D2 | **Panelist 5's weights**: prose says 45/20/35, recorded row says 40/30/30. Visible the moment Table S2-8 reproduces the justification verbatim. Source: `output/table_S2-8_justifications.md` |
-| D3 | **RESOLVED 2026-07-29.** The replacement SAR text *is* reproducible — from `app_data/SAR LAR Releases.xlsx` filtered to American River release groups, `SAR = expanded returns / number released`, which is exactly the derivation the author described. `analysis/sar_from_cwt.R` reproduces every number in the paragraph and checks the text against the data. The old 0.05%–0.68% remains unreproducible from this workbook under any aggregation and is now out of the SI, so no citation is owed for it. **One error survives in the replacement text — see B7.** |
 | D4 | **Acknowledgments** omit one panel member and spell another differently from the scoresheet. |
 | D5 | **Anonymise or name the panelists** in Tables S2-7/S2-8. If named, we need consent; the justifications are candid. |
 | D6 | **Three highlight colours** now layer in the manuscript (yellow, cyan, green) with no key. Green marks the 2026-07-28 automated edits. Collapse or add a legend before this goes to Brian or the editor. |
@@ -380,37 +316,24 @@ The model produces a nearly flat 17,000–25,000 trajectory and misses the
 
 ------------------------------------------------------------------------
 
-## E. Corrections already applied on 2026-07-28 — verify, do not redo
+## E. Already applied on 2026-07-28 — do not redo
 
-Listed so it is clear what changed and by whom. **Everything in this
-section is done.** The automated edits are highlighted **bright green**
-in the documents; yellow and cyan highlighting predates them.
+Sixteen numeric and wording corrections went into the three documents on
+2026-07-28: composite scores and ranking, the 12.14 °C threshold, the
+cooling-benefit and EVPI ranges, Spearman rho 0.96, the SAR sentence, the
+`rear_surv` clarification, the S2-7 → **S2-9** renumbering and parameter
+table header, and the crossover temperatures and "November-spawning"
+wording in the response. The itemised list is in this file's git history
+at commit `08a7f4b`; the automated edits are highlighted **bright green**
+in the documents, and yellow and cyan predate them (D6).
 
-| Where | Change | By |
-|----|----|----|
-| Manuscript §3.2 | Composite scores → 0.573 / 0.534 / 0.530 / 0.502 / 0.500, and the full ranking | author |
-| Manuscript, Fig. 3 caption | Martin threshold 12.8 → 12.14 °C | author |
-| Manuscript §3.1.1 | Oct 16 – Nov 15 cooling benefit stated as −0.35 to −0.91 °C | author |
-| Manuscript §3.1.2 | Martin-only index range added; PB1/PB3/PB6 falling below no-bypass explained by the front-loading mechanism | author |
-| Manuscript, Discussion | EVPI range 0.000–0.027 | author |
-| Manuscript §3.1 | Spearman rho 0.95 → **0.96** (recomputed on the current run, 0.9624) | **automated, green** |
-| Manuscript, Results | EVPI point estimate qualified as the upper bound of the 0.000–0.027 range, so it stops contradicting the Discussion | **automated, green** |
-| SI §S1 | SAR sentence replaced with verified brood-year values; bootstrap-CI note added; window corrected (data end at brood year 2019) | author |
-| SI §S2.7/S2.8 | `rear_surv` 0.543 calibrated vs 0.5419 optimizer start clarified | author |
-| SI, parameter table | Renumbered S2-7 → **S2-9** (S2-7 was used twice) | **automated, green** |
-| SI, parameter table | Header "Calibrated Value" → "Value (empirical input)"; cells annotated with the calibrated estimates, which the prose already gave | **automated, green** |
-| SI §S2.8 | `[EDITORIAL — DECISION NEEDED]` note inserted on the fit statistics | **automated, green** |
-| Response | Crossovers 17.25/16.59 °C, the 12.2–16.6 °C band, operational range 14.1–18.2 °C | author |
-| Response | Martin-only "functionally extinct" argument for the degenerate corner | author |
-| Response | "late-spawning" → "November-spawning cohorts" throughout | author |
-| Response | `[INTERNAL]` blocking list updated to current status | **automated, green** |
-
-**Two verification notes.** The mixed-run problem is closed: no value
-from a superseded run (12,493, 0.004161, 17,245, 18,396, 18,953, 0.537,
-0.499, 0.491) survives anywhere in the manuscript or SI. And the single
-remaining "late-spawning" string in the response sits inside an
-`[INTERNAL, resolved]` note documenting the change — it is not a stale
-error, and it goes when the `[INTERNAL]` notes are deleted (section C).
+**Two verification notes still worth having.** The mixed-run problem is
+closed: no value from a superseded run (12,493, 0.004161, 17,245, 18,396,
+18,953, 0.537, 0.499, 0.491) survives anywhere in the manuscript or SI.
+And the single remaining "late-spawning" string in the response sits
+inside an `[INTERNAL, resolved]` note documenting the change — it is not
+a stale error, and it goes when the `[INTERNAL]` notes are deleted
+(section C).
 
 ## F. Available and verified, but not currently used
 
@@ -434,12 +357,7 @@ decisions, not housekeeping.
 | G1 | **Alternative-specific spawn timing is computed and then discarded.** `SalmonCountR/precompute.R:659` splits redds by alternative and year; line 773 overwrites that with a split by year only, pooling all 36 alternatives. The CLM's temperature-driven shift in spawn timing therefore never affects any result. Flagged with a comment in the code; **not changed**, because correcting it would move every downstream number. Decide whether to disclose, fix, or defend it as holding spawn timing constant so differences are attributable to incubation exposure alone. | flagged in code |
 | G2 | **Forecast temperatures are misaligned in leap years.** The forecast series is built by day-of-year, so leap years shift by one day against non-leap years — up to 1.08 °C on a given calendar date. Immaterial to the conclusions, but it is a real defect someone reading the code will find. | not fixed |
 | G3 | **`sar_percent` in `app_data/SAR LAR Releases.xlsx` is identical to `sar`** — never multiplied by 100. Anyone reading that column as a percentage gets values 100× too small. | not fixed |
-| G4 | **`app_data/*.rds` carry no provenance.** Nothing in the files records which data vintage or which commit produced them, which is the root cause of the mixed-run problem. See `APP_DATA_UPDATE_OPTIONS.md` §Option 2. | **plumbed 2026-07-29.** `refresh_data_year.R --apply` writes `app_data/data_vintage.rds`; `global.R` reads it and the app shows it in the footer, on the About tab, and at the head of every CSV export. Needs one applied refresh to populate — until then it reads "not recorded" |
-
-*Fixed already:* `app_data/sim_redds.rds` was a stale artifact from an
-older pipeline that did not reproduce `egg_summary.rds`; `precompute.R`
-now writes `sim_redds` and `sim_future`. `calib_pred_by_variant.rds` is
-no longer 0 bytes.
+| G4 | **`app_data/*.rds` provenance** — built 2026-07-29, one step left. `refresh_data_year.R --apply` writes `app_data/data_vintage.rds` and the app shows it in the footer, on About, and atop every CSV export. **Run one applied refresh to populate it**; until then it reads "not recorded". | needs a refresh run |
 
 ------------------------------------------------------------------------
 
@@ -461,19 +379,16 @@ copies live alongside the repo by design.
 
 ## Suggested order
 
-1.  **Resolve D1 first.** It determines whether Figure S2-2 exists and
-    what Section S2.8 says, and it is the only item that changes the
-    scientific claims rather than the presentation.
-2.  **A4, then A2.** Both are tables and both are copy-paste from files
+1.  **A4, then A2.** Both are tables and both are copy-paste from files
     that already exist. Resolve D2 and D5 before Table S2-8 goes in. A4
     is the direct answer to the elicitation-rigour complaint. Fix the
     S2-9 cross-reference (B2) at the same time.
-3.  **Table 3 and the six-callout renumbering** (current Table 3 becomes
+2.  **Table 3 and the six-callout renumbering** (current Table 3 becomes
     Table 4).
-4.  **B1, A3, A1.** Swap Figures 3 and 5, insert Figure 6, and add the
+3.  **B1, A3, A1.** Swap Figures 3 and 5, insert Figure 6, and add the
     two callout paragraphs.
-5.  **B6, B3, B4, C.** Cleanup, with B6 falling out of whatever D1
-    decides, and the response placeholders filled last.
+4.  **B6 and B7, then B3, B4, C.** B6 is the D1 confirmation; B7 is a
+    one-number fix in the SAR paragraph. Response placeholders last.
 
 Once A1 through A4 are in, every `[N]` and `[S_]` in the response can be
 filled with a real number, and the response stops making claims the
