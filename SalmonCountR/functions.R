@@ -1352,20 +1352,39 @@ pairs_for_env_year <- function(red_this, sim_yr, env_nm) {
 #' It calculates the weighted mean survival for each combination.
 #'
 #' @param sim_yr Integer, the simulation year to evaluate.
-#' @param sim_redds_split A list of redd data.tables, split by year.
+#' @param sim_redds_split Redd data.tables. When `alt_specific` is FALSE, a list
+#'   split by year (pooled across alternatives). When TRUE, a nested list
+#'   indexed `[[alternative]][[year]]`.
 #' @param env_cache A cached list of environment-specific assets.
 #' @param tdm_defs A data frame defining the TDM model variants.
+#' @param alt_specific Logical. If TRUE, each alternative is evaluated against
+#'   the redds simulated under its own temperatures, so the CLM's
+#'   temperature-driven shift in spawn timing affects the result. If FALSE
+#'   (the published behaviour), every alternative is evaluated against a single
+#'   redd set pooled across all alternatives for that year. See G1.
 #'
 #' @return A data.table summarizing the mean cumulative survival for the year
 #'   across all alternatives and variants.
 #' @keywords internal
-eval_year <- function(sim_yr, sim_redds_split, env_cache, tdm_defs) {
-  red_this <- sim_redds_split[[as.character(sim_yr)]]
-  if (is.null(red_this) || !nrow(red_this)) return(data.table())
-  
+eval_year <- function(sim_yr, sim_redds_split, env_cache, tdm_defs,
+                      alt_specific = FALSE) {
+  yr_key <- as.character(sim_yr)
+
+  if (!alt_specific) {
+    red_pooled <- sim_redds_split[[yr_key]]
+    if (is.null(red_pooled) || !nrow(red_pooled)) return(data.table())
+  }
+
   env_names <- names(env_cache)
-  
+
   env_tables <- lapply(env_names, function(env_nm) {
+    red_this <- if (alt_specific) {
+      sim_redds_split[[env_nm]][[yr_key]]
+    } else {
+      red_pooled
+    }
+    if (is.null(red_this) || !nrow(red_this)) return(NULL)
+
     pairs <- pairs_for_env_year(red_this, sim_yr, env_nm)
     if (is.null(pairs) || !nrow(pairs)) return(NULL)
     
