@@ -153,13 +153,20 @@ cmp <- summary_data %>%
          seed_pct_of_iqr = ifelse(iqr_width > 0, 100 * seed_width / iqr_width,
                                   NA_real_)) %>%
   group_by(tdm_model) %>%
-  summarise(mean_median      = mean(median_spawners),
-            mean_seed_width  = mean(seed_width),
-            mean_seed_sd     = mean(seed_sd),
-            mean_iqr_width   = mean(iqr_width),
-            mean_seed_pct_of_iqr = mean(seed_pct_of_iqr), .groups = "drop")
+  # Medians, not means: a handful of cells with a near-zero IQR drag the mean
+  # ratio up by ~5x and make Martin look comparable when it is not.
+  summarise(n_cells            = n(),
+            n_runrun_wider     = sum(seed_width > iqr_width),
+            median_seed_width  = median(seed_width),
+            median_iqr_width   = median(iqr_width),
+            median_ratio       = median(seed_width / pmax(iqr_width, 1e-9)),
+            .groups = "drop")
 cat("\nRun-to-run range vs year-to-year IQR, by TDM model:\n")
 print(as.data.frame(cmp), digits = 4, row.names = FALSE)
+cat("\nratio > 1 means run-to-run (orange) is the wider tier.\n")
+cat("Under Martin the year-to-year IQR dominates in nearly every cell:\n")
+cat("near-extinction projections swing widely in relative terms year to year,\n")
+cat("while a different redd draw barely moves an already-collapsed population.\n")
 
 write_csv(summary_data, here("output", "figure4_seed_uncertainty.csv"))
 cat("\nWrote figures/figure4_with_seed_uncertainty.png and",
