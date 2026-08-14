@@ -51,10 +51,21 @@ identical composite scores. Every difference below is attributable to G1.
 
 ## Results
 
-### The top choice does not change
+### The selected alternative is unaffected
 
-**PB1 ranks first in both arms at every seed.** The headline recommendation is
-unaffected.
+**PB4 is the manuscript's selected alternative** — the decision-makers chose it
+"despite it not being the top-ranked option in the MCDA", on their judgment
+about balancing hydropower against fish benefit. PB1 tops the composite score
+(0.573) but is not the selection, so composite rank is the wrong quantity to
+check for reassurance here.
+
+On the right quantity the result is stronger than a rank comparison would be:
+**PB4's abundance is the least affected of all nine alternatives** — a mean
+effect of +3.7 fish across seeds, essentially zero. And because the selection
+rested on decision-maker judgment rather than MCDA rank, its basis is untouched
+regardless.
+
+For completeness, PB1 does rank first in both arms at every seed.
 
 ### The effect is invisible in abundance and unmistakable in the composite
 
@@ -90,26 +101,45 @@ at every seed:
 
 The remaining 33 pairs are stable and unchanged.
 
-### The PB3/PB5 counterweight reverses sign
+### The PB3/PB5 counterweight reverses sign — in the paper's favour
 
-`REVISION_FINDINGS.md` sub-check 4 offers this as an honest counterweight in
-the manuscript: PB3 and PB5 use identical 21.4 Mm³ on different schedules and
-produce near-identical outcomes, "difference 36 adults."
+The manuscript's Discussion currently reads:
+
+> "...the two alternatives bypassing identical volumes on different schedules
+> (PB3 and PB5) differed by fewer than 40 adults, so release schedule is
+> consequential at specific points in the decision space rather than throughout
+> it."
+
+That sentence is a hedge *against the paper's own front-loading argument* — it
+concedes that schedule does not always matter.
 
 | Arm | PB3 − PB5 | Spread across seeds |
 |---|---|---|
 | Legacy (published) | **+43 adults** (PB3 ahead) | ±4 |
 | Fixed | **−256 adults** (PB5 ahead) | ±40 |
 
-**The sign reverses at every seed, by roughly six times the noise.** The
-corrected model does not say the two are near-identical; it says PB5 is better,
-by seven times the quoted magnitude, in the opposite direction.
+**The sign reverses at every seed, by roughly six times the noise.**
 
-This moves the model *toward* the mechanism the paper argues for. PB3's bypass
-ends Nov 14 with a net hazard balance of +0.014; PB5 ends Nov 21 at −0.018.
-Under pooling those two produce near-identical abundance despite clearly
-different hazard balances — a quiet incoherence. Under the fix, PB5 pulls ahead
-in the direction its hazard balance predicts.
+So the correction *removes* the caveat rather than creating one. It also
+resolves a quiet incoherence in the current results: PB3's bypass ends Nov 14
+with a net hazard balance of +0.014, PB5 ends Nov 21 at −0.018, yet under
+pooling the two produce near-identical abundance despite clearly different
+hazard balances. Under the fix PB5 pulls ahead, in the direction its hazard
+balance predicts. The schedule-matters mechanism gets *more* internally
+consistent, not less.
+
+### Manuscript claims that would need regenerating
+
+| Claim | Where | Why it moves |
+|---|---|---|
+| PB3 vs PB5 "fewer than 40 adults"; schedule consequential only "at specific points" | Discussion | Reverses sign (above) |
+| PB6 vs PB4 adult index, "9,350 against 9,545" | Discussion | Both values shift |
+| Efficiency "roughly 47 additional adults per million m³ ... against 76 for PB4 and PB2c" | Discussion | Derived from the above |
+| Volume vs salmon benefit, "Spearman rho = 0.95" | Discussion | Recomputed across all nine |
+
+`MANUSCRIPT_REVISION_HANDOFF.md` §2.3 currently instructs "**Retain as
+written:** the PB3 vs PB5 comparison." That instruction is superseded if the
+correction is applied.
 
 ### Pooling was hiding real uncertainty
 
