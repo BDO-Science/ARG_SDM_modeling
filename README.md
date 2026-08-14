@@ -177,6 +177,7 @@ and writing to `figures/` and `output/`:
 
 | Script | Produces |
 |---|---|
+| `figures.R` | Figure 4 — adult population index by alternative, faceted climate year × TDM model; also the baseline spawner forecast barchart |
 | `mcda.R` | Figure 5 — composite MCDA scores, stacked by objective, with numeric bar labels |
 | `figure3_tdm_curves.R` | Figure 3 — TDM daily survival and cumulative egg-to-fry survival, 10–18 °C |
 | `tdm_weight_sensitivity.R` | TDM weight sensitivity of the composite score, plus the Martin-weight sweep |
