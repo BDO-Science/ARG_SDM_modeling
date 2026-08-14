@@ -124,8 +124,60 @@ comp <- noise_effect(scores %>% select(scenario, arm, seed, composite),
 print(as.data.frame(comp), digits = 5, row.names = FALSE)
 
 # ---------------------------------------------------------------------------
-g1_rule("4. VERDICT")
+g1_rule("4. PAIRWISE ORDER — WHICH RANK CHANGES ARE REAL")
 # ---------------------------------------------------------------------------
+# A whole-ranking comparison is too coarse: one noisy pair makes the entire
+# ranking look unstable and hides the pairs that flip reproducibly. Order each
+# pair of alternatives separately, in each arm, at every seed.
+scs    <- sort(unique(scores$scenario))
+combos <- utils::combn(scs, 2)
+
+pairwise <- map_dfr(seq_len(ncol(combos)), function(i) {
+  a <- combos[1, i]; b <- combos[2, i]
+  d <- scores %>%
+    filter(scenario %in% c(a, b)) %>%
+    select(arm, seed, scenario, composite) %>%
+    pivot_wider(names_from = scenario, values_from = composite) %>%
+    mutate(a_ahead = .data[[a]] > .data[[b]])
+  leg <- d$a_ahead[d$arm == "legacy"]
+  fix <- d$a_ahead[d$arm == "fixed"]
+  tibble(
+    pair          = paste(a, "vs", b),
+    legacy_stable = n_distinct(leg) == 1,
+    fixed_stable  = n_distinct(fix) == 1,
+    legacy_order  = if (n_distinct(leg) == 1)
+                      (if (leg[1]) paste(a, ">", b) else paste(b, ">", a)) else "UNSTABLE",
+    fixed_order   = if (n_distinct(fix) == 1)
+                      (if (fix[1]) paste(a, ">", b) else paste(b, ">", a)) else "UNSTABLE",
+    real_flip     = n_distinct(leg) == 1 && n_distinct(fix) == 1 && leg[1] != fix[1]
+  )
+})
+
+real <- pairwise %>% filter(real_flip)
+cat("Pairs that flip CONSISTENTLY between arms (stable within each arm) —\n")
+cat("these are attributable to G1, not to noise:\n")
+if (nrow(real)) {
+  print(as.data.frame(real %>% select(pair, legacy_order, fixed_order)), row.names = FALSE)
+} else {
+  cat("  none\n")
+}
+
+unstable <- pairwise %>% filter(!fixed_stable | !legacy_stable)
+cat("\nPairs whose order is NOT determinable from a single run (seed-dependent\n")
+cat("in at least one arm) — a single-seed ranking overstates precision here:\n")
+if (nrow(unstable)) {
+  print(as.data.frame(unstable %>% select(pair, legacy_order, fixed_order)), row.names = FALSE)
+} else {
+  cat("  none\n")
+}
+
+# ---------------------------------------------------------------------------
+g1_rule("5. VERDICT")
+# ---------------------------------------------------------------------------
+cat(sprintf("pairs flipping consistently (real G1 effect): %d of %d\n",
+            nrow(real), nrow(pairwise)))
+cat(sprintf("pairs not determinable from one run (noise):  %d of %d\n",
+            nrow(unstable), nrow(pairwise)))
 n_signal <- sum(chin$effect_vs_noise > 2 & chin$consistent_sign, na.rm = TRUE)
 cat(sprintf("scenarios where the Chinook effect exceeds 2x noise AND is\n"))
 cat(sprintf("  sign-consistent across all seeds: %d of %d\n",
