@@ -278,9 +278,10 @@ Once the above are in, replace throughout the response letter:
 ### D1. Calibration fit statistics — **DECIDED 2026-07-29: deleted**
 
 The author reports having deleted the fit statistics from the SI, and
-describing the calibration as magnitude-matching instead. Defensible: the
-published values were not reproducible under any variant tested, which is
-consistent with their coming from a structurally earlier pipeline.
+describing the calibration as magnitude-matching instead. Defensible:
+the published values were not reproducible under any variant tested,
+which is consistent with their coming from a structurally earlier
+pipeline.
 
 **All that is left is confirmation.** Only the pre-edit backups are in
 the repo, so none of the following could be verified here — three things
@@ -320,20 +321,21 @@ defensible framing is magnitude-matching, not hindcast skill.
 
 Sixteen numeric and wording corrections went into the three documents on
 2026-07-28: composite scores and ranking, the 12.14 °C threshold, the
-cooling-benefit and EVPI ranges, Spearman rho 0.96, the SAR sentence, the
-`rear_surv` clarification, the S2-7 → **S2-9** renumbering and parameter
-table header, and the crossover temperatures and "November-spawning"
-wording in the response. The itemised list is in this file's git history
-at commit `08a7f4b`; the automated edits are highlighted **bright green**
-in the documents, and yellow and cyan predate them (D6).
+cooling-benefit and EVPI ranges, Spearman rho 0.96, the SAR sentence,
+the `rear_surv` clarification, the S2-7 → **S2-9** renumbering and
+parameter table header, and the crossover temperatures and
+"November-spawning" wording in the response. The itemised list is in
+this file's git history at commit `08a7f4b`; the automated edits are
+highlighted **bright green** in the documents, and yellow and cyan
+predate them (D6).
 
 **Two verification notes still worth having.** The mixed-run problem is
-closed: no value from a superseded run (12,493, 0.004161, 17,245, 18,396,
-18,953, 0.537, 0.499, 0.491) survives anywhere in the manuscript or SI.
-And the single remaining "late-spawning" string in the response sits
-inside an `[INTERNAL, resolved]` note documenting the change — it is not
-a stale error, and it goes when the `[INTERNAL]` notes are deleted
-(section C).
+closed: no value from a superseded run (12,493, 0.004161, 17,245,
+18,396, 18,953, 0.537, 0.499, 0.491) survives anywhere in the manuscript
+or SI. And the single remaining "late-spawning" string in the response
+sits inside an `[INTERNAL, resolved]` note documenting the change — it
+is not a stale error, and it goes when the `[INTERNAL]` notes are
+deleted (section C).
 
 ## F. Available and verified, but not currently used
 
