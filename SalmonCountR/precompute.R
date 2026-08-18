@@ -775,28 +775,30 @@ setDT(sim_redds)
 
 # Split the redd set for the parallel TDM loop (G1).
 #
-# ARG_G1_ALT_SPAWN controls which behaviour is used, so both arms can be run on
-# the same machine from the same source tree:
+# ARG_G1_ALT_SPAWN controls which behaviour is used, so the superseded arm can
+# still be reproduced on the same machine from the same source tree:
 #
-#   "0" (default) — published behaviour. All 36 alternatives' redds are pooled
-#                   per year and every alternative is evaluated against the
-#                   pooled set, averaging the timing signal away before use.
-#   "1"           — alternative-specific. Each alternative is evaluated against
+#   "1" (default) — alternative-specific. Each alternative is evaluated against
 #                   the redds simulated under ITS OWN temperatures, so the CLM's
 #                   temperature-driven shift in spawn timing reaches the result.
+#   "0"           — superseded behaviour, retained for reproduction only. All 36
+#                   alternatives' redds are pooled per year and every alternative
+#                   is evaluated against the pooled set, averaging the timing
+#                   signal away before use.
 #
-# DEFAULT IS DELIBERATELY THE PUBLISHED BEHAVIOUR. The manuscript points at this
-# repository, so a clone must keep reproducing the published numbers until the
-# paper is accepted; the assumption is disclosed in the SI instead. Flipping
-# this default to "1" is the first commit of the next power-bypass cycle.
-# Rationale and the measured effect: see G1_FINDINGS.md.
+# DEFAULT IS THE CORRECTED BEHAVIOUR as of the 2026-08 revision. Pooling severed
+# the temperature -> spawn timing -> thermal mortality channel that the CLM
+# exists to model, so alternatives could differ only through incubation
+# exposure. The correction is disclosed in the revision; set ARG_G1_ALT_SPAWN=0
+# to regenerate the superseded numbers for comparison. Measured effect and the
+# manuscript claims it moves: see G1_FINDINGS.md.
 #
 # Only rows with a management alternative are eligible for the alternative-
 # specific split. The observed rows (sim_actual, mgt_alt = NA) carry site = NA
 # and are dropped by the site filter in section 27 under either setting, so TDM
 # is computed over the forecast years only. Keeping the filter as the single
 # place that drops them means the two arms differ in exactly one respect.
-g1_alt_specific <- identical(Sys.getenv("ARG_G1_ALT_SPAWN", "0"), "1")
+g1_alt_specific <- !identical(Sys.getenv("ARG_G1_ALT_SPAWN", "1"), "0")
 
 if (g1_alt_specific) {
   # Nested: sim_redds_split[[alt]][[year]]
@@ -810,7 +812,8 @@ if (g1_alt_specific) {
   sim_redds_split <- split(sim_redds[, .(spawn_dt, site)], sim_redds$sim_year)
 }
 cat(sprintf("G1 spawn timing: %s\n",
-            if (g1_alt_specific) "ALTERNATIVE-SPECIFIC (fixed)" else "POOLED (legacy/published)"))
+            if (g1_alt_specific) "ALTERNATIVE-SPECIFIC (current)"
+            else "POOLED (superseded — reproduction only)"))
 
 # Step 2: Cache management alternative assets for fast access
 alt_cache <- lapply(names(env_ext_list), function(alt_nm) {

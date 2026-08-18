@@ -315,9 +315,26 @@ write.csv(overlap_summary, here("output", "frontloading_incubation_overlap.csv")
           row.names = FALSE)
 
 # ---- 3. Sub-check 3: cohort decomposition ----------------------------------
-# The alternatives share one redd distribution, so the difference in mean
-# egg-to-fry survival decomposes exactly by cohort:
-#   dS = sum_c w_c * (S_c,A - S_c,B),  w_c = redd share of cohort c.
+# dS = sum_c w_c * (S_c,A - S_c,B),  w_c = redd share of cohort c.
+#
+# ⚠️ THIS IS NOW AN APPROXIMATION, not an identity. It holds exactly only when
+# both alternatives share one redd distribution, which was true under the pooled
+# spawn-timing behaviour (G1) but is NOT true since the 2026-08 correction. With
+# alternative-specific spawn timing the exact decomposition carries a second
+# term:
+#
+#   dS = sum_c wbar_c * (S_c,A - S_c,B)     <- survival-response channel (below)
+#      + sum_c (w_c,A - w_c,B) * Sbar_c     <- composition channel (NOT computed)
+#
+# where wbar_c and Sbar_c are the two-alternative means. The second term is the
+# spawn-timing channel that the correction restores, so it is exactly the part
+# that used to be zero by construction. What is reported below is therefore the
+# survival-response component only.
+#
+# Both weightings used here (observed carcass surveys, and the simulated set)
+# are single distributions applied to both alternatives, so neither can supply
+# w_c,A and w_c,B. Quantifying the composition term needs per-alternative redd
+# shares from sim_redds under the corrected pipeline. See G1_FINDINGS.md.
 
 surv_by_md <- grid[, .(S = mean(S_martin)), by = .(scenario, site, md)]
 

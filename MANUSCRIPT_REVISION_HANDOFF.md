@@ -218,9 +218,20 @@ their incubation runs in water already below the 12.14 °C Martin threshold.
 Replace "late-spawning cohorts" with "November-spawning cohorts" or "cohorts whose
 incubation window covers late November" everywhere it appears.
 
-**Retain as written:** the PB3 vs PB5 comparison. Identical bypass volume
-(21.4 Mm³), different schedule, outcomes differing by 35.7 adults — the
-manuscript's "36" is right, and it remains a useful honest counterweight.
+**⚠️ SUPERSEDED 2026-08-18 — the PB3 vs PB5 comparison must be rewritten, not
+retained.** This entry previously read "Retain as written… the manuscript's '36'
+is right, and it remains a useful honest counterweight." That was correct under
+the pooled spawn-timing behaviour, which has since been corrected (G1). Under
+alternative-specific spawn timing the comparison **reverses sign**: PB5 leads
+PB3 by 261 ± 36 adults, the same sign at all five seeds. Identical bypass volume
+(21.4 Mm³) on different schedules now produces a difference several times the
+run-to-run noise, in the direction PB5's net hazard balance already predicted
+(PB3 +0.014, PB5 −0.018).
+
+The counterweight sentence therefore has to go: schedule is not "consequential
+only at specific points in the decision space". Replacement wording and the full
+number set are in `output/g1_revision_claims.md`. See `G1_FINDINGS.md` for the
+measurement and `analysis/g1_revision_numbers.R` to regenerate.
 
 ### 2.4 Discussion — cohort decomposition, PB6 vs PB4 — **VERIFIED**
 
@@ -228,8 +239,15 @@ Supporting detail for §2.3; use as much as the Discussion has room for. Egg
 survival is confirmed to be the only channel that matters: the PB6/PB4 ratio is
 **0.977 for egg-to-fry survival** but **1.0008 for pre-spawn survival**.
 
-Because all alternatives share one redd distribution, the difference in mean
-egg-to-fry survival decomposes exactly by spawn cohort.
+**⚠️ Premise changed 2026-08-18.** This decomposition was exact *because* all
+alternatives shared one redd distribution. The G1 correction makes redd
+distributions alternative-specific, so the split below is now the
+**survival-response component only**; an additional composition term
+`sum_c (w_c,A − w_c,B) · Sbar_c` is not included. The qualitative conclusion is
+unaffected — egg survival is still the only channel that matters, and the
+affected group is still November spawners — but the percentages below should be
+described as approximate, or the composition term quantified before they are
+quoted to two figures. See `analysis/frontloading_cohort_decomposition.R` §3.
 
 **PB6 − PB4**, total −0.0076:
 
