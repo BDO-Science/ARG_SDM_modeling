@@ -131,6 +131,28 @@ Reclamation's selection of PB4.
 > objective is normalized across a range of a few dozen fish and the
 > ranking is decided almost entirely by the hydropower objective.
 
+**⚠️ SUPERSEDED 2026-08-18 — this paragraph changed qualitatively, not just
+numerically.** Under the correction the sweep gains an intermediate regime that
+did not exist before: PB1 holds the top rank to a Martin weight of **0.972**,
+then **PB2c takes the top rank from 0.974 to 0.996**, and no-bypass only from
+**0.998**. The Martin-only span also roughly doubles, to **3.5–171.1** spawners.
+Replacement text:
+
+> …Holding the other two formulations at their elicited ratio and increasing
+> the weight on Martin et al. (2017) from 0 to 1, PB1 retained the top rank up
+> to a weight of 0.972. Above that the ranking became unstable: PB2c held the
+> top rank between 0.974 and 0.996, and the no-bypass alternative only from
+> 0.998. Across that upper range the projected adult population index spans
+> just 3.5 to 171 spawners across all nine alternatives, so the Chinook
+> objective is normalized across a range of a few hundred fish against a
+> baseline of tens of thousands, and the ranking is decided almost entirely by
+> the hydropower objective.
+
+Source: `output/tdm_weight_sensitivity_martin_sweep.csv`. Note the conclusion —
+the elicited weighting is nowhere near the unstable region — is unchanged and if
+anything better supported, since the instability now shows up as two regime
+changes rather than one.
+
 **Caption:**
 
 > **Figure 6.** Sensitivity of the multi-criteria decision analysis to
@@ -356,11 +378,93 @@ decisions, not housekeeping.
 
 | \# | Item | Status |
 |----|----|----|
-| G1 | ~~**Alternative-specific spawn timing is computed and then discarded.**~~ **CLOSED 2026-08-18 — corrected.** Redds were pooled across all 36 alternatives before survival was computed, so the CLM's temperature-driven shift in spawn timing never reached any result. Alternative-specific spawn timing is now the default; `ARG_G1_ALT_SPAWN=0` reproduces the superseded numbers. Measured across five seeds in both arms: PB3−PB5 reverses sign (+43 → −261), PB6/PB4 becomes 9,199/9,550, PB2b−PB5 reverses in the composite, efficiency becomes 45/79/84, Spearman ρ 0.9624 → 0.9205. PB4 (the selection) moves +3.7 adults; PB1 still ranks first. Replacement text in `G1_DISCLOSURE.md`, numbers in `output/g1_revision_claims.md`. **Two follow-ons remain:** the PB6/PB4 cohort decomposition is no longer an identity (see G1a), and Table 3's abundance column changes for all nine. | `G1_FINDINGS.md`, `analysis/g1_revision_numbers.R` |
-| G1a | **The cohort decomposition lost its exactness.** `analysis/frontloading_cohort_decomposition.R` §3 splits the PB6−PB4 egg-survival gap by spawn cohort, which was exact *because* all alternatives shared one redd distribution. G1's correction makes redd distributions alternative-specific, so the reported split is now the survival-response component only and omits a composition term `Σ_c (w_c,A − w_c,B)·S̄_c`. The qualitative conclusion (November spawners) is unaffected. **Fix:** compute the composition term from per-alternative redd shares in the corrected `sim_redds`, or describe the 49%/49% figures as approximate. | flagged in code |
+| G1 | ~~**Alternative-specific spawn timing is computed and then discarded.**~~ **CLOSED 2026-08-18 — corrected.** Redds were pooled across all 36 alternatives before survival was computed, so the CLM's temperature-driven shift in spawn timing never reached any result. Alternative-specific spawn timing is now the default; `ARG_G1_ALT_SPAWN=0` reproduces the superseded numbers. Measured across five seeds in both arms: PB3−PB5 reverses sign (+43 → −261), PB6/PB4 becomes 9,199/9,550, PB2b−PB5 reverses in the composite, efficiency becomes 45/79/84, Spearman ρ 0.9624 → 0.9205. PB4 (the selection) moves +3.7 adults; PB1 still ranks first. Replacement text in `G1_DISCLOSURE.md`, numbers in `G1_FINDINGS.md` and `output/g1_revision_*.csv`. **Document changes this forces are listed in §H.** | `G1_FINDINGS.md`, `analysis/g1_revision_numbers.R` |
+| G1a | ~~**The cohort decomposition lost its exactness.**~~ **CLOSED 2026-08-18 — recomputed exactly.** The PB6−PB4 split was exact only because alternatives shared one redd distribution; G1 removed that. `frontloading_cohort_decomposition.R` Part 3b now computes the exact two-channel identity (asserted in code) and it changed the finding materially: composition is **41%** of the PB6−PB4 gap, and the December cohorts went from 0% to **47%** of it — their survival is untouched but front-loading moves redds out of the safe December window. The old 49%/49% November figures are superseded. Numbers in `output/frontloading_cohort_two_channel.csv`; replacement table and mechanism sentence in `MANUSCRIPT_REVISION_HANDOFF.md` §2.4. | `analysis/frontloading_cohort_decomposition.R` Part 3b |
 | G2 | **Forecast temperatures are misaligned in leap years.** The forecast series is built by day-of-year, so leap years shift by one day against non-leap years — up to 1.08 °C on a given calendar date. Immaterial to the conclusions, but it is a real defect someone reading the code will find. | not fixed |
-| G3 | **`sar_percent` in `app_data/SAR LAR Releases.xlsx` is identical to `sar`** — never multiplied by 100. Anyone reading that column as a percentage gets values 100× too small. | not fixed |
+| G3 | **`sar_percent` in `app_data/SAR LAR Releases.xlsx` is identical to `sar`** — never multiplied by 100. Anyone reading that column as a percentage gets values 100× too small. **No live consumer is affected:** `analysis/sar_from_cwt.R:32` drops the column outright (`select(-any_of("sar_percent"))`) with the reason in a comment, recomputes the percentage itself, and `analysis/data_sources.R:98` records the defect in the source register. The remaining exposure is a human opening the workbook and trusting the header. **Fix when the workbook is next regenerated:** either multiply by 100 or delete the column — do not edit the snapshot in place, since it is a provenance-stamped input. | latent, defended in code |
 | G4 | ~~**`app_data/*.rds` provenance**~~ — **DONE 2026-08-14.** `refresh_data_year.R --apply` was run and wrote `app_data/data_vintage.rds` (8 sources, stamped at commit `7b064a2`); the app now shows a real vintage in the footer, on About, and atop every CSV export instead of "not recorded". The run replaced no snapshots — nothing new was available to download — so no number moved. Report: `output/data_refresh_report_2026-08-14.md`. | **closed** |
+
+------------------------------------------------------------------------
+
+## H. Document changes forced by the G1 correction — **all still open**
+
+The code side of G1 is finished and verified. Everything in this section is
+Word-document work that nobody has done yet. Numbers are means over five seeds;
+regenerate any of them with `analysis/g1_revision_numbers.R`.
+
+Two sanity anchors before editing: running `ARG_G1_ALT_SPAWN=0` reproduces the
+**submitted** values exactly (Table 3 for all nine alternatives, Spearman
+ρ = 0.9624), and `main` is tagged `as-submitted-2026-07-28`. So every "was"
+below is verifiably the number now in the documents.
+
+### ⚠️ H0. Decide this before typing anything: which number set?
+
+There are two defensible sets and they are **not interchangeable**. Pick one and
+apply it to the table, the figures and the prose together.
+
+| | Single canonical run (seed 123) | Mean of five seeds |
+|---|---|---|
+| Table 3 abundance, NB→PB6 | 7,412 / 8,306 / 10,443 / 10,992 / 11,274 / 8,954 / 9,427 / 9,194 / 9,091 | 7,528 / 8,447 / 10,576 / 11,141 / 11,396 / 9,059 / 9,550 / 9,320 / 9,199 |
+| Matches the committed `app_data` | **yes** | no |
+| Matches the figures as currently generated | **yes** | no — needs Figure 4 regenerated as a seed average |
+| Honest about run-to-run noise | only if the ±175–215 range is stated | **yes, inherently** |
+
+**The tension:** `SalmonCountR/app_data/` and every exhibit in `figures/` come
+from a single run at seed 123. The table above (H1) quotes five-seed means. Those
+differ by 70–250 fish per alternative — *more than the difference several
+Discussion sentences rest on* — so mixing them would reintroduce exactly the
+mixed-run problem §1 of the handoff was written to close.
+
+**Recommendation:** report the five-seed mean with the range, and regenerate
+Figure 4 from the seed average (`analysis/figure4_seed_uncertainty.R` already
+does this and draws both uncertainty tiers). It is the only option that supports
+the H12 precision caveat rather than contradicting it. But it means the Shiny app
+and the paper show slightly different values unless the app is also pointed at an
+averaged `app_data`, which is not currently built — so the alternative, keeping
+seed 123 everywhere and quoting the range beside it, is a legitimate and cheaper
+choice. **This has not been decided.**
+
+| \# | Location | Was | Becomes | Kind of change |
+|----|----|----|----|----|
+| H1 | MS Table 3, abundance column | 7,600 / 8,560 / 10,505 / 10,974 / 11,073 / 9,116 / 9,545 / 9,080 / 9,350 (NB→PB6) | 7,528 / 8,447 / 10,576 / 11,141 / 11,396 / 9,059 / 9,550 / 9,320 / 9,199 | retype all nine |
+| H1a | MS §3.2, composite scores | PB1 0.573, PB2 0.534, PB4 0.530 (values from the last pass) | PB1 **0.558**, PB4 **0.515**, PB2 **0.514**, PB3 0.506, PB2c 0.502, NB 0.500, PB5 0.479, PB2b 0.467, PB6 0.402 | retype |
+| H1b | MS §3.2, MCDA ordering | PB1 > PB2 > PB4 > PB3 > PB2c > NB > PB2b > PB5 > PB6 | PB1 > **PB4 > PB2** > PB3 > PB2c > NB > **PB5 > PB2b** > PB6 | **two swaps** — see caveat below |
+| H2 | MS Discussion, PB3 vs PB5 | "differed by fewer than 40 adults… consequential at specific points" | PB5 leads by 261 ± 36; schedule matters throughout | **rewrite, sign reversed** |
+| H3 | MS Discussion, PB6 vs PB4 | "9,350 against 9,545" | "9,199 against 9,550" | retype |
+| H4 | MS Discussion, efficiency | "roughly 47… against 76 for PB4 and PB2c" | PB6 45, PB4 79, PB2c 84 | **restructure** — PB4 and PB2c no longer share a value |
+| H5 | MS Discussion, volume correlation | "Spearman ρ = 0.95" (edited to 0.96 last pass) | 0.92 | retype |
+| H6 | MS Discussion, mechanism | one channel (worse incubation window) | two channels: worse window **and** redds displaced into it, ~59% / 41% | **rewrite** — see handoff §2.4 |
+| H7 | MS + SI, "late-spawning cohorts" | attributed to late spawners | November window, but say *which channel* | rewrite; the old justification that December spawners are unaffected is **false** |
+| H8 | SI, cohort decomposition table | Nov 1–15 49%, Nov 16–30 49%, Dec 0% | Nov 16–30 44%, Dec 1–15 32%, Dec 16–Jan 15%, Nov 1–15 8% | replace table |
+| H9 | MS Methods, spawn timing | pooling not described | state that each alternative uses its own simulated redds | **new sentence** — draft in `G1_DISCLOSURE.md` §1 |
+| H10 | Response to reviewers | — | disclose the correction | **new section** — draft in `G1_DISCLOSURE.md` §2 |
+| H11 | SI reproducibility | — | `ARG_G1_ALT_SPAWN` / `ARG_SEED`, five-seed reporting | **new note** — draft in `G1_DISCLOSURE.md` §3 |
+| H12 | Anywhere quoting a single-run difference | point estimates | mean ± run-to-run range | **differences under ~400 fish are not supportable from one run** — true of the submitted numbers too |
+| H13 | All figures embedded in MS/SI | 2026-07-21 images | regenerated versions in `figures/` | re-embed; see §A, none of the promised exhibits are in the documents yet either |
+| H14 | MS §4.3 + Response, EVPI | range 0.000–0.027, upper bound 0.026 (4.6%) | range **0.000–0.034**, upper bound **0.034 (6.1%)**; two of four combinations now give zero, not one | retype + adjust the sentence about how many cases are zero |
+| H15 | Figure 5 / MCDA composite chart | pre-correction bar values | regenerated `figures/mcda_composite_scores.png` | already regenerated in the repo; re-embed |
+| H16 | MS §3.2, Figure 6 sensitivity paragraph | PB1 to 0.988, then NB at 1.000; span 3.6–84.8 | PB1 to **0.972**, **PB2c 0.974–0.996**, NB from **0.998**; span **3.5–171** | **rewrite** — a regime that did not exist appears; replacement text in §A-bis above |
+| H17 | MS §2.3 / SI, Martin index vs net hazard | "exact inverse order, ρ = −1.00" | ρ = **−0.983**; PB1 and PB3 swap | **soften the claim** — it is now falsifiable against the repo as written |
+| H18 | SI S2, "in contrast to 7,600–11,073 seen in Table 3" | 7,600–11,073 | **7,412–11,274** (single run) or **7,528–11,396** (five-seed) — follow the §H0 decision | retype |
+| H19 | Anywhere quoting projected vs observed | NB Bratovich 13,178 = 59% of observed; model-averaged = 34% | **12,828 = 57%**; **33%** | retype |
+
+**H12 is the one with teeth.** Pooling suppressed run-to-run noise about
+fourteen-fold (±15–21 fish reported, ±173–217 actual). Any comparison in the
+current text resting on a margin under ~400 fish was never resolvable from a
+single run, and reporting it to the digit overstates precision. This applies to
+the submitted numbers as much as the corrected ones.
+
+**Caveat on H1b — only one of the two swaps is real.** PB5 overtaking PB2b is a
+genuine, reproducible effect of the correction: same direction at all five seeds,
+3.5–10.9× the run-to-run noise. PB4 overtaking PB2 is **not** — they differ by
+0.00017 against a composite standard deviation of 0.002–0.003, so their order is
+decided by the seed, not by the alternatives. Do not describe PB4 as ranking
+above PB2. Either present them as tied, or report the ordering only down to the
+resolution the model actually supports.
+
+Note also that NB and PB2c are pinned at 0.500 and 0.502 **by construction** —
+they are the min–max normalisation anchors, so the composite understates their
+sensitivity and their apparent stability is not evidence of anything.
 
 ------------------------------------------------------------------------
 

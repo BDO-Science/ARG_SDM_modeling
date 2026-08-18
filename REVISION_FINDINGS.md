@@ -11,6 +11,25 @@ the claims currently in the manuscript, SI and response to reviewers. Every
 number below was recomputed from `SalmonCountR/app_data/*.rds` unless marked
 otherwise. Scripts that regenerate each result are named per section.
 
+> ## ⚠️ Read this before quoting any number below
+>
+> **This is a record of the 2026-07-28 pass and it predates the G1 correction
+> (2026-08-18).** Commit `26d61b8` — the "source of truth" named above — pooled
+> the simulated redd set across all 36 alternatives before computing egg
+> survival, which severed the temperature → spawn-timing → mortality channel.
+> That was a defect, and it has since been fixed.
+>
+> **Every model-derived number in this document is therefore the pre-correction
+> value.** The findings and the reasoning still stand — that is why this file is
+> kept — but the figures attached to them have moved, several materially and two
+> qualitatively (the PB3/PB5 comparison reverses sign; the cohort decomposition
+> gained a second channel).
+>
+> **`OUTSTANDING_ITEMS.md` §H is the authoritative list of current values.**
+> Where it and this document disagree, §H wins. `G1_FINDINGS.md` explains what
+> changed and why. To reproduce the numbers as written below, run with
+> `ARG_G1_ALT_SPAWN=0`, or check out the tag `as-submitted-2026-07-28`.
+
 **Status: all twelve tasks complete.** For the version organised as manuscript
 edits rather than as an analysis record — which is the one to hand to someone
 making the revisions — see `MANUSCRIPT_REVISION_HANDOFF.md`.
@@ -595,9 +614,15 @@ invoked.
 Egg survival is the channel: PB6/PB4 ratio is **0.977 for egg survival** but
 **1.0008 for pre-spawn survival**, so the pre-spawn pathway contributes nothing.
 The alternatives share one redd distribution, so the difference in mean
-egg-to-fry survival decomposes exactly by spawn cohort. **(That premise was
-removed by the G1 correction on 2026-08-18 — the split below is now the
-survival-response component only. See `MANUSCRIPT_REVISION_HANDOFF.md` §2.4.)**
+egg-to-fry survival decomposes exactly by spawn cohort.
+
+> **⚠️ SUPERSEDED 2026-08-18. The table below is the survival channel only — do
+> not quote it.** The G1 correction removed the shared-redd-distribution premise,
+> so the gap splits into a survival channel *and* a composition channel, and
+> composition turns out to be 41% of it. The December cohorts, shown as 0% below,
+> are in fact **47%** of the gap. Current table:
+> `MANUSCRIPT_REVISION_HANDOFF.md` §2.4; numbers:
+> `output/frontloading_cohort_two_channel.csv`.
 
 **PB6 − PB4**, total −0.0076 in mean egg-to-fry survival:
 
@@ -639,18 +664,33 @@ above is materially identical under both weightings** — the PB6−PB4 gap is �
 vs −0.0074, and the cohort shares agree to one percentage point. See the
 reproducibility section below.
 
+> **⚠️ Narrow this claim (2026-08-18).** It establishes that the *survival*
+> channel does not depend on the choice of weighting, which still holds. It does
+> not establish that the decomposition is complete. Both weightings apply a
+> single distribution to both alternatives, so both are blind to the fact that
+> alternatives now have *different* redd distributions — and agreement between
+> two estimators blind in the same way says nothing about the channel they both
+> miss. That channel is 41% of the PB6−PB4 gap. See
+> `MANUSCRIPT_REVISION_HANDOFF.md` §2.4.
+
 ---
 
 ## Consolidated list of numbers to change
 
+> **⚠️ The five Section 3.2 rows below were superseded by the G1 correction on
+> 2026-08-18** — they are the pre-correction values. Composite scores and the
+> MCDA ordering both move again. Use `OUTSTANDING_ITEMS.md` §H, which supersedes
+> this whole list wherever the two disagree. The rest of the table (Figure 3
+> caption, SI, EVPI, §3.1.1) is unaffected by G1 and still stands.
+
 | Location | Currently says | Should say |
 |---|---|---|
-| Section 3.2 | PB1 0.537 | **0.573** |
-| Section 3.2 | PB2c 0.502 | 0.502 *(unchanged)* |
-| Section 3.2 | NB 0.500 | 0.500 *(unchanged)* |
-| Section 3.2 | PB2 0.499 | **0.534** |
-| Section 3.2 | PB4 0.491 | **0.530** |
-| Section 3.2 | *(order)* | PB1 > PB2 > PB4 > PB3 > PB2c > NB > PB2b > PB5 > PB6 |
+| ~~Section 3.2~~ | ~~PB1 0.537~~ | ~~**0.573**~~ → **0.558** (G1) |
+| ~~Section 3.2~~ | ~~PB2c 0.502~~ | 0.502 *(unchanged — normalisation anchor)* |
+| ~~Section 3.2~~ | ~~NB 0.500~~ | 0.500 *(unchanged — normalisation anchor)* |
+| ~~Section 3.2~~ | ~~PB2 0.499~~ | ~~**0.534**~~ → **0.514** (G1) |
+| ~~Section 3.2~~ | ~~PB4 0.491~~ | ~~**0.530**~~ → **0.515** (G1) |
+| ~~Section 3.2~~ | ~~*(order)*~~ | ~~PB1 > PB2 > PB4 > …~~ → PB1 > PB4 ≈ PB2 > PB3 > PB2c > NB > PB5 > PB2b > PB6 (G1; PB4/PB2 are tied within noise) |
 | Figure 3 caption | Martin onset 12.8 °C | **12.14 °C** |
 | SI S2.7 | `rear_surv` = 0.5419 (calibration estimate) | **0.543 calibrated; 0.5419 is the optimizer start** |
 | SI Table S2-7 | SAR 0.0025, range 0.0018–0.0034 | label as **95% bootstrap CI on the mean**; split input vs calibrated |

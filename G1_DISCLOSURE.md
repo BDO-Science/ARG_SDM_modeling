@@ -1,7 +1,8 @@
 # G1 disclosure — draft text for the revision
 
-Three pieces of text. Drop them in and edit for voice; the numbers are from
-`output/g1_revision_claims.md` and regenerate with
+Three pieces of text. Drop them in and edit for voice. The numbers are tabulated
+in `G1_FINDINGS.md` and regenerate from
+`output/g1_revision_{numbers,contrasts,efficiency}.csv` via
 `analysis/g1_revision_numbers.R`.
 
 ---
@@ -94,12 +95,18 @@ before survival was computed, so only the first pathway was active.
 
 ## What is NOT covered by this draft
 
-- **The PB6/PB4 cohort decomposition percentages** (49% / 49% for the two
-  November cohorts) are now the survival-response component only, because the
-  decomposition assumed a shared redd distribution. Either describe them as
-  approximate or quantify the composition term first.
+- **The mechanism paragraph needs rewriting, not just renumbering.** The
+  correction turned the cohort decomposition from one channel into two, and the
+  published 49% / 49% November split is superseded — the December cohorts go from
+  0% of the PB6−PB4 gap to 47% of it. Replacement table and a draft sentence are
+  in `MANUSCRIPT_REVISION_HANDOFF.md` §2.4. §4 below covers the numbers but not
+  this paragraph.
 - **Figures and tables** need regenerating from the corrected `app_data`, and
-  Table 3's abundance column changes for all nine alternatives.
+  Table 3's abundance column changes for all nine alternatives. Every affected
+  document location is itemised in `OUTSTANDING_ITEMS.md` §H.
+- **Which number set to report** — a single canonical run or the five-seed mean —
+  is undecided and has to be settled before any of this is typed. See
+  `OUTSTANDING_ITEMS.md` §H0.
 - Whether to characterise this as an **erratum-style disclosure or a routine
   revision** is an editorial judgment for the co-authors and, ultimately, the
   editor. The text above treats it as a correction found during revision, which

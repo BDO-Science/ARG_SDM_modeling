@@ -18,9 +18,29 @@ interactively shifts the RNG stream and changes the draw. The script saves
 `sim_redds` and `sim_future` so the redd set behind a given set of results can be
 recovered without a full re-run.
 
+**Do not edit `precompute.R` (or anything it sources) while a run is in flight.**
+R reads the file incrementally, so an edit part-way through shifts byte offsets
+under the running process and it dies with a syntax error that is not in the
+file. A full run takes roughly fifteen minutes; wait it out.
+
+### Reproducibility switches
+
+| Variable | Default | Effect |
+|---|---|---|
+| `ARG_G1_ALT_SPAWN` | `1` | `1` — each alternative is evaluated against the redds simulated under its own temperatures. `0` — reproduces the **superseded** behaviour in which redds were pooled across all 36 alternatives before survival was computed, which is what the submitted manuscript used. |
+| `ARG_SEED` | `123` | Overrides `set.seed(123)`, for replicating across seeds. |
+
+The pooling behaviour was a defect, corrected on 2026-08-18: it severed the
+temperature → spawn timing → thermal mortality channel that the model's ordinal
+spawn-timing regression exists to represent. `ARG_G1_ALT_SPAWN=0` is retained
+only so the submitted numbers stay reproducible; the state of the model as
+submitted is also tagged `as-submitted-2026-07-28`. Full write-up and the list of
+values that moved: `G1_FINDINGS.md`.
+
 Reproducing the manuscript figures and tables does **not** require re-running
 `precompute.R` — the scripts in `analysis/` read the saved `app_data/*.rds` and
-finish in seconds.
+finish in seconds. The exception is the multi-seed scripts below, which need
+several `app_data` snapshots.
 
 ---
 
@@ -183,7 +203,7 @@ and writing to `figures/` and `output/`:
 | `tdm_weight_sensitivity.R` | TDM weight sensitivity of the composite score, plus the Martin-weight sweep |
 | `elicitation_tables.R` | SI Tables S2-7 and S2-8 from the TDM elicitation scoresheet |
 | `evpi.R` | Expected value of perfect information under both objective weight sets |
-| `frontloading_cohort_decomposition.R` | Front-loading mechanism: crossover dates, hazard split, spawn-cohort decomposition |
+| `frontloading_cohort_decomposition.R` | Front-loading mechanism: crossover dates, hazard split, and the exact two-channel spawn-cohort decomposition (survival response vs composition) |
 | `calibration_fit_statistics.R` | Calibration predictions and fit statistics; repopulates `calib_pred_by_variant.rds` |
 | `sar_from_cwt.R` | SAR from American River CWT release groups — the provenance for every SAR figure quoted in SI §S2.6, with the text checked against the data |
 
@@ -192,6 +212,28 @@ than in this repo; point it there with the `ARG_SCORESHEET` environment variable
 
 All of these read precomputed `.rds` files, so they run in seconds without
 re-running `precompute.R`.
+
+### Multi-seed scripts (G1)
+
+These need snapshots of `app_data` from several `precompute.R` runs rather than
+the single committed copy, so they do **not** run in seconds. Point
+`G1_SNAPROOT` at a directory of `<arm>_seed<n>/` folders, built by running
+`precompute.R` with `ARG_G1_ALT_SPAWN` in `{0,1}` and `ARG_SEED` in
+`{123,456,789,1011,1213}` — about 14 minutes per run.
+
+| Script | Produces |
+|---|---|
+| `g1_revision_numbers.R` | Every objective value the correction moves, as means over seeds with the run-to-run range: per-alternative index and composite, paired contrasts, volume-normalised benefit, and the volume-vs-benefit rank correlation |
+| `figure4_seed_uncertainty.R` | Figure 4 variant drawing both uncertainty tiers — year-to-year IQR and run-to-run spread across seeds |
+| `compare_g1.R` | One legacy-vs-corrected pair, for a quick check |
+| `compare_g1_seeds.R` | The full multi-seed replication, separating G1 effect from Monte Carlo noise |
+| `g1_helpers.R` | Shared composite/normalisation helpers — sourced by the above, mirrors `mcda.R` so the two cannot drift |
+
+**Why seeds matter here.** The correction evaluates each alternative against its
+own redd sample rather than a pooled sample ~36× larger, so per-alternative
+estimates carry ±173–217 fish of run-to-run noise where pooling reported ±15–21.
+Differences under roughly 400 fish are not resolvable from a single run. See
+`G1_FINDINGS.md`.
 
 The remaining scripts in `analysis/` derive model parameters from raw data in
 `data_raw/` (age structure, CWT returns, flow, spawning habitat, juvenile

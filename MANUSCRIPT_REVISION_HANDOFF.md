@@ -46,16 +46,25 @@ number now traces to commit `26d61b8`. No value from a superseded run (12,493,
 either document. The one exception is the calibration fit statistics, which come
 from a pipeline version that no longer exists — see §7 item 2.
 
+> **⚠️ This table describes the state as of the 07-28 pass. The G1 correction
+> (2026-08-18) reopened several of these rows** — anything marked "applied by
+> author" that depends on a model output has moved again. `OUTSTANDING_ITEMS.md`
+> §H is the current, authoritative list of document changes; where it disagrees
+> with this table, §H wins.
+
 | Item | State |
 |---|---|
-| §2.1 Composite scores → 0.573 / 0.534 / 0.530 | applied by author |
+| §2.1 Composite scores → 0.573 / 0.534 / 0.530 | applied by author — **superseded by G1: now 0.558 / 0.514 / 0.515, and the ordering changes. See §H1a/H1b** |
+| Consequence table, adult index, all nine alternatives | **reopened by G1 — every value moves. See §H1** |
+| §2.3 Discussion, PB3 vs PB5 | **reopened by G1 — sign reverses. See §H2** |
+| §2.4 Discussion, cohort decomposition | **reopened by G1 — one channel became two. See §H6/H8** |
 | §2.5 Consequence table, K, calibrated SAR, `rear_surv` | already current-run |
 | §5.1 Figure 3 caption 12.8 → 12.14 | applied by author |
 | §3.3 SAR sentence and bootstrap-CI note | applied by author |
 | §4.2 Crossovers, operational band 14.1–18.2 °C | applied by author |
 | §4.3 EVPI range in the **Discussion** | applied by author |
 | §4.3 EVPI in the **Results** — was still a point estimate | **edited this pass** |
-| Spearman rho 0.95 → 0.96 (recomputed, 0.9624) | **edited this pass** |
+| Spearman rho 0.95 → 0.96 (recomputed, 0.9624) | edited this pass — **superseded by G1: 0.9205. See §H5** |
 | SI Table S2-7 duplicate number → renumbered S2-9 | **edited this pass** |
 | SI table labelled inputs as "Calibrated Value" | **edited this pass** |
 | §7.2 R² = 0.72 / RMSE = 8,240 unreproducible | **flagged in place, needs your decision** |
@@ -199,13 +208,23 @@ and PB6 **the late-November penalty exceeds the October cooling benefit
 outright**, which is exactly why those three fall below no-bypass under Martin.
 
 **The strongest single sentence available here:** this net column rank-orders the
-Martin-only adult population index perfectly — all 9 alternatives, in exact
-inverse order (Spearman ρ = −1.00, more hazard → fewer fish):
+Martin-only adult population index almost perfectly — more hazard → fewer fish.
 
 | | PB2c | PB2b | PB2 | PB5 | PB4 | NB | PB1 | PB3 | PB6 |
 |---|---|---|---|---|---|---|---|---|---|
 | Net Δ −log S | −0.138 | −0.109 | −0.072 | −0.018 | −0.008 | 0 | +0.013 | +0.014 | +0.021 |
-| Martin adult index | 84.8 | 49.6 | 21.4 | 10.2 | 8.0 | 6.7 | 4.5 | 4.0 | 3.6 |
+| Martin index (submitted) | 84.8 | 49.6 | 21.4 | 10.2 | 8.0 | 6.7 | 4.5 | 4.0 | 3.6 |
+| **Martin index (corrected)** | **171.1** | **82.8** | **32.8** | **23.6** | **13.1** | **8.0** | **4.7** | **5.1** | **3.5** |
+
+**⚠️ "Exact inverse order, ρ = −1.00" is no longer true (2026-08-18).** Under the
+correction PB1 and PB3 swap — 4.7 against 5.1, a gap of less than half a fish —
+so the correlation is **ρ = −0.983**, not −1.00. Say "almost perfectly" or
+"ρ = −0.98"; do not claim an exact inverse ordering. The mechanism argument is
+unaffected and the two alternatives involved are separated by noise, but the
+sentence as written is now falsifiable against the repository.
+
+Note also the Martin-only spread roughly doubles, from 3.6–84.8 to **3.5–171.1**.
+Anywhere the text leans on "a range of a few dozen fish" should say a few hundred.
 
 The balance of hazard within the incubation window *is* the ranking; no other
 mechanism needs to be invoked.
@@ -240,9 +259,14 @@ run-to-run noise, in the direction PB5's net hazard balance already predicted
 (PB3 +0.014, PB5 −0.018).
 
 The counterweight sentence therefore has to go: schedule is not "consequential
-only at specific points in the decision space". Replacement wording and the full
-number set are in `output/g1_revision_claims.md`. See `G1_FINDINGS.md` for the
-measurement and `analysis/g1_revision_numbers.R` to regenerate.
+only at specific points in the decision space". Replacement wording is in
+`G1_DISCLOSURE.md`, the full number set in `G1_FINDINGS.md`, and
+`analysis/g1_revision_numbers.R` regenerates everything.
+
+**A stronger sentence is available in its place.** PB3 and PB5 bypass the
+identical 21.4 Mm³ and now differ sharply in volume-normalised benefit — 72
+against 84 additional adults per million m³ — which makes the schedule-matters
+point with volume held exactly constant, which is what that pair was chosen for.
 
 ### 2.4 Discussion — cohort decomposition, PB6 vs PB4 — **VERIFIED**
 
@@ -250,30 +274,56 @@ Supporting detail for §2.3; use as much as the Discussion has room for. Egg
 survival is confirmed to be the only channel that matters: the PB6/PB4 ratio is
 **0.977 for egg-to-fry survival** but **1.0008 for pre-spawn survival**.
 
-**⚠️ Premise changed 2026-08-18.** This decomposition was exact *because* all
-alternatives shared one redd distribution. The G1 correction makes redd
-distributions alternative-specific, so the split below is now the
-**survival-response component only**; an additional composition term
-`sum_c (w_c,A − w_c,B) · Sbar_c` is not included. The qualitative conclusion is
-unaffected — egg survival is still the only channel that matters, and the
-affected group is still November spawners — but the percentages below should be
-described as approximate, or the composition term quantified before they are
-quoted to two figures. See `analysis/frontloading_cohort_decomposition.R` §3.
+**⚠️ REPLACED 2026-08-18 — do not use the previous version of this table.** The
+old decomposition was exact only *because* all alternatives shared one redd
+distribution. G1 makes redd distributions alternative-specific, so the gap now
+splits into two channels, exactly (this is an algebraic identity, asserted in
+code, not an approximation):
 
-**PB6 − PB4**, total −0.0076:
+    gap = Σ_c wbar_c (S_c,A − S_c,B)      survival response — as previously reported
+        + Σ_c (w_c,A − w_c,B) · Sbar_c    composition — WHEN eggs were laid
 
-| Cohort | Redd share | S (PB6) | S (PB4) | Contribution | Share of gap |
+**The composition channel is not small, and it changes the story.**
+
+| Comparison | Survival | Composition | Total | Composition share |
+|---|---|---|---|---|
+| PB6 − PB4 | −0.01401 | **−0.00983** | −0.02385 | **41%** |
+| PB6 − NB | −0.01341 | **−0.00510** | −0.01850 | **28%** |
+| PB4 − NB | +0.00052 | **+0.00482** | +0.00534 | **90%** |
+
+**PB6 − PB4** by cohort, total −0.02385 (source:
+`output/frontloading_cohort_two_channel.csv`):
+
+| Cohort | Redd share PB6 / PB4 | Survival | Composition | Contribution | Share of gap |
 |---|---|---|---|---|---|
-| Oct 1–15 | 1.4% | 0.567 | 0.566 | 0.00000 | 0% |
-| Oct 16–31 | 8.6% | 0.051 | 0.053 | −0.00018 | 2% |
-| **Nov 1–15** | 25.0% | 0.169 | 0.184 | **−0.00369** | **49%** |
-| **Nov 16–30** | 35.5% | 0.534 | 0.544 | **−0.00368** | **49%** |
-| Dec 1–15 | 23.0% | 0.959 | 0.959 | 0.00000 | 0% |
-| Dec 16–Jan | 6.4% | 1.000 | 1.000 | 0.00000 | 0% |
+| Oct 1–15 | 1.7% / 1.7% | +0.00001 | −0.00030 | −0.00029 | 1% |
+| Oct 16–31 | 7.2% / 6.9% | −0.00017 | +0.00022 | +0.00005 | 0% |
+| Nov 1–15 | 26.0% / 25.2% | −0.00372 | +0.00187 | −0.00186 | 8% |
+| **Nov 16–30** | 35.7% / 35.7% | **−0.01013** | −0.00045 | **−0.01058** | **44%** |
+| **Dec 1–15** | 22.3% / 23.1% | **0.00000** | **−0.00760** | **−0.00760** | **32%** |
+| **Dec 16–Jan** | 7.0% / 7.4% | **0.00000** | **−0.00357** | **−0.00357** | **15%** |
 
-**PB6 − NB**, total −0.0190: Nov 16–30 contributes **80%**, Nov 1–15 **26%**, and
-Oct 16–31 contributes **−6%** — that cohort is *better off* under PB6, the cooling
-benefit appearing exactly where the mechanism predicts.
+**The December cohorts are no longer zero — they are 47% of the gap.** Their
+survival contribution is *exactly* zero under every alternative, because December
+incubation runs below the 12.14 °C Martin threshold. But PB6 holds 29.3% of its
+redds in that safe window against PB4's 30.5%, and that difference alone carries
+nearly half the deficit. Front-loading pushes fish out of the safe window and
+into risky late November.
+
+**The mechanism sentence should now describe two channels, not one:**
+
+> Front-loaded release reduces egg-to-fry survival two ways. Eggs already in the
+> gravel through late November experience a warmer thermal window; and warmer
+> October temperatures advance spawn timing, so a larger share of redds is placed
+> into that window in the first place rather than into the thermally safe
+> December period. Under the Martin et al. (2017) formulation these contribute
+> roughly 59% and 41% of the PB6–PB4 difference respectively.
+
+**PB6 − NB**, total −0.01850: Nov 16–30 dominates at 112% of the gap, with
+Oct 16–31 and Nov 1–15 both *positive* (−13% and −25% of the gap — those cohorts
+are better off under PB6, the cooling benefit appearing where the mechanism
+predicts), and the December cohorts contributing −0.00501 entirely through
+composition.
 
 Suggested sentence:
 
@@ -292,12 +342,17 @@ models**, and stating the breakdown is far easier to defend than the pooled figu
 NB, median of the final 20 forecast years, against the observed 2014–2024 mean of
 22,491:
 
-| TDM model | Panel weight | NB adult index | % of observed |
-|---|---|---|---|
-| Bratovich (2020) | 0.51 | 13,178 | **59%** |
-| Bartholow & Heasley (2006) | 0.24 | 3,655 | 16% |
-| Martin et al. (2017) | 0.25 | **6.7** | **0.03%** |
-| Model-averaged | — | 7,600 | 34% |
+| TDM model | Panel weight | NB adult index (submitted) | % | **NB (corrected)** | **%** |
+|---|---|---|---|---|---|
+| Bratovich (2020) | 0.51 | 13,178 | 59% | **12,828** | **57%** |
+| Bartholow & Heasley (2006) | 0.24 | 3,655 | 16% | **3,617** | **16%** |
+| Martin et al. (2017) | 0.25 | 6.7 | 0.03% | **8.0** | **0.04%** |
+| Model-averaged | — | 7,600 | 34% | **7,412** | **33%** |
+
+*Corrected column added 2026-08-18 (G1), from `output/frontloading_index_by_variant.csv`.
+Observed 2014–2024 mean is 22,491. The point of this table — the headline 34% is
+dragged down by Martin projecting extinction under every alternative, and
+Bratovich alone is far more defensible — is unchanged.*
 
 Under the model carrying the majority of the panel weight the projection sits at
 59% of recent observed escapement — a defensible gap for a fixed-climatology
@@ -513,9 +568,11 @@ the first:**
 1. No panelist proposed a weighting anywhere near it — the lowest individual
    Bratovich + Bartholow allocation was 0.60 (Panelist 5).
 2. **At 100% Martin weight every alternative is functionally extinct.** The
-   entire nine-alternative range of the adult population index is 3.6 to 84.8
-   spawners, and the trajectory never equilibrates — no-bypass declines
-   monotonically across the whole 114-year run to about 7 spawners. The Chinook
+   entire nine-alternative range of the adult population index is 3.5 to 171
+   spawners (was 3.6 to 84.8 before the G1 correction — the span roughly doubles
+   but the conclusion does not change), and the trajectory never equilibrates —
+   no-bypass declines monotonically across the whole 114-year run to about 8
+   spawners. The Chinook
    objective at that corner is a min-max normalisation across a range of a few
    dozen fish, so it carries almost no information: no-bypass scores 0.038 on the
    normalised Chinook axis and wins the composite purely on hydropower, where it
@@ -575,16 +632,25 @@ The published 0.026 (4.6%) reproduces exactly, under re-derived objective weight
 with pooled normalisation — which pins down the method that was used. But it is
 the largest of four defensible combinations:
 
-| Objective weights | Normalisation | Best under uncertainty | EVPI | EVPI % |
-|---|---|---|---|---|
-| re-derived (0.75/0.20/0.05) | pooled | PB1 | **0.0265** | **4.64%** |
-| re-derived (0.75/0.20/0.05) | per-state | PB2c | 0.0126 | 1.61% |
-| elicited (0.40/0.50/0.10) | per-state | PB1 | 0.0120 | 2.17% |
-| elicited (0.40/0.50/0.10) | pooled | NB | 0.0000 | 0.00% |
+| Objective weights | Normalisation | Best under uncertainty | EVPI (submitted) | EVPI % | **EVPI (corrected)** | **%** |
+|---|---|---|---|---|---|---|
+| re-derived (0.75/0.20/0.05) | pooled | PB1 | 0.0265 | 4.64% | **0.0341** | **6.10%** |
+| re-derived (0.75/0.20/0.05) | per-state | PB2c | 0.0126 | 1.61% | **0.0000** | **0.00%** |
+| elicited (0.40/0.50/0.10) | per-state | PB1 | 0.0120 | 2.17% | 0.0120 | 2.22% |
+| elicited (0.40/0.50/0.10) | pooled | NB | 0.0000 | 0.00% | 0.0000 | 0.00% |
 
-**Report the range 0.000–0.027 and note that 0.026 is the upper bound.** Under the
-elicited weights with pooled normalisation the EVPI is *zero*, because no-bypass
-is then optimal under all three TDM models and perfect information changes nothing.
+**⚠️ The corrected column is new (2026-08-18) — G1 moved EVPI too.** The upper
+bound rises from 0.0265 to **0.0341** and the re-derived/per-state case collapses
+to zero, because PB2c becomes optimal under all three TDM models there. So the
+range widens *and* the number of zero cases goes from one to two.
+
+**Report the range 0.000–0.034 and note that 0.034 is the upper bound**, replacing
+"0.000–0.027 … 0.026 is the upper bound". Two of the four combinations now give
+*zero* EVPI, because one alternative is optimal under all three TDM models and
+perfect information changes nothing.
+
+Source: `output/evpi.csv` (regenerated from the corrected `app_data`);
+`analysis/evpi.R` rebuilds it.
 
 **A caveat worth stating pre-emptively, since it is a fair criticism waiting to
 happen:** the normalisation choice matters as much as the weight set. Pooled
@@ -809,3 +875,12 @@ simulated set. **Every result is materially identical under both** — the PB6�
 gap is −0.0076 vs −0.0074 and cohort shares agree to one percentage point — so
 none of the conclusions depend on the choice of weighting. This is stronger
 evidence than the pipeline's own single stochastic realisation would have been.
+
+**⚠️ Read that robustness claim narrowly (noted 2026-08-18).** It shows the
+*survival* channel is insensitive to which spawn-date distribution you weight
+by, and that still holds. It does **not** show the decomposition is complete.
+Both weightings are single distributions applied to both alternatives, so both
+are blind in the same way: neither can see that the alternatives now have
+*different* redd distributions. Agreement between two blind estimators is not
+evidence of coverage. The channel they both miss turns out to be 41% of the
+PB6−PB4 gap — see §2.4.

@@ -104,16 +104,29 @@ rather than housekeeping. Full text in `OUTSTANDING_ITEMS.md` §G.
 
 ## Picking it up
 
-**G4 is the smallest useful first commit** — one applied refresh run, and the
-provenance stamp stops reading "not recorded" everywhere in the app. G1 is the
-one that needs a real decision before anyone quotes a number from this repo.
+**G1 and G4 are both closed** (2026-08-18 and 2026-08-14). The code side of the
+branch is finished and verified. What is left is Word-document work: every
+manuscript and SI change the G1 correction forces is itemised in
+`OUTSTANDING_ITEMS.md` §H, with draft replacement text in `G1_DISCLOSURE.md`.
+
+**Read §H0 first.** There is one undecided question — whether the paper reports a
+single canonical run or the mean of five seeds. The committed `app_data` and
+every figure are a single run at seed 123; the corrected values quoted in most of
+the write-up are five-seed means. They differ by more than several Discussion
+sentences rest on, so the two must not be mixed.
 
 Before running anything: `precompute.R` must be run start to finish in a clean
 session. The simulated redd set comes from `set.seed(123)` at the top, so
 re-executing a chunk interactively shifts the RNG stream and changes the draw.
+Do not edit the script while a run is in flight — R reads it incrementally and an
+edit part-way through kills the run with a syntax error that is not in the file.
 The script saves `sim_redds` and `sim_future` so the redd set behind a given
 result can be recovered without a full re-run. Reproducing anything in
 `figures/` or `output/` does not need `precompute.R` at all.
+
+`ARG_G1_ALT_SPAWN=0` reproduces the superseded pooled-spawn-timing behaviour that
+the submitted manuscript used; `main` at that state is tagged
+`as-submitted-2026-07-28`.
 
 Neither this file nor the branch name is load-bearing — both can go when the
 branch merges.
