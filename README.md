@@ -197,6 +197,7 @@ and writing to `figures/` and `output/`:
 
 | Script | Produces |
 |---|---|
+| `reporting_values.R` | **The numbers reported in the manuscript** — adult index, composite score and rank, volume-normalised benefit, and the volume-vs-benefit rank correlation, all from the committed run. One place to look, and it reproduces the paper's tables in seconds |
 | `figures.R` | Figure 4 — adult population index by alternative, faceted climate year × TDM model; also the baseline spawner forecast barchart |
 | `mcda.R` | Figure 5 — composite MCDA scores, stacked by objective, with numeric bar labels |
 | `figure3_tdm_curves.R` | Figure 3 — TDM daily survival and cumulative egg-to-fry survival, 10–18 °C |

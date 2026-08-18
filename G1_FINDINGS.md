@@ -168,6 +168,16 @@ Replacement values for every affected claim are tabulated below and written to
 `analysis/g1_revision_numbers.R`, from the five-seed snapshots. They are means
 across seeds with the run-to-run range, not single-run point estimates.
 
+> **These are measurement values, not the reported ones.** The reporting
+> convention (`OUTSTANDING_ITEMS.md` §H0) is that **levels** in the paper come
+> from the committed run — generate them with `analysis/reporting_values.R` — with
+> the ±173–217 spread quoted alongside, while **differences** between
+> alternatives are reported as the paired within-seed contrasts below. So the
+> PB3−PB5 figure of −261 ± 36 *is* what the paper reports; the per-alternative
+> levels in the next table are not. Subtracting two levels out of Table 3
+> discards the cancellation that makes the contrasts tight and would understate
+> what the model resolves.
+
 | Claim | Published | Corrected |
 |---|---|---|
 | PB3 − PB5 | +43 ± 4 (PB3 ahead) | **−261 ± 36 (PB5 ahead)** |

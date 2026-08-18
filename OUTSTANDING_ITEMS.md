@@ -397,41 +397,55 @@ Two sanity anchors before editing: running `ARG_G1_ALT_SPAWN=0` reproduces the
 ρ = 0.9624), and `main` is tagged `as-submitted-2026-07-28`. So every "was"
 below is verifiably the number now in the documents.
 
-### ⚠️ H0. Decide this before typing anything: which number set?
+### H0. Reporting convention — **DECIDED 2026-08-18**
 
-There are two defensible sets and they are **not interchangeable**. Pick one and
-apply it to the table, the figures and the prose together.
+**Levels come from the single committed run. Spread is quoted alongside.
+Differences are reported as paired contrasts, not as subtractions of levels.**
 
-| | Single canonical run (seed 123) | Mean of five seeds |
+Generate every level with `analysis/reporting_values.R`, which reads the
+committed `app_data` and writes `output/reporting_values.csv`. It runs in
+seconds and needs no seed snapshots, so anyone who clones the repo reproduces
+the paper's tables directly.
+
+| Quantity | Source | Why |
 |---|---|---|
-| Table 3 abundance, NB→PB6 | 7,412 / 8,306 / 10,443 / 10,992 / 11,274 / 8,954 / 9,427 / 9,194 / 9,091 | 7,528 / 8,447 / 10,576 / 11,141 / 11,396 / 9,059 / 9,550 / 9,320 / 9,199 |
-| Matches the committed `app_data` | **yes** | no |
-| Matches the figures as currently generated | **yes** | no — needs Figure 4 regenerated as a seed average |
-| Honest about run-to-run noise | only if the ±175–215 range is stated | **yes, inherently** |
+| Table 3, composites, efficiency, ranges | committed run, via `reporting_values.R` | table, every figure, the app and the repo all trace to one artefact |
+| Uncertainty on a level | ±173–217 fish, from the five-seed replication | stating the range is what keeps a single run honest |
+| PB3−PB5, PB6−PB4, and any interpreted difference | **paired within-seed mean** from `g1_revision_numbers.R` | see below |
 
-**The tension:** `SalmonCountR/app_data/` and every exhibit in `figures/` come
-from a single run at seed 123. The table above (H1) quotes five-seed means. Those
-differ by 70–250 fish per alternative — *more than the difference several
-Discussion sentences rest on* — so mixing them would reintroduce exactly the
-mixed-run problem §1 of the handoff was written to close.
+**Why differences are handled separately.** The seed shift is largely *common*
+across alternatives, so it cancels in a paired difference. Levels carry ±173–217
+fish of run-to-run noise; the contrasts that carry the argument carry only
+±21–36. Subtracting two numbers out of Table 3 throws that cancellation away and
+would understate what the model can actually resolve. Report PB5 leading PB3 by
+**261 ± 36**, not by the 240 you get by subtracting the table.
 
-**Recommendation:** report the five-seed mean with the range, and regenerate
-Figure 4 from the seed average (`analysis/figure4_seed_uncertainty.R` already
-does this and draws both uncertainty tiers). It is the only option that supports
-the H12 precision caveat rather than contradicting it. But it means the Shiny app
-and the paper show slightly different values unless the app is also pointed at an
-averaged `app_data`, which is not currently built — so the alternative, keeping
-seed 123 everywhere and quoting the range beside it, is a legitimate and cheaper
-choice. **This has not been decided.**
+**Why not the five-seed mean for levels.** It was the other serious candidate.
+Against it: the paper's numbers would then correspond to no single committed
+artefact, so reproducing Table 3 would mean a ~70-minute five-seed rebuild rather
+than opening `app_data`; and Figure 5 and the composite scores would need
+seed-averaging machinery that does not exist (`mcda.R` reads `app_data`
+directly). Both headline claims hold at the committed run anyway — PB3−PB5 is
+−240 there against a five-seed mean of −261, PB6−PB4 is −335 against −352, both
+the right sign and inside the interval — so averaging buys robustness the
+argument does not need.
+
+**Put the five-seed replication table in the SI** as the uncertainty
+characterisation. That answers a reviewer objecting to a single realisation at no
+cost to internal consistency.
+
+*Not a factor in this decision:* the Shiny app diverging from the paper. The app
+continues to be developed past the journal version, so the two are expected to
+drift.
 
 | \# | Location | Was | Becomes | Kind of change |
 |----|----|----|----|----|
-| H1 | MS Table 3, abundance column | 7,600 / 8,560 / 10,505 / 10,974 / 11,073 / 9,116 / 9,545 / 9,080 / 9,350 (NB→PB6) | 7,528 / 8,447 / 10,576 / 11,141 / 11,396 / 9,059 / 9,550 / 9,320 / 9,199 | retype all nine |
-| H1a | MS §3.2, composite scores | PB1 0.573, PB2 0.534, PB4 0.530 (values from the last pass) | PB1 **0.558**, PB4 **0.515**, PB2 **0.514**, PB3 0.506, PB2c 0.502, NB 0.500, PB5 0.479, PB2b 0.467, PB6 0.402 | retype |
+| H1 | MS Table 3, abundance column | 7,600 / 8,560 / 10,505 / 10,974 / 11,073 / 9,116 / 9,545 / 9,080 / 9,350 (NB→PB6) | **7,412 / 8,306 / 10,443 / 10,992 / 11,274 / 8,954 / 9,427 / 9,194 / 9,091** | retype all nine; add the ±173–217 run-to-run note |
+| H1a | MS §3.2, composite scores | PB1 0.573, PB2 0.534, PB4 0.530 (values from the last pass) | PB1 **0.555**, PB4 **0.514**, PB2 **0.513**, PB3 0.508, PB2c 0.502, NB 0.500, PB5 0.479, PB2b 0.465, PB6 0.403 | retype |
 | H1b | MS §3.2, MCDA ordering | PB1 > PB2 > PB4 > PB3 > PB2c > NB > PB2b > PB5 > PB6 | PB1 > **PB4 > PB2** > PB3 > PB2c > NB > **PB5 > PB2b** > PB6 | **two swaps** — see caveat below |
 | H2 | MS Discussion, PB3 vs PB5 | "differed by fewer than 40 adults… consequential at specific points" | PB5 leads by 261 ± 36; schedule matters throughout | **rewrite, sign reversed** |
-| H3 | MS Discussion, PB6 vs PB4 | "9,350 against 9,545" | "9,199 against 9,550" | retype |
-| H4 | MS Discussion, efficiency | "roughly 47… against 76 for PB4 and PB2c" | PB6 45, PB4 79, PB2c 84 | **restructure** — PB4 and PB2c no longer share a value |
+| H3 | MS Discussion, PB6 vs PB4 | "9,350 against 9,545" | "**9,091 against 9,427**"; the gap itself is **−352 ± 21** (paired, per H0) | retype |
+| H4 | MS Discussion, efficiency | "roughly 47… against 76 for PB4 and PB2c" | PB6 **45**, PB4 **78**, PB2c **84** | **restructure** — PB4 and PB2c no longer share a value |
 | H5 | MS Discussion, volume correlation | "Spearman ρ = 0.95" (edited to 0.96 last pass) | 0.92 | retype |
 | H6 | MS Discussion, mechanism | one channel (worse incubation window) | two channels: worse window **and** redds displaced into it, ~59% / 41% | **rewrite** — see handoff §2.4 |
 | H7 | MS + SI, "late-spawning cohorts" | attributed to late spawners | November window, but say *which channel* | rewrite; the old justification that December spawners are unaffected is **false** |
@@ -439,13 +453,13 @@ choice. **This has not been decided.**
 | H9 | MS Methods, spawn timing | pooling not described | state that each alternative uses its own simulated redds | **new sentence** — draft in `G1_DISCLOSURE.md` §1 |
 | H10 | Response to reviewers | — | disclose the correction | **new section** — draft in `G1_DISCLOSURE.md` §2 |
 | H11 | SI reproducibility | — | `ARG_G1_ALT_SPAWN` / `ARG_SEED`, five-seed reporting | **new note** — draft in `G1_DISCLOSURE.md` §3 |
-| H12 | Anywhere quoting a single-run difference | point estimates | mean ± run-to-run range | **differences under ~400 fish are not supportable from one run** — true of the submitted numbers too |
+| H12 | Anywhere quoting a difference between alternatives | subtraction of two table values | **paired within-seed contrast with its own spread** (per H0) | **differences under ~400 fish are not supportable from a subtraction of levels** — true of the submitted numbers too |
 | H13 | All figures embedded in MS/SI | 2026-07-21 images | regenerated versions in `figures/` | re-embed; see §A, none of the promised exhibits are in the documents yet either |
 | H14 | MS §4.3 + Response, EVPI | range 0.000–0.027, upper bound 0.026 (4.6%) | range **0.000–0.034**, upper bound **0.034 (6.1%)**; two of four combinations now give zero, not one | retype + adjust the sentence about how many cases are zero |
 | H15 | Figure 5 / MCDA composite chart | pre-correction bar values | regenerated `figures/mcda_composite_scores.png` | already regenerated in the repo; re-embed |
 | H16 | MS §3.2, Figure 6 sensitivity paragraph | PB1 to 0.988, then NB at 1.000; span 3.6–84.8 | PB1 to **0.972**, **PB2c 0.974–0.996**, NB from **0.998**; span **3.5–171** | **rewrite** — a regime that did not exist appears; replacement text in §A-bis above |
 | H17 | MS §2.3 / SI, Martin index vs net hazard | "exact inverse order, ρ = −1.00" | ρ = **−0.983**; PB1 and PB3 swap | **soften the claim** — it is now falsifiable against the repo as written |
-| H18 | SI S2, "in contrast to 7,600–11,073 seen in Table 3" | 7,600–11,073 | **7,412–11,274** (single run) or **7,528–11,396** (five-seed) — follow the §H0 decision | retype |
+| H18 | SI S2, "in contrast to 7,600–11,073 seen in Table 3" | 7,600–11,073 | **7,412–11,274** | retype |
 | H19 | Anywhere quoting projected vs observed | NB Bratovich 13,178 = 59% of observed; model-averaged = 34% | **12,828 = 57%**; **33%** | retype |
 
 **H12 is the one with teeth.** Pooling suppressed run-to-run noise about
@@ -457,10 +471,10 @@ the submitted numbers as much as the corrected ones.
 **Caveat on H1b — only one of the two swaps is real.** PB5 overtaking PB2b is a
 genuine, reproducible effect of the correction: same direction at all five seeds,
 3.5–10.9× the run-to-run noise. PB4 overtaking PB2 is **not** — they differ by
-0.00017 against a composite standard deviation of 0.002–0.003, so their order is
-decided by the seed, not by the alternatives. Do not describe PB4 as ranking
-above PB2. Either present them as tied, or report the ordering only down to the
-resolution the model actually supports.
+0.0009 at the committed run and 0.0002 in the five-seed mean, against a composite
+standard deviation of 0.002–0.003. Their order is decided by the seed, not by the
+alternatives. Do not describe PB4 as ranking above PB2. Either present them as
+tied, or report the ordering only to the resolution the model supports.
 
 Note also that NB and PB2c are pinned at 0.500 and 0.502 **by construction** —
 they are the min–max normalisation anchors, so the composite understates their

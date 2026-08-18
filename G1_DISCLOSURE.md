@@ -83,13 +83,13 @@ before survival was computed, so only the first pathway was active.
 
 > Two further Discussion values change. The volume-normalised benefit of the
 > most front-loaded alternative, PB6, falls from approximately 47 to 45
-> additional adults per million cubic metres bypassed, while PB4 rises to 79 and
+> additional adults per million cubic metres bypassed, while PB4 rises to 78 and
 > PB2c to 84; those two alternatives no longer share a common value. The rank
 > correlation between bypass volume and Chinook benefit falls from 0.96 to 0.92,
 > the corrected analysis attributing somewhat less of the biological benefit to
 > volume alone and more to release timing. The clearest illustration is the
 > PB3–PB5 pair: bypassing the identical 21.4 million cubic metres, they now
-> return 72 and 84 additional adults per million cubic metres respectively.
+> return 72 and 83 additional adults per million cubic metres respectively.
 
 ---
 
@@ -104,9 +104,11 @@ before survival was computed, so only the first pathway was active.
 - **Figures and tables** need regenerating from the corrected `app_data`, and
   Table 3's abundance column changes for all nine alternatives. Every affected
   document location is itemised in `OUTSTANDING_ITEMS.md` §H.
-- **Which number set to report** — a single canonical run or the five-seed mean —
-  is undecided and has to be settled before any of this is typed. See
-  `OUTSTANDING_ITEMS.md` §H0.
+- **Reporting convention is settled** (`OUTSTANDING_ITEMS.md` §H0): levels come
+  from the committed run via `analysis/reporting_values.R`, the ±173–217 range is
+  quoted alongside, and differences between alternatives are reported as paired
+  within-seed contrasts rather than subtractions of table values. The five-seed
+  replication table goes in the SI.
 - Whether to characterise this as an **erratum-style disclosure or a routine
   revision** is an editorial judgment for the co-authors and, ultimately, the
   editor. The text above treats it as a correction found during revision, which
