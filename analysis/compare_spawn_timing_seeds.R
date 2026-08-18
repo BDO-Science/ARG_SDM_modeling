@@ -1,5 +1,5 @@
 # ============================================================================
-# G1 seed replication — is the effect larger than Monte Carlo noise?
+# Seed replication — is the spawn-timing effect larger than Monte Carlo noise?
 # ============================================================================
 # The alternative-specific fix reduces the redd sample behind each survival
 # estimate from ~36 x N_redd (all alternatives pooled) to N_redd, so the
@@ -15,7 +15,7 @@
 # large relative to the within-arm spread.
 #
 # Usage (from the repo root):
-#   G1_SNAPROOT=<dir> Rscript analysis/compare_g1_seeds.R
+#   SPAWN_TIMING_SNAPROOT=<dir> Rscript analysis/compare_spawn_timing_seeds.R
 #
 # Expects subdirectories named  legacy_seed<N>  and  fixed_seed<N>.
 # ============================================================================
@@ -23,9 +23,9 @@
 suppressPackageStartupMessages({
   library(dplyr); library(tidyr); library(purrr); library(here)
 })
-source(here("analysis", "g1_helpers.R"))
+source(here("analysis", "composite_helpers.R"))
 
-snaproot <- Sys.getenv("G1_SNAPROOT")
+snaproot <- Sys.getenv("SPAWN_TIMING_SNAPROOT")
 stopifnot(dir.exists(snaproot))
 
 dirs <- list.dirs(snaproot, recursive = FALSE)
@@ -48,13 +48,13 @@ if (length(paired_seeds) < 3) {
 }
 
 scores <- meta %>%
-  mutate(comp = map(path, g1_composite)) %>%
+  mutate(comp = map(path, composite_scores)) %>%
   filter(!map_lgl(comp, is.null)) %>%
   select(arm, seed, comp) %>%
   unnest(comp)
 
 # ---------------------------------------------------------------------------
-g1_rule("1. RANKING BY ARM AND SEED")
+rule("1. RANKING BY ARM AND SEED")
 # ---------------------------------------------------------------------------
 rankings <- scores %>%
   arrange(arm, seed, rank) %>%
@@ -78,7 +78,7 @@ cat("\nlegacy vs fixed ranking identical, by seed:\n")
 print(as.data.frame(paired_rank_same %>% select(seed, same)), row.names = FALSE)
 
 # ---------------------------------------------------------------------------
-g1_rule("2. CHINOOK SPAWNER METRIC — NOISE vs EFFECT")
+rule("2. CHINOOK SPAWNER METRIC — NOISE vs EFFECT")
 # ---------------------------------------------------------------------------
 noise_effect <- function(df, value_col, digits = 4) {
   v <- rlang::sym(value_col)
@@ -117,14 +117,14 @@ cat("mean_effect = mean paired (fixed - legacy) difference\n")
 cat("effect_vs_noise = |mean_effect| / larger within-arm SD; >2 suggests signal\n")
 
 # ---------------------------------------------------------------------------
-g1_rule("3. MCDA COMPOSITE SCORE — NOISE vs EFFECT")
+rule("3. MCDA COMPOSITE SCORE — NOISE vs EFFECT")
 # ---------------------------------------------------------------------------
 comp <- noise_effect(scores %>% select(scenario, arm, seed, composite),
                      "composite")
 print(as.data.frame(comp), digits = 5, row.names = FALSE)
 
 # ---------------------------------------------------------------------------
-g1_rule("4. PAIRWISE ORDER — WHICH RANK CHANGES ARE REAL")
+rule("4. PAIRWISE ORDER — WHICH RANK CHANGES ARE REAL")
 # ---------------------------------------------------------------------------
 # A whole-ranking comparison is too coarse: one noisy pair makes the entire
 # ranking look unstable and hides the pairs that flip reproducibly. Order each
@@ -155,7 +155,7 @@ pairwise <- map_dfr(seq_len(ncol(combos)), function(i) {
 
 real <- pairwise %>% filter(real_flip)
 cat("Pairs that flip CONSISTENTLY between arms (stable within each arm) —\n")
-cat("these are attributable to G1, not to noise:\n")
+cat("these are attributable to spawn timing, not to noise:\n")
 if (nrow(real)) {
   print(as.data.frame(real %>% select(pair, legacy_order, fixed_order)), row.names = FALSE)
 } else {
@@ -172,9 +172,9 @@ if (nrow(unstable)) {
 }
 
 # ---------------------------------------------------------------------------
-g1_rule("5. VERDICT")
+rule("5. VERDICT")
 # ---------------------------------------------------------------------------
-cat(sprintf("pairs flipping consistently (real G1 effect): %d of %d\n",
+cat(sprintf("pairs flipping consistently (real spawn-timing effect): %d of %d\n",
             nrow(real), nrow(pairwise)))
 cat(sprintf("pairs not determinable from one run (noise):  %d of %d\n",
             nrow(unstable), nrow(pairwise)))
@@ -187,7 +187,7 @@ cat(sprintf("max |mean effect| on the composite score: %.5f\n",
 cat(sprintf("top choice by arm: legacy = %s | fixed = %s\n",
             paste(unique(rankings$top[rankings$arm == "legacy"]), collapse = "/"),
             paste(unique(rankings$top[rankings$arm == "fixed"]),  collapse = "/")))
-cat(sprintf("\nranking changes attributable to G1 (not noise): %s\n",
+cat(sprintf("\nranking changes attributable to spawn timing (not noise): %s\n",
             if (all(paired_rank_same$same)) "NONE — ranking identical at every seed"
             else if (within_legacy > 1 || within_fixed > 1)
               "AMBIGUOUS — ranking is not even stable across seeds within an arm"

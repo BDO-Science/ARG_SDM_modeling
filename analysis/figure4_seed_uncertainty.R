@@ -8,7 +8,7 @@
 # It shows nothing about how much the bar itself would move on a different
 # random draw of redds. That second quantity — run-to-run uncertainty in the
 # estimate — is what determines whether two alternatives are actually
-# distinguishable, and pooling (G1) was suppressing it by a factor of ~14.
+# distinguishable, and pooling was suppressing it by a factor of ~14.
 #
 # This script draws both, from the multi-seed snapshots:
 #
@@ -16,8 +16,8 @@
 #   thick orange bar    = run-to-run range   (min-max of the per-seed medians)
 #
 # Usage (from the repo root):
-#   G1_SNAPROOT=<dir> Rscript analysis/figure4_seed_uncertainty.R
-#   G1_ARM=fixed|legacy   (default fixed)
+#   SPAWN_TIMING_SNAPROOT=<dir> Rscript analysis/figure4_seed_uncertainty.R
+#   SPAWN_TIMING_MODE=fixed|legacy   (default fixed)
 # ============================================================================
 
 suppressPackageStartupMessages({
@@ -25,8 +25,8 @@ suppressPackageStartupMessages({
 })
 source(here("analysis", "figure_theme.R"))
 
-snaproot <- Sys.getenv("G1_SNAPROOT")
-arm      <- Sys.getenv("G1_ARM", "fixed")
+snaproot <- Sys.getenv("SPAWN_TIMING_SNAPROOT")
+arm      <- Sys.getenv("SPAWN_TIMING_MODE", "fixed")
 stopifnot(dir.exists(snaproot))
 
 snaps <- list.dirs(snaproot, recursive = FALSE)

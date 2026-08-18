@@ -3,7 +3,7 @@
 # ============================================================================
 # Derives every SAR statistic quoted in SI Section S2.6, so the numbers in the
 # text can be checked against the data instead of taken on trust. This is the
-# citation the SI needs (OUTSTANDING_ITEMS.md D3): the source is the hand-built
+# citation the SI needs (docs/spawn-timing.md D3): the source is the hand-built
 # `app_data/SAR LAR Releases.xlsx`, filtered to American River release groups,
 # where SAR = expanded returns / number released.
 #
@@ -26,7 +26,7 @@ suppressPackageStartupMessages({
 xlsx <- here("SalmonCountR", "app_data", "SAR LAR Releases.xlsx")
 
 # `sar_percent` in this workbook is a copy of `sar`, NOT a percentage
-# (OUTSTANDING_ITEMS.md G3), so it is dropped here rather than used.
+# (docs/spawn-timing.md G3), so it is dropped here rather than used.
 am <- read_excel(xlsx) %>%
   clean_names() %>%
   select(-any_of("sar_percent")) %>%

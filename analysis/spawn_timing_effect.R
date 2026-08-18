@@ -1,7 +1,7 @@
 # ============================================================================
-# G1 effect on the reported objective values
+# Spawn-timing effect on the reported objective values
 # ============================================================================
-# Quantifies what the G1 correction (alternative-specific spawn timing) changes
+# Quantifies what alternative-specific spawn timing changes
 # in the model's output, for every quantity the project reports: the adult
 # population index, the MCDA composite, volume-normalised benefit, and the
 # volume-vs-benefit rank correlation.
@@ -16,24 +16,24 @@
 # Contrasts are paired WITHIN seed. Averaging each arm separately and
 # subtracting would fold the common seed shift into the contrast.
 #
-# Inputs  : snapshots from running precompute.R with ARG_G1_ALT_SPAWN in {0,1}
-#           and ARG_SEED in {123,456,789,1011,1213}. Point G1_SNAPROOT at the
+# Inputs  : snapshots from running precompute.R with ARG_SPAWN_TIMING in {alternative,pooled}
+#           and ARG_SEED in {123,456,789,1011,1213}. Point SPAWN_TIMING_SNAPROOT at the
 #           directory holding the <arm>_seed<n>/ folders.
-# Outputs : output/g1_revision_numbers.csv    per-alternative, both arms
-#           output/g1_revision_contrasts.csv  paired contrasts
-#           output/g1_revision_efficiency.csv volume-normalised benefit + rho
+# Outputs : output/spawn_timing_numbers.csv    per-alternative, both arms
+#           output/spawn_timing_contrasts.csv  paired contrasts
+#           output/spawn_timing_efficiency.csv volume-normalised benefit + rho
 #
 # Usage:
-#   G1_SNAPROOT=<dir> Rscript analysis/g1_revision_numbers.R
+#   SPAWN_TIMING_SNAPROOT=<dir> Rscript analysis/spawn_timing_effect.R
 # ============================================================================
 
 suppressPackageStartupMessages({
   library(dplyr); library(tidyr); library(purrr); library(tibble)
   library(readr); library(here); library(stringr)
 })
-source(here("analysis", "g1_helpers.R"))
+source(here("analysis", "composite_helpers.R"))
 
-snaproot <- Sys.getenv("G1_SNAPROOT")
+snaproot <- Sys.getenv("SPAWN_TIMING_SNAPROOT")
 stopifnot(nzchar(snaproot), dir.exists(snaproot))
 
 SCEN  <- c("NB","PB1","PB2","PB2b","PB2c","PB3","PB4","PB5","PB6")
@@ -47,26 +47,26 @@ ARMS  <- c("legacy", "fixed")
 # roughly with volume but not exactly - PB3 and PB5 bypass identical volumes and
 # differ in cost by about 1% - and the rank correlation below is meant to relate
 # volume to fish benefit independently of the cost model.
-G1_VOLUME_MM3 <- c(
+VOLUME_MM3 <- c(
   "NB"   =  0.0, "PB1" = 12.2, "PB2" = 42.2,
   "PB2b" = 49.5, "PB2c" = 45.9, "PB3" = 21.4,
   "PB4"  = 25.7, "PB5" = 21.4,  "PB6" = 37.2
 )
 
-# Override with G1_VOLUMES="NB=0,PB1=12.2,..." if the operational definitions
+# Override with BYPASS_VOLUMES="NB=0,PB1=12.2,..." if the operational definitions
 # of the alternatives change.
 parse_volumes <- function(s) {
-  if (!nzchar(s)) return(G1_VOLUME_MM3[SCEN])
+  if (!nzchar(s)) return(VOLUME_MM3[SCEN])
   kv <- str_split(str_split(s, ",")[[1]], "=")
   v  <- setNames(as.numeric(map_chr(kv, 2)), str_trim(map_chr(kv, 1)))
   if (!all(SCEN %in% names(v))) {
-    warning("G1_VOLUMES is missing: ", paste(setdiff(SCEN, names(v)), collapse = ", "),
+    warning("BYPASS_VOLUMES is missing: ", paste(setdiff(SCEN, names(v)), collapse = ", "),
             " - falling back to the built-in values")
-    return(G1_VOLUME_MM3[SCEN])
+    return(VOLUME_MM3[SCEN])
   }
   v[SCEN]
 }
-VOL  <- parse_volumes(Sys.getenv("G1_VOLUMES", ""))
+VOL  <- parse_volumes(Sys.getenv("BYPASS_VOLUMES", ""))
 volt <- tibble(scenario = SCEN, volume_Mm3 = as.numeric(VOL))
 
 # ---------------------------------------------------------------------------
@@ -75,8 +75,8 @@ volt <- tibble(scenario = SCEN, volume_Mm3 = as.numeric(VOL))
 load_one <- function(arm, seed) {
   d <- file.path(snaproot, sprintf("%s_seed%d", arm, seed))
   if (!dir.exists(d)) { warning("missing snapshot: ", d); return(NULL) }
-  sw <- g1_read(d, "swing_scenario_results")
-  cm <- g1_composite(d)
+  sw <- read_snap(d, "swing_scenario_results")
+  cm <- composite_scores(d)
   if (is.null(sw) || is.null(cm)) return(NULL)
   sw %>%
     rename(adult_index = spawner_metric) %>%
@@ -102,7 +102,7 @@ per_alt <- raw %>%
 # ---------------------------------------------------------------------------
 # Paired contrasts
 # ---------------------------------------------------------------------------
-# `metric` matters: G1 moves the adult index and the composite differently,
+# `metric` matters: spawn timing moves the adult index and the composite differently,
 # because the composite's min-max normalisation cancels the shift common to all
 # alternatives. The one reproducible ranking change (PB2b vs PB5) is a COMPOSITE
 # change - both arms keep PB2b well ahead on raw abundance - so contrasting that
@@ -158,27 +158,26 @@ spear <- raw %>%
 # ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
-g1_rule("Per-alternative adult population index and composite")
+rule("Per-alternative adult population index and composite")
 print(as.data.frame(per_alt), digits = 5, row.names = FALSE)
 
-g1_rule("Paired contrasts (within-seed differences)")
+rule("Paired contrasts (within-seed differences)")
 print(as.data.frame(contrasts), digits = 4, row.names = FALSE)
 
-g1_rule("Volume-normalised benefit: additional adults per million m3 vs no-bypass")
+rule("Volume-normalised benefit: additional adults per million m3 vs no-bypass")
 print(as.data.frame(
   eff %>% select(arm, scenario, volume_Mm3, adults_per_Mm3) %>%
     pivot_wider(names_from = arm, values_from = adults_per_Mm3)),
   digits = 4, row.names = FALSE)
 
-g1_rule("Rank correlation: bypass volume vs adult index")
+rule("Rank correlation: bypass volume vs adult index")
 print(as.data.frame(spear), digits = 4, row.names = FALSE)
 
 dir.create(here("output"), showWarnings = FALSE)
-write_csv(per_alt,   here("output", "g1_revision_numbers.csv"))
-write_csv(contrasts, here("output", "g1_revision_contrasts.csv"))
+write_csv(per_alt,   here("output", "spawn_timing_numbers.csv"))
+write_csv(contrasts, here("output", "spawn_timing_contrasts.csv"))
 write_csv(eff %>% left_join(spear, by = "arm"),
-          here("output", "g1_revision_efficiency.csv"))
+          here("output", "spawn_timing_efficiency.csv"))
 
-cat("\nWrote output/g1_revision_{numbers,contrasts,efficiency}.csv\n")
-cat("Interpretation and the reporting write-up live in G1_FINDINGS.md and",
-    "G1_DISCLOSURE.md, not here.\n")
+cat("\nWrote output/spawn_timing_{numbers,contrasts,efficiency}.csv\n")
+cat("What these mean, and the reporting convention, are in docs/spawn-timing.md.\n")

@@ -319,7 +319,7 @@ write.csv(overlap_summary, here("output", "frontloading_incubation_overlap.csv")
 #
 # ⚠️ THIS IS NOW AN APPROXIMATION, not an identity. It holds exactly only when
 # both alternatives share one redd distribution, which was true under the pooled
-# spawn-timing behaviour (G1) but is NOT true since the 2026-08 correction. With
+# spawn-timing behaviour but is NOT true since the 2026-08 correction. With
 # alternative-specific spawn timing the exact decomposition carries a second
 # term:
 #
