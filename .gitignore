@@ -22,3 +22,14 @@
 
 # Stray device output from headless Rscript runs
 Rplots.pdf
+
+# Manuscript-revision working notes.
+# The technical record of model changes belongs in the repo (see
+# docs/spawn-timing.md); the manuscript-side breadcrumb trail - reviewer
+# responses, document editing checklists, revision audit logs - does not.
+# Those live alongside the manuscript in the project folder, not here.
+MANUSCRIPT_*.md
+REVISION_FINDINGS.md
+OUTSTANDING_ITEMS.md
+*_DISCLOSURE.md
+revision_notes/

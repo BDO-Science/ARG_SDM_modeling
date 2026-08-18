@@ -88,32 +88,31 @@ lines atop every CSV export (both `read.csv(comment.char = "#")` and
 
 ---
 
-## Known code issues — decide before this goes public
+## Known code issues
 
-The manuscript points at this repository, so these are publication decisions
-rather than housekeeping. Full text in `OUTSTANDING_ITEMS.md` §G.
-
-| # | Issue | State |
-|----|----|----|
-| G1 | **Alternative-specific spawn timing was computed and then discarded.** Redds were pooled across all 36 alternatives before survival was computed, so the CLM's temperature-driven shift in spawn timing never reached any result. | **FIXED 2026-08-18.** Alternative-specific timing is now the default; `ARG_G1_ALT_SPAWN=0` reproduces the superseded numbers. Effect measured across five seeds in both arms — see `G1_FINDINGS.md`. Left one follow-on: the cohort decomposition is no longer an identity (G1a in `OUTSTANDING_ITEMS.md`) |
-| G2 | **Forecast temperatures misalign in leap years.** The series is built by day-of-year, so leap years shift a day against non-leap years — up to 1.08 °C on a given calendar date. | Not fixed. Immaterial to the conclusions, but a real defect anyone reading the code will find |
-| G3 | **`sar_percent` in `app_data/SAR LAR Releases.xlsx` is identical to `sar`** — never multiplied by 100, so reading it as a percentage gives values 100× too small. | Not fixed |
-| G4 | **`app_data/*.rds` provenance is unstamped.** Everything is built and wired; it needs one applied refresh to populate. | Run `analysis/refresh_data_year.R --apply` |
+| Issue | State |
+|----|----|
+| **Spawn timing was computed per alternative and then discarded.** Redds were pooled across all 36 alternatives before survival was computed, so the temperature-driven shift in spawn timing never reached any result. | **Fixed 2026-08-18.** Alternative-specific timing is now the default; `ARG_SPAWN_TIMING=pooled` reproduces the superseded behaviour. What it moves, and the two-channel cohort decomposition it made possible: `docs/spawn-timing.md` |
+| **Forecast temperatures misalign in leap years.** The series is built by day-of-year, so leap years shift a day against non-leap years — up to 1.08 °C on a given calendar date. | Not fixed. Immaterial to the conclusions, but a real defect anyone reading the code will find |
+| **`sar_percent` in `app_data/SAR LAR Releases.xlsx` is identical to `sar`** — never multiplied by 100, so reading it as a percentage gives values 100× too small. | No live consumer is affected: `analysis/sar_from_cwt.R` drops the column and recomputes the percentage, and `analysis/data_sources.R` records the defect. Fix the workbook when it is next regenerated — do not edit the snapshot in place |
+| **`app_data/*.rds` provenance was unstamped.** | Fixed 2026-08-14. `analysis/refresh_data_year.R --apply` writes `app_data/data_vintage.rds`; the app surfaces it in every tab footer and atop every CSV export |
 
 ---
 
 ## Picking it up
 
-**G1 and G4 are both closed** (2026-08-18 and 2026-08-14). The code side of the
-branch is finished and verified. What is left is Word-document work: every
-manuscript and SI change the G1 correction forces is itemised in
-`OUTSTANDING_ITEMS.md` §H, with draft replacement text in `G1_DISCLOSURE.md`.
+The code side of this branch is finished and verified: the spawn-timing
+correction and the provenance stamp are both in, `precompute.R` reproduces the
+committed `app_data` byte for byte, and every exhibit script runs clean.
 
-**Read §H0 first.** There is one undecided question — whether the paper reports a
-single canonical run or the mean of five seeds. The committed `app_data` and
-every figure are a single run at seed 123; the corrected values quoted in most of
-the write-up are five-seed means. They differ by more than several Discussion
-sentences rest on, so the two must not be mixed.
+**One convention worth knowing before quoting any number.** The committed
+`app_data` and every figure come from a single run at seed 123. Per-alternative
+levels carry ±173–217 fish of run-to-run variation, so quote a level from the
+committed run and take *differences between alternatives* from the paired
+multi-seed contrasts instead — subtracting two levels out of a summary table
+discards a cancellation that makes those contrasts roughly eight times tighter.
+`docs/spawn-timing.md` explains this and `analysis/spawn_timing_effect.R`
+computes it.
 
 Before running anything: `precompute.R` must be run start to finish in a clean
 session. The simulated redd set comes from `set.seed(123)` at the top, so
@@ -124,7 +123,7 @@ The script saves `sim_redds` and `sim_future` so the redd set behind a given
 result can be recovered without a full re-run. Reproducing anything in
 `figures/` or `output/` does not need `precompute.R` at all.
 
-`ARG_G1_ALT_SPAWN=0` reproduces the superseded pooled-spawn-timing behaviour that
+`ARG_SPAWN_TIMING=pooled` reproduces the superseded behaviour that
 the submitted manuscript used; `main` at that state is tagged
 `as-submitted-2026-07-28`.
 

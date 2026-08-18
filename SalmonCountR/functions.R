@@ -1362,7 +1362,7 @@ pairs_for_env_year <- function(red_this, sim_yr, env_nm) {
 #'   simulated under its own temperatures, so the CLM's temperature-driven shift
 #'   in spawn timing affects the result. If FALSE (superseded, retained for
 #'   reproduction), every alternative is evaluated against a single redd set
-#'   pooled across all alternatives for that year. See G1_FINDINGS.md.
+#'   pooled across all alternatives for that year. See docs/spawn-timing.md.
 #'
 #' @return A data.table summarizing the mean cumulative survival for the year
 #'   across all alternatives and variants.

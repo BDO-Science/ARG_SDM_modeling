@@ -773,33 +773,36 @@ tdm_lin_c        <- cmpfun(tdm_lin_martin)
 # Convert sim_redds to data.table if not already
 setDT(sim_redds)
 
-# Split the redd set for the parallel TDM loop (G1).
+# Split the redd set for the parallel TDM loop.
 #
-# ARG_G1_ALT_SPAWN controls which behaviour is used, so the superseded arm can
-# still be reproduced on the same machine from the same source tree:
+# ARG_SPAWN_TIMING selects how simulated redds are matched to alternatives:
 #
-#   "1" (default) — alternative-specific. Each alternative is evaluated against
-#                   the redds simulated under ITS OWN temperatures, so the CLM's
+#   "alternative" (default) — each alternative is evaluated against the redds
+#                   simulated under ITS OWN temperatures, so the CLM's
 #                   temperature-driven shift in spawn timing reaches the result.
-#   "0"           — superseded behaviour, retained for reproduction only. All 36
-#                   alternatives' redds are pooled per year and every alternative
-#                   is evaluated against the pooled set, averaging the timing
-#                   signal away before use.
+#   "pooled"      — superseded behaviour, retained so earlier results can be
+#                   regenerated. All 36 alternatives' redds are pooled per year
+#                   and every alternative is evaluated against the pooled set,
+#                   averaging the timing signal away before use.
 #
-# DEFAULT IS THE CORRECTED BEHAVIOUR as of 2026-08-18. Pooling severed the
-# temperature -> spawn timing -> thermal mortality channel that the CLM exists
-# to model, so alternatives could differ only through incubation exposure. Set
-# ARG_G1_ALT_SPAWN=0 to regenerate the superseded numbers for comparison.
-# Measured effect: G1_FINDINGS.md.
+# Pooling severed the temperature -> spawn timing -> thermal mortality channel
+# that the spawn-timing regression exists to represent, leaving alternatives to
+# differ only through incubation exposure. Changed to alternative-specific on
+# 2026-08-18; see docs/spawn-timing.md for what it moves and by how much.
 #
 # Only rows with a management alternative are eligible for the alternative-
 # specific split. The observed rows (sim_actual, mgt_alt = NA) carry site = NA
 # and are dropped by the site filter in section 27 under either setting, so TDM
 # is computed over the forecast years only. Keeping the filter as the single
-# place that drops them means the two arms differ in exactly one respect.
-g1_alt_specific <- !identical(Sys.getenv("ARG_G1_ALT_SPAWN", "1"), "0")
+# place that drops them means the two modes differ in exactly one respect.
+.spawn_timing_mode <- tolower(Sys.getenv("ARG_SPAWN_TIMING", "alternative"))
+if (!.spawn_timing_mode %in% c("alternative", "pooled")) {
+  stop("ARG_SPAWN_TIMING must be \"alternative\" (default) or \"pooled\"; got \"",
+       .spawn_timing_mode, "\"")
+}
+alt_spawn_timing <- identical(.spawn_timing_mode, "alternative")
 
-if (g1_alt_specific) {
+if (alt_spawn_timing) {
   # Nested: sim_redds_split[[alt]][[year]]
   sim_redds_split <- lapply(
     split(sim_redds[!is.na(mgt_alt)], by = "mgt_alt", drop = TRUE, keep.by = TRUE),
@@ -810,8 +813,8 @@ if (g1_alt_specific) {
   # Flat: sim_redds_split[[year]], pooled across alternatives
   sim_redds_split <- split(sim_redds[, .(spawn_dt, site)], sim_redds$sim_year)
 }
-cat(sprintf("G1 spawn timing: %s\n",
-            if (g1_alt_specific) "ALTERNATIVE-SPECIFIC (current)"
+cat(sprintf("Spawn timing: %s\n",
+            if (alt_spawn_timing) "ALTERNATIVE-SPECIFIC (current)"
             else "POOLED (superseded — reproduction only)"))
 
 # Step 2: Cache management alternative assets for fast access
@@ -852,7 +855,7 @@ sites_with_temps <- Reduce(
 )
 
 # Filter the split redd data to only include redds from these common, valid sites.
-# This is also what drops the observed rows (site = NA) under both G1 settings.
+# This is also what drops the observed rows (site = NA) under either spawn-timing mode.
 .filter_valid_sites <- function(dt) {
   if (is.null(dt) || !nrow(dt)) return(dt)
   # Ensure required columns exist before filtering
@@ -861,7 +864,7 @@ sites_with_temps <- Reduce(
   dt[dt$site %in% sites_with_temps, , drop = FALSE]
 }
 
-sim_redds_split <- if (g1_alt_specific) {
+sim_redds_split <- if (alt_spawn_timing) {
   # Two levels deep: [[alt]][[year]]
   lapply(sim_redds_split, function(by_year) lapply(by_year, .filter_valid_sites))
 } else {
@@ -929,7 +932,7 @@ plan(multisession, workers = max(1L, parallel::detectCores() - 1L))
 # Execute TDM calculations in parallel across all simulation years
 results_obs_fast <- furrr::future_map_dfr(
   sim_years,
-  ~eval_year(.x, sim_redds_split, env_cache, tdm_defs, alt_specific = g1_alt_specific),
+  ~eval_year(.x, sim_redds_split, env_cache, tdm_defs, alt_specific = alt_spawn_timing),
   .options = furrr::furrr_options(seed = TRUE, scheduling = 20)
 )
 # Result contains: sim_year, mgt_alt, variant, method, mean_cum_surv

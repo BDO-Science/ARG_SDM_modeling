@@ -1,13 +1,13 @@
 # ============================================================================
-# G1 comparison — alternative-specific vs pooled spawn timing
+# Compare alternative-specific vs pooled spawn timing
 # ============================================================================
 # Diffs two snapshots of SalmonCountR/app_data and reports what changes in the
 # quantities the decision rests on: the Chinook spawner metric, the MCDA
 # composite scores, and the resulting ranking of alternatives.
 #
 # Usage:
-#   G1_A=<dir> G1_A_LABEL=<name> G1_B=<dir> G1_B_LABEL=<name> \
-#     Rscript analysis/compare_g1.R
+#   MODE_A=<dir> MODE_A_LABEL=<name> MODE_B=<dir> MODE_B_LABEL=<name> \
+#     Rscript analysis/compare_spawn_timing.R
 #
 # Both directories must contain the .rds files written by precompute.R.
 # ============================================================================
@@ -18,21 +18,21 @@ suppressPackageStartupMessages({
   library(purrr)
   library(here)
 })
-source(here("analysis", "g1_helpers.R"))
+source(here("analysis", "composite_helpers.R"))
 
-dir_a   <- Sys.getenv("G1_A")
-dir_b   <- Sys.getenv("G1_B")
-label_a <- Sys.getenv("G1_A_LABEL", "A")
-label_b <- Sys.getenv("G1_B_LABEL", "B")
+dir_a   <- Sys.getenv("MODE_A")
+dir_b   <- Sys.getenv("MODE_B")
+label_a <- Sys.getenv("MODE_A_LABEL", "A")
+label_b <- Sys.getenv("MODE_B_LABEL", "B")
 stopifnot(dir.exists(dir_a), dir.exists(dir_b))
 
-rd   <- g1_read
-rule <- g1_rule
+rd   <- read_snap
+rule <- rule
 
 pct <- function(new, old) ifelse(old == 0, NA_real_, 100 * (new - old) / old)
 
-ca <- g1_composite(dir_a)
-cb <- g1_composite(dir_b)
+ca <- composite_scores(dir_a)
+cb <- composite_scores(dir_b)
 
 rule(sprintf("1. CHINOOK SPAWNER METRIC  (%s -> %s)", label_a, label_b))
 chin <- ca %>% select(scenario, a = chinook_raw) %>%
