@@ -1,24 +1,27 @@
 # ============================================================================
-# Corrected Discussion numbers for the 2026-08 revision
+# G1 effect on the reported objective values
 # ============================================================================
-# The decision was taken to apply the G1 correction (alternative-specific spawn
-# timing) during the current revision rather than the next cycle. This script
-# produces the replacement values for every Discussion claim that moves, in the
-# form the manuscript should now report them: a mean across seeds with the
-# run-to-run spread stated, not a single-run point estimate.
+# Quantifies what the G1 correction (alternative-specific spawn timing) changes
+# in the model's output, for every quantity the project reports: the adult
+# population index, the MCDA composite, volume-normalised benefit, and the
+# volume-vs-benefit rank correlation.
 #
-# WHY A MEAN ACROSS SEEDS. The correction reduces the redd sample behind each
+# WHY MEANS ACROSS SEEDS. The correction reduces the redd sample behind each
 # survival estimate from ~36 x N_redd to N_redd, so per-alternative estimates
-# carry +/-173-217 fish of Monte Carlo noise (pooling suppressed this to
-# +/-15-21 and made single runs look far more precise than they were). Any claim
-# resting on a difference smaller than roughly 400 fish is not supportable from
-# one run. See G1_FINDINGS.md.
+# carry +/-173-217 fish of Monte Carlo noise; pooling suppressed this to
+# +/-15-21 and made single runs look far more precise than they were. Any
+# difference smaller than roughly 400 fish is not resolvable from one run, so
+# every value here is a mean over seeds with the run-to-run range alongside it.
 #
-# Inputs  : the multi-seed snapshots produced by running precompute.R with
-#           ARG_G1_ALT_SPAWN in {0,1} and ARG_SEED in {123,456,789,1011,1213}.
-#           Set G1_SNAPROOT to the directory holding <arm>_seed<n>/ folders.
-# Outputs : output/g1_revision_numbers.csv   (per-alternative, both arms)
-#           output/g1_revision_claims.md     (claim-by-claim replacement text)
+# Contrasts are paired WITHIN seed. Averaging each arm separately and
+# subtracting would fold the common seed shift into the contrast.
+#
+# Inputs  : snapshots from running precompute.R with ARG_G1_ALT_SPAWN in {0,1}
+#           and ARG_SEED in {123,456,789,1011,1213}. Point G1_SNAPROOT at the
+#           directory holding the <arm>_seed<n>/ folders.
+# Outputs : output/g1_revision_numbers.csv    per-alternative, both arms
+#           output/g1_revision_contrasts.csv  paired contrasts
+#           output/g1_revision_efficiency.csv volume-normalised benefit + rho
 #
 # Usage:
 #   G1_SNAPROOT=<dir> Rscript analysis/g1_revision_numbers.R
@@ -35,39 +38,36 @@ stopifnot(nzchar(snaproot), dir.exists(snaproot))
 
 SCEN  <- c("NB","PB1","PB2","PB2b","PB2c","PB3","PB4","PB5","PB6")
 SEEDS <- c(123, 456, 789, 1011, 1213)
-ARMS  <- c(legacy = "legacy", fixed = "fixed")
+ARMS  <- c("legacy", "fixed")
 
 # ---------------------------------------------------------------------------
-# Bypass volume (Mm3) per alternative.
+# Bypass volume (Mm3) per alternative - a design input, not a model output.
 # ---------------------------------------------------------------------------
-# Source: manuscript Table 2 ("Volume bypassed (in million m3)"), transcribed
-# from FolsomBypass_manuscript_2026-07-28_revised. These were not recorded
-# anywhere in the repository - the live .docx files are gitignored, so they are
-# hard-coded here to make the efficiency and Spearman claims reproducible
-# without the manuscript in hand. Override with G1_VOLUMES if Table 2 changes.
-#
 # Do NOT derive these from the hydropower revenue-loss scores. Cost scales
-# roughly with volume but not exactly (PB3 and PB5 bypass identical volumes and
-# differ in cost by ~1%), and the Spearman below is meant to relate volume to
-# fish benefit independently of the cost model.
+# roughly with volume but not exactly - PB3 and PB5 bypass identical volumes and
+# differ in cost by about 1% - and the rank correlation below is meant to relate
+# volume to fish benefit independently of the cost model.
 G1_VOLUME_MM3 <- c(
   "NB"   =  0.0, "PB1" = 12.2, "PB2" = 42.2,
   "PB2b" = 49.5, "PB2c" = 45.9, "PB3" = 21.4,
   "PB4"  = 25.7, "PB5" = 21.4,  "PB6" = 37.2
 )
 
+# Override with G1_VOLUMES="NB=0,PB1=12.2,..." if the operational definitions
+# of the alternatives change.
 parse_volumes <- function(s) {
   if (!nzchar(s)) return(G1_VOLUME_MM3[SCEN])
   kv <- str_split(str_split(s, ",")[[1]], "=")
   v  <- setNames(as.numeric(map_chr(kv, 2)), str_trim(map_chr(kv, 1)))
   if (!all(SCEN %in% names(v))) {
     warning("G1_VOLUMES is missing: ", paste(setdiff(SCEN, names(v)), collapse = ", "),
-            " - falling back to the Table 2 values")
+            " - falling back to the built-in values")
     return(G1_VOLUME_MM3[SCEN])
   }
   v[SCEN]
 }
-VOL <- parse_volumes(Sys.getenv("G1_VOLUMES", ""))
+VOL  <- parse_volumes(Sys.getenv("G1_VOLUMES", ""))
+volt <- tibble(scenario = SCEN, volume_Mm3 = as.numeric(VOL))
 
 # ---------------------------------------------------------------------------
 # Load every arm x seed
@@ -84,39 +84,29 @@ load_one <- function(arm, seed) {
     mutate(arm = arm, seed = seed)
 }
 
-raw <- expand_grid(arm = unname(ARMS), seed = SEEDS) %>%
+raw <- expand_grid(arm = ARMS, seed = SEEDS) %>%
   pmap_dfr(function(arm, seed) load_one(arm, seed))
 stopifnot(nrow(raw) > 0)
+cat(sprintf("loaded %d arm x seed combinations\n", nrow(distinct(raw, arm, seed))))
 
-cat(sprintf("loaded %d arm x seed combinations\n",
-            nrow(distinct(raw, arm, seed))))
-
-# Per-alternative summary: mean across seeds, plus the run-to-run range that
-# has to be quoted alongside it.
 per_alt <- raw %>%
   group_by(arm, scenario) %>%
-  summarise(n_seed      = n(),
-            adult_mean  = mean(adult_index),
-            adult_sd    = sd(adult_index),
-            adult_lo    = min(adult_index),
-            adult_hi    = max(adult_index),
-            comp_mean   = mean(composite),
-            comp_sd     = sd(composite),
+  summarise(n_seed     = n(),
+            adult_mean = mean(adult_index), adult_sd = sd(adult_index),
+            adult_lo   = min(adult_index),  adult_hi = max(adult_index),
+            comp_mean  = mean(composite),   comp_sd  = sd(composite),
             .groups = "drop") %>%
   mutate(scenario = factor(scenario, levels = SCEN)) %>%
   arrange(arm, scenario)
 
 # ---------------------------------------------------------------------------
-# Paired contrasts. Pair WITHIN seed, then average the differences - averaging
-# the two arms separately and subtracting would fold the common seed shift into
-# the contrast.
+# Paired contrasts
 # ---------------------------------------------------------------------------
-# `metric` selects which quantity is contrasted. This matters: G1 moves the
-# adult index and the MCDA composite in different ways, because the composite's
-# min-max normalisation cancels the shift that is common to all alternatives.
-# The one reproducible ranking change (PB2b vs PB5) is a COMPOSITE flip - both
-# arms keep PB2b well ahead on raw abundance - so contrasting it on abundance
-# would miss it entirely.
+# `metric` matters: G1 moves the adult index and the composite differently,
+# because the composite's min-max normalisation cancels the shift common to all
+# alternatives. The one reproducible ranking change (PB2b vs PB5) is a COMPOSITE
+# change - both arms keep PB2b well ahead on raw abundance - so contrasting that
+# pair on abundance alone would miss it.
 contrast <- function(a, b, metric = "adult_index") {
   raw %>%
     filter(scenario %in% c(a, b)) %>%
@@ -124,194 +114,71 @@ contrast <- function(a, b, metric = "adult_index") {
     pivot_wider(names_from = scenario, values_from = all_of(metric)) %>%
     mutate(diff = .data[[a]] - .data[[b]]) %>%
     group_by(arm) %>%
-    summarise(pair      = paste(a, "-", b),
-              metric    = metric,
-              mean_diff = mean(diff),
-              sd_diff   = sd(diff),
-              lo        = min(diff),
-              hi        = max(diff),
+    summarise(pair = paste(a, "-", b), metric = metric,
+              mean_diff = mean(diff), sd_diff = sd(diff),
+              lo = min(diff), hi = max(diff),
               same_sign = n_distinct(sign(diff)) == 1,
               .groups = "drop")
 }
 
-contrasts <- bind_rows(contrast("PB3", "PB5"),
-                       contrast("PB6", "PB4"),
-                       contrast("PB2b", "PB5"),
-                       contrast("PB2b", "PB5", metric = "composite"))
+contrasts <- bind_rows(
+  contrast("PB3",  "PB5"),
+  contrast("PB6",  "PB4"),
+  contrast("PB2b", "PB5"),
+  contrast("PB2b", "PB5", metric = "composite")
+)
 
 # ---------------------------------------------------------------------------
-# Efficiency and Spearman - only if volumes were supplied
+# Volume-normalised benefit, and the volume-vs-benefit rank correlation
 # ---------------------------------------------------------------------------
-eff <- NULL; spear <- NULL
-if (!is.null(VOL)) {
-  volt <- tibble(scenario = SCEN, volume_Mm3 = as.numeric(VOL))
-  nb   <- per_alt %>% filter(scenario == "NB") %>% select(arm, nb_adult = adult_mean)
+# Benefit is measured against no-bypass, the only alternative with zero volume.
+nb <- per_alt %>% filter(scenario == "NB") %>% select(arm, nb_adult = adult_mean)
 
-  # "additional adults per million m3" is measured against no-bypass, which is
-  # the only alternative with zero bypass volume.
-  eff <- per_alt %>%
-    left_join(volt, by = "scenario") %>%
-    left_join(nb, by = "arm") %>%
-    filter(volume_Mm3 > 0) %>%
-    mutate(gain            = adult_mean - nb_adult,
-           adults_per_Mm3  = gain / volume_Mm3) %>%
-    select(arm, scenario, volume_Mm3, gain, adults_per_Mm3) %>%
-    arrange(arm, scenario)
+eff <- per_alt %>%
+  left_join(volt, by = "scenario") %>%
+  left_join(nb, by = "arm") %>%
+  filter(volume_Mm3 > 0) %>%
+  mutate(gain = adult_mean - nb_adult, adults_per_Mm3 = gain / volume_Mm3) %>%
+  select(arm, scenario, volume_Mm3, gain, adults_per_Mm3) %>%
+  arrange(arm, scenario)
 
-  # Spearman is computed per seed and then averaged, so the reported value
-  # carries a spread like everything else.
-  spear <- raw %>%
-    left_join(volt, by = "scenario") %>%
-    group_by(arm, seed) %>%
-    summarise(rho = cor(volume_Mm3, adult_index, method = "spearman"),
-              .groups = "drop") %>%
-    group_by(arm) %>%
-    summarise(rho_mean = mean(rho), rho_lo = min(rho), rho_hi = max(rho),
-              .groups = "drop")
-}
+# rho is computed per seed then summarised, so it carries a spread like
+# everything else. In practice the spread is zero: rho is rank-based, and the
+# run-to-run noise shifts all nine alternatives together without reordering
+# them. This is the one quantity here that is stable from a single run.
+spear <- raw %>%
+  left_join(volt, by = "scenario") %>%
+  group_by(arm, seed) %>%
+  summarise(rho = cor(volume_Mm3, adult_index, method = "spearman"),
+            .groups = "drop") %>%
+  group_by(arm) %>%
+  summarise(rho_mean = mean(rho), rho_lo = min(rho), rho_hi = max(rho),
+            .groups = "drop")
 
 # ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
-g1_rule("Per-alternative adult population index (model-averaged)")
+g1_rule("Per-alternative adult population index and composite")
 print(as.data.frame(per_alt), digits = 5, row.names = FALSE)
 
 g1_rule("Paired contrasts (within-seed differences)")
 print(as.data.frame(contrasts), digits = 4, row.names = FALSE)
 
-if (!is.null(eff)) {
-  g1_rule("Efficiency: additional adults per million m3, vs no-bypass")
-  print(as.data.frame(eff), digits = 4, row.names = FALSE)
-  g1_rule("Spearman rho: bypass volume vs adult index")
-  print(as.data.frame(spear), digits = 4, row.names = FALSE)
-} else {
-  g1_rule("Efficiency and Spearman: PENDING")
-  cat("Bypass volumes were not supplied, so these two claims cannot be\n",
-      "recomputed. Re-run with G1_VOLUMES set from manuscript Table 2:\n",
-      '  G1_VOLUMES="NB=0,PB1=...,PB2=...,PB2b=...,PB2c=...,',
-      'PB3=21.4,PB4=...,PB5=21.4,PB6=..."\n', sep = "")
-}
+g1_rule("Volume-normalised benefit: additional adults per million m3 vs no-bypass")
+print(as.data.frame(
+  eff %>% select(arm, scenario, volume_Mm3, adults_per_Mm3) %>%
+    pivot_wider(names_from = arm, values_from = adults_per_Mm3)),
+  digits = 4, row.names = FALSE)
+
+g1_rule("Rank correlation: bypass volume vs adult index")
+print(as.data.frame(spear), digits = 4, row.names = FALSE)
 
 dir.create(here("output"), showWarnings = FALSE)
-write_csv(per_alt, here("output", "g1_revision_numbers.csv"))
+write_csv(per_alt,   here("output", "g1_revision_numbers.csv"))
+write_csv(contrasts, here("output", "g1_revision_contrasts.csv"))
+write_csv(eff %>% left_join(spear, by = "arm"),
+          here("output", "g1_revision_efficiency.csv"))
 
-# ---------------------------------------------------------------------------
-# Claim-by-claim replacement text
-# ---------------------------------------------------------------------------
-gv <- function(arm_, scen) per_alt %>%
-  filter(arm == arm_, scenario == scen) %>% pull(adult_mean)
-cv <- function(arm_, pair_, metric_ = "adult_index") contrasts %>%
-  filter(arm == arm_, pair == pair_, metric == metric_)
-
-c35 <- cv("fixed", "PB3 - PB5"); c35L <- cv("legacy", "PB3 - PB5")
-c64 <- cv("fixed", "PB6 - PB4"); c64L <- cv("legacy", "PB6 - PB4")
-k25 <- cv("fixed",  "PB2b - PB5", "composite")
-k25L<- cv("legacy", "PB2b - PB5", "composite")
-
-lines <- c(
-"# Corrected Discussion numbers — G1 applied",
-"",
-"Generated by `analysis/g1_revision_numbers.R`. Every value is a mean across",
-sprintf("%d seeds (%s) with the run-to-run range in brackets. Single-run point",
-        length(SEEDS), paste(SEEDS, collapse = ", ")),
-"estimates should not be reinstated: see the noise note in `G1_FINDINGS.md`.",
-"",
-"## 1. PB3 vs PB5 — the schedule counterweight (SIGN REVERSES)",
-"",
-sprintf("- Published (pooled): PB3 - PB5 = **%+.0f adults** [%.0f, %.0f], PB3 ahead",
-        c35L$mean_diff, c35L$lo, c35L$hi),
-sprintf("- Corrected: PB3 - PB5 = **%+.0f adults** [%.0f, %.0f], PB5 ahead",
-        c35$mean_diff, c35$lo, c35$hi),
-sprintf("- Same sign at every seed: %s", c35$same_sign),
-"",
-"The current sentence — identical volumes differing by \"fewer than 40 adults\",",
-"so schedule is consequential only \"at specific points in the decision space\" —",
-"no longer holds and should be replaced. The correction *removes* this hedge",
-"against the paper's own front-loading argument: PB5 now leads by a margin",
-"several times the run-to-run noise, in the direction its net hazard balance",
-"already predicted (PB3 +0.014, PB5 -0.018).",
-"",
-"## 2. PB6 vs PB4 adult population index",
-"",
-sprintf("- Published: PB6 %.0f against PB4 %.0f (difference %+.0f)",
-        gv("legacy","PB6"), gv("legacy","PB4"), c64L$mean_diff),
-sprintf("- Corrected: PB6 **%.0f** [%.0f, %.0f] against PB4 **%.0f** [%.0f, %.0f]",
-        gv("fixed","PB6"),
-        per_alt %>% filter(arm=="fixed", scenario=="PB6") %>% pull(adult_lo),
-        per_alt %>% filter(arm=="fixed", scenario=="PB6") %>% pull(adult_hi),
-        gv("fixed","PB4"),
-        per_alt %>% filter(arm=="fixed", scenario=="PB4") %>% pull(adult_lo),
-        per_alt %>% filter(arm=="fixed", scenario=="PB4") %>% pull(adult_hi)),
-sprintf("- Difference %+.0f adults [%.0f, %.0f]; same sign at every seed: %s",
-        c64$mean_diff, c64$lo, c64$hi, c64$same_sign),
-"",
-"## 3. Efficiency — additional adults per million m3",
-"",
-if (is.null(eff)) paste(
-  "**PENDING.** Needs bypass volumes from manuscript Table 2; they are not",
-  "recorded in the repository. Re-run with G1_VOLUMES set.") else
-  paste(c(
-  "Gain over no-bypass divided by bypass volume (Table 2). Both arms shown, so",
-  "the published values can be checked against the table:",
-  "",
-  paste(capture.output(print(as.data.frame(
-    eff %>% select(arm, scenario, volume_Mm3, adults_per_Mm3) %>%
-      pivot_wider(names_from = arm, values_from = c(adults_per_Mm3)) %>%
-      rename(published = legacy, corrected = fixed)),
-    digits = 4, row.names = FALSE)), collapse = "\n"),
-  "",
-  "**The manuscript sentence has to be restructured, not just renumbered.** It",
-  "currently reads \"roughly 47 additional adults per million m3 ... against 76",
-  sprintf("for PB4 and PB2c\". PB4 and PB2c no longer share a value: PB4 is %.0f and",
-          eff %>% filter(arm=="fixed", scenario=="PB4") %>% pull(adults_per_Mm3)),
-  sprintf("PB2c is %.0f. PB6 becomes %.0f.",
-          eff %>% filter(arm=="fixed", scenario=="PB2c") %>% pull(adults_per_Mm3),
-          eff %>% filter(arm=="fixed", scenario=="PB6") %>% pull(adults_per_Mm3)),
-  "",
-  "**A stronger sentence is now available.** PB3 and PB5 bypass the identical",
-  sprintf("21.4 Mm3, and their efficiencies now diverge sharply — PB3 %.0f against PB5",
-          eff %>% filter(arm=="fixed", scenario=="PB3") %>% pull(adults_per_Mm3)),
-  sprintf("%.0f adults per million m3 — which makes the schedule-matters point on a",
-          eff %>% filter(arm=="fixed", scenario=="PB5") %>% pull(adults_per_Mm3)),
-  "per-volume basis with volume held exactly constant."), collapse = "\n"),
-"",
-"## 4. Spearman rho — bypass volume vs salmon benefit",
-"",
-if (is.null(spear)) paste(
-  "**PENDING.** Same blocker as claim 3.") else paste(c(
-  sprintf("- Corrected rho = **%.3f** (published %.3f)",
-          spear %>% filter(arm=="fixed") %>% pull(rho_mean),
-          spear %>% filter(arm=="legacy") %>% pull(rho_mean)),
-  "",
-  "No range is quoted because rho is rank-based and the volume-vs-index ranking",
-  "is identical at all five seeds within each arm — the run-to-run noise moves",
-  "every alternative together and does not reorder them. So unlike the abundance",
-  "claims, this one *is* stable from a single run.",
-  "",
-  "The correction weakens the volume-benefit relationship slightly, because PB6",
-  "(the largest front-loaded volume) loses ground while PB5 (a small, later",
-  "volume) gains. That is the front-loading argument showing up in the",
-  "correlation, and it is worth saying so rather than just changing the digit."),
-  collapse = "\n"),
-"",
-"## 5. Ranking",
-"",
-"PB1 remains the top-ranked alternative in the MCDA under both arms at every",
-sprintf("seed. PB4 remains the decision-makers' selection and is the least affected"),
-sprintf("alternative in absolute abundance (%+.0f adults). Exactly one pairwise order",
-        gv("fixed","PB4") - gv("legacy","PB4")),
-"changes reproducibly, and it is a change in COMPOSITE score, not abundance:",
-"",
-sprintf("- PB2b - PB5 composite: published %+.4f (PB2b ahead), corrected %+.4f (PB5 ahead)",
-        k25L$mean_diff, k25$mean_diff),
-sprintf("  Same sign at every seed in both arms: %s / %s",
-        k25L$same_sign, k25$same_sign),
-"",
-"On raw abundance PB2b stays well ahead of PB5 in both arms (by roughly",
-sprintf("%.0f adults), so this is the min-max normalisation and the hydropower",
-        cv("fixed","PB2b - PB5")$mean_diff),
-"weight resolving a pair that abundance alone does not separate.",
-""
-)
-writeLines(lines, here("output", "g1_revision_claims.md"))
-cat("\nWrote output/g1_revision_numbers.csv and output/g1_revision_claims.md\n")
+cat("\nWrote output/g1_revision_{numbers,contrasts,efficiency}.csv\n")
+cat("Interpretation and the reporting write-up live in G1_FINDINGS.md and",
+    "G1_DISCLOSURE.md, not here.\n")

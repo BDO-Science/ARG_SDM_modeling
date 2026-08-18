@@ -786,12 +786,11 @@ setDT(sim_redds)
 #                   is evaluated against the pooled set, averaging the timing
 #                   signal away before use.
 #
-# DEFAULT IS THE CORRECTED BEHAVIOUR as of the 2026-08 revision. Pooling severed
-# the temperature -> spawn timing -> thermal mortality channel that the CLM
-# exists to model, so alternatives could differ only through incubation
-# exposure. The correction is disclosed in the revision; set ARG_G1_ALT_SPAWN=0
-# to regenerate the superseded numbers for comparison. Measured effect and the
-# manuscript claims it moves: see G1_FINDINGS.md.
+# DEFAULT IS THE CORRECTED BEHAVIOUR as of 2026-08-18. Pooling severed the
+# temperature -> spawn timing -> thermal mortality channel that the CLM exists
+# to model, so alternatives could differ only through incubation exposure. Set
+# ARG_G1_ALT_SPAWN=0 to regenerate the superseded numbers for comparison.
+# Measured effect: G1_FINDINGS.md.
 #
 # Only rows with a management alternative are eligible for the alternative-
 # specific split. The observed rows (sim_actual, mgt_alt = NA) carry site = NA
