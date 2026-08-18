@@ -78,16 +78,40 @@ before survival was computed, so only the first pathway was active.
 
 ---
 
+## 4. Optional addition to §2, if you want the efficiency change stated too
+
+> Two further Discussion values change. The volume-normalised benefit of the
+> most front-loaded alternative, PB6, falls from approximately 47 to 45
+> additional adults per million cubic metres bypassed, while PB4 rises to 79 and
+> PB2c to 84; those two alternatives no longer share a common value. The rank
+> correlation between bypass volume and Chinook benefit falls from 0.96 to 0.92,
+> the corrected analysis attributing somewhat less of the biological benefit to
+> volume alone and more to release timing. The clearest illustration is the
+> PB3–PB5 pair: bypassing the identical 21.4 million cubic metres, they now
+> return 72 and 84 additional adults per million cubic metres respectively.
+
+---
+
 ## What is NOT covered by this draft
 
-- **Efficiency (adults per million m³) and the volume-vs-benefit Spearman
-  correlation** still need recomputing. Both need bypass volume per alternative,
-  which is in manuscript Table 2 and is not recorded in this repository.
 - **The PB6/PB4 cohort decomposition percentages** (49% / 49% for the two
   November cohorts) are now the survival-response component only, because the
   decomposition assumed a shared redd distribution. Either describe them as
   approximate or quantify the composition term first.
+- **Figures and tables** need regenerating from the corrected `app_data`, and
+  Table 3's abundance column changes for all nine alternatives.
 - Whether to characterise this as an **erratum-style disclosure or a routine
   revision** is an editorial judgment for the co-authors and, ultimately, the
   editor. The text above treats it as a correction found during revision, which
   is what it is.
+
+## One argument worth making explicitly to the editor
+
+The corrected analysis is *more* internally consistent than the submitted one,
+not less. Under pooling, PB3 and PB5 produced near-identical abundance despite
+clearly different net thermal hazard balances (+0.014 against −0.018) — a quiet
+incoherence with no mechanistic explanation. The correction resolves it: PB5
+pulls ahead, in the direction its hazard balance predicts. The same is true of
+the Spearman change, which shifts explanatory weight from volume to timing,
+which is the paper's own thesis. It is worth saying that the correction supports
+the argument rather than merely perturbing the numbers.

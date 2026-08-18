@@ -25,11 +25,42 @@ already predicted (PB3 +0.014, PB5 -0.018).
 
 ## 3. Efficiency — additional adults per million m3
 
-**PENDING.** Needs bypass volumes from manuscript Table 2; they are not recorded in the repository. Re-run with G1_VOLUMES set.
+Gain over no-bypass divided by bypass volume (Table 2). Both arms shown, so
+the published values can be checked against the table:
+
+ scenario volume_Mm3 corrected published
+      PB1       12.2     75.30     79.06
+      PB2       42.2     72.21     68.97
+     PB2b       49.5     72.99     68.29
+     PB2c       45.9     84.26     75.88
+      PB3       21.4     71.53     71.18
+      PB4       25.7     78.67     75.93
+      PB5       21.4     83.71     69.15
+      PB6       37.2     44.90     47.24
+
+**The manuscript sentence has to be restructured, not just renumbered.** It
+currently reads "roughly 47 additional adults per million m3 ... against 76
+for PB4 and PB2c". PB4 and PB2c no longer share a value: PB4 is 79 and
+PB2c is 84. PB6 becomes 45.
+
+**A stronger sentence is now available.** PB3 and PB5 bypass the identical
+21.4 Mm3, and their efficiencies now diverge sharply — PB3 72 against PB5
+84 adults per million m3 — which makes the schedule-matters point on a
+per-volume basis with volume held exactly constant.
 
 ## 4. Spearman rho — bypass volume vs salmon benefit
 
-**PENDING.** Same blocker as claim 3.
+- Corrected rho = **0.921** (published 0.962)
+
+No range is quoted because rho is rank-based and the volume-vs-index ranking
+is identical at all five seeds within each arm — the run-to-run noise moves
+every alternative together and does not reorder them. So unlike the abundance
+claims, this one *is* stable from a single run.
+
+The correction weakens the volume-benefit relationship slightly, because PB6
+(the largest front-loaded volume) loses ground while PB5 (a small, later
+volume) gains. That is the front-loading argument showing up in the
+correlation, and it is worth saying so rather than just changing the digit.
 
 ## 5. Ranking
 

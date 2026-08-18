@@ -40,21 +40,30 @@ ARMS  <- c(legacy = "legacy", fixed = "fixed")
 # ---------------------------------------------------------------------------
 # Bypass volume (Mm3) per alternative.
 # ---------------------------------------------------------------------------
-# These live in manuscript Table 2 and are NOT recorded anywhere in the repo.
-# Only the PB3/PB5 pair is documented here (21.4 Mm3 each, identical volume on
-# different schedules - that pairing is the whole point of the comparison).
-# Supply the rest via G1_VOLUMES as a comma-separated ALT=VALUE list, e.g.
-#   G1_VOLUMES="NB=0,PB1=10.7,PB2=21.4,..."
-# Without it the efficiency and Spearman claims are reported as PENDING rather
-# than guessed - deriving volume from the hydropower scores would be circular,
-# since those scores are what the Spearman is meant to be independent of.
+# Source: manuscript Table 2 ("Volume bypassed (in million m3)"), transcribed
+# from FolsomBypass_manuscript_2026-07-28_revised. These were not recorded
+# anywhere in the repository - the live .docx files are gitignored, so they are
+# hard-coded here to make the efficiency and Spearman claims reproducible
+# without the manuscript in hand. Override with G1_VOLUMES if Table 2 changes.
+#
+# Do NOT derive these from the hydropower revenue-loss scores. Cost scales
+# roughly with volume but not exactly (PB3 and PB5 bypass identical volumes and
+# differ in cost by ~1%), and the Spearman below is meant to relate volume to
+# fish benefit independently of the cost model.
+G1_VOLUME_MM3 <- c(
+  "NB"   =  0.0, "PB1" = 12.2, "PB2" = 42.2,
+  "PB2b" = 49.5, "PB2c" = 45.9, "PB3" = 21.4,
+  "PB4"  = 25.7, "PB5" = 21.4,  "PB6" = 37.2
+)
+
 parse_volumes <- function(s) {
-  if (!nzchar(s)) return(NULL)
+  if (!nzchar(s)) return(G1_VOLUME_MM3[SCEN])
   kv <- str_split(str_split(s, ",")[[1]], "=")
   v  <- setNames(as.numeric(map_chr(kv, 2)), str_trim(map_chr(kv, 1)))
   if (!all(SCEN %in% names(v))) {
-    warning("G1_VOLUMES is missing: ", paste(setdiff(SCEN, names(v)), collapse = ", "))
-    return(NULL)
+    warning("G1_VOLUMES is missing: ", paste(setdiff(SCEN, names(v)), collapse = ", "),
+            " - falling back to the Table 2 values")
+    return(G1_VOLUME_MM3[SCEN])
   }
   v[SCEN]
 }
@@ -241,18 +250,49 @@ sprintf("- Difference %+.0f adults [%.0f, %.0f]; same sign at every seed: %s",
 if (is.null(eff)) paste(
   "**PENDING.** Needs bypass volumes from manuscript Table 2; they are not",
   "recorded in the repository. Re-run with G1_VOLUMES set.") else
-  paste(capture.output(print(as.data.frame(eff %>% filter(arm == "fixed")),
-                             digits = 4, row.names = FALSE)), collapse = "\n"),
+  paste(c(
+  "Gain over no-bypass divided by bypass volume (Table 2). Both arms shown, so",
+  "the published values can be checked against the table:",
+  "",
+  paste(capture.output(print(as.data.frame(
+    eff %>% select(arm, scenario, volume_Mm3, adults_per_Mm3) %>%
+      pivot_wider(names_from = arm, values_from = c(adults_per_Mm3)) %>%
+      rename(published = legacy, corrected = fixed)),
+    digits = 4, row.names = FALSE)), collapse = "\n"),
+  "",
+  "**The manuscript sentence has to be restructured, not just renumbered.** It",
+  "currently reads \"roughly 47 additional adults per million m3 ... against 76",
+  sprintf("for PB4 and PB2c\". PB4 and PB2c no longer share a value: PB4 is %.0f and",
+          eff %>% filter(arm=="fixed", scenario=="PB4") %>% pull(adults_per_Mm3)),
+  sprintf("PB2c is %.0f. PB6 becomes %.0f.",
+          eff %>% filter(arm=="fixed", scenario=="PB2c") %>% pull(adults_per_Mm3),
+          eff %>% filter(arm=="fixed", scenario=="PB6") %>% pull(adults_per_Mm3)),
+  "",
+  "**A stronger sentence is now available.** PB3 and PB5 bypass the identical",
+  sprintf("21.4 Mm3, and their efficiencies now diverge sharply — PB3 %.0f against PB5",
+          eff %>% filter(arm=="fixed", scenario=="PB3") %>% pull(adults_per_Mm3)),
+  sprintf("%.0f adults per million m3 — which makes the schedule-matters point on a",
+          eff %>% filter(arm=="fixed", scenario=="PB5") %>% pull(adults_per_Mm3)),
+  "per-volume basis with volume held exactly constant."), collapse = "\n"),
 "",
 "## 4. Spearman rho — bypass volume vs salmon benefit",
 "",
 if (is.null(spear)) paste(
-  "**PENDING.** Same blocker as claim 3.") else
-  sprintf("- Corrected rho = **%.3f** [%.3f, %.3f] (published %.3f)",
+  "**PENDING.** Same blocker as claim 3.") else paste(c(
+  sprintf("- Corrected rho = **%.3f** (published %.3f)",
           spear %>% filter(arm=="fixed") %>% pull(rho_mean),
-          spear %>% filter(arm=="fixed") %>% pull(rho_lo),
-          spear %>% filter(arm=="fixed") %>% pull(rho_hi),
           spear %>% filter(arm=="legacy") %>% pull(rho_mean)),
+  "",
+  "No range is quoted because rho is rank-based and the volume-vs-index ranking",
+  "is identical at all five seeds within each arm — the run-to-run noise moves",
+  "every alternative together and does not reorder them. So unlike the abundance",
+  "claims, this one *is* stable from a single run.",
+  "",
+  "The correction weakens the volume-benefit relationship slightly, because PB6",
+  "(the largest front-loaded volume) loses ground while PB5 (a small, later",
+  "volume) gains. That is the front-loading argument showing up in the",
+  "correlation, and it is worth saying so rather than just changing the digit."),
+  collapse = "\n"),
 "",
 "## 5. Ranking",
 "",

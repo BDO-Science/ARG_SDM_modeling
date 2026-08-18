@@ -174,15 +174,32 @@ run-to-run range, not single-run point estimates.
 | PB6 vs PB4 adult index | 9,352 vs 9,546 | **9,199 vs 9,550** |
 | PB6 − PB4 gap | −194 ± 3 | **−352 ± 21** |
 | PB2b − PB5 composite | +0.0178 (PB2b ahead) | **−0.0120 (PB5 ahead)** |
-| Efficiency (adults per Mm³) | 47 / 76 | pending bypass volumes (Table 2) |
-| Spearman ρ, volume vs benefit | 0.9624 | pending bypass volumes (Table 2) |
+| Efficiency, PB6 / PB4 / PB2c | 47 / 76 / 76 | **45 / 79 / 84** |
+| Spearman ρ, volume vs benefit | 0.9624 | **0.9205** |
 
 PB4 — the decision-makers' selection — moves by **+3.7 adults**, the smallest
 change of all nine. PB1 still ranks first in the MCDA at every seed in both
 arms.
 
-Two claims remain open only because **bypass volume per alternative is not
-recorded anywhere in this repository** — it lives in manuscript Table 2. Supply
-it via `G1_VOLUMES` and both fall out of the same script. Deriving volume from
-the hydropower revenue-loss scores would be circular, since the Spearman is
-meant to relate volume to fish benefit independently of the cost model.
+Bypass volumes were transcribed from manuscript Table 2 and are now hard-coded
+in `analysis/g1_revision_numbers.R`; they were not recorded anywhere in the
+repository before. Override with `G1_VOLUMES` if Table 2 changes.
+
+**Validation.** Run with `ARG_G1_ALT_SPAWN=0`, the pipeline reproduces published
+Table 3 across all nine alternatives (7,600 / 8,560 / 10,505 / 10,974 / 11,073 /
+9,116 / 9,545 / 9,080 / 9,350) and the published Spearman ρ of 0.9624 to four
+decimal places. The corrected values above are therefore differences from the
+paper's own numbers, not from a re-derivation of them.
+
+**Two Discussion sentences need restructuring, not just renumbering:**
+
+1. The efficiency sentence pairs "76 for PB4 and PB2c" — those two no longer
+   share a value (79 and 84).
+2. A stronger claim is now available in its place: PB3 and PB5 bypass the
+   identical 21.4 Mm³ and their efficiencies diverge, 72 against 84 adults per
+   million m³. That makes the schedule-matters point with volume held exactly
+   constant, which is what the PB3/PB5 pairing was chosen for.
+
+The Spearman ρ has no seed spread — it is rank-based, and run-to-run noise
+shifts all nine alternatives together without reordering them. That claim is
+stable from a single run; the abundance claims are not.
