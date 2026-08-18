@@ -333,8 +333,10 @@ write.csv(overlap_summary, here("output", "frontloading_incubation_overlap.csv")
 #
 # Both weightings used here (observed carcass surveys, and the simulated set)
 # are single distributions applied to both alternatives, so neither can supply
-# w_c,A and w_c,B. Quantifying the composition term needs per-alternative redd
-# shares from sim_redds under the corrected pipeline. See G1_FINDINGS.md.
+# w_c,A and w_c,B. **Part 3b below computes the exact two-channel split** from
+# per-alternative redd shares; read the two together. This part is retained
+# because the observed-carcass weighting is an independent check on the survival
+# channel that Part 3b cannot provide.
 
 surv_by_md <- grid[, .(S = mean(S_martin)), by = .(scenario, site, md)]
 
@@ -369,6 +371,84 @@ for (wn in names(weightings)) for (cmp in unique(cohorts$comparison)) {
                             share_of_gap = round(share_of_gap, 3))]), row.names = FALSE)
 }
 write.csv(cohorts, here("output", "frontloading_cohort_decomposition.csv"), row.names = FALSE)
+
+# ---- 3b. Exact two-channel decomposition -----------------------------------
+# Part 3 above applies ONE spawn-date weighting to both alternatives, which is
+# what the pooled pipeline did. Since spawn timing became alternative-specific
+# the redd distribution itself differs between alternatives, so the gap splits
+# into two channels. Writing wbar = (w_A + w_B)/2 and Sbar = (S_A + S_B)/2:
+#
+#   sum_c [w_c,A S_c,A - w_c,B S_c,B]
+#     = sum_c wbar_c (S_c,A - S_c,B)      <- survival response, same as Part 3
+#     + sum_c (w_c,A - w_c,B) Sbar_c      <- composition: WHEN eggs were laid
+#
+# That is an algebraic identity, not an approximation, and it holds cohort by
+# cohort because it holds at each (site, spawn date). It is asserted below.
+#
+# The composition channel is exactly what pooling forced to zero. Note that
+# sim_redds is identical in both arms at a given seed - the per-alternative redd
+# distributions were always simulated, they were simply averaged away before
+# use - so this term is recoverable from either arm's snapshot.
+
+w_alt <- sim_redds[!is.na(mgt_alt) & month(spawn_dt) %in% c(10L, 11L, 12L, 1L),
+                   .(N = .N), by = .(env  = as.character(mgt_alt),
+                                     site = as.character(site),
+                                     md   = format(spawn_dt, "%m-%d"))]
+w_alt <- merge(w_alt, env_key[, .(env, scenario)], by = "env")
+w_alt <- w_alt[, .(N = sum(N)), by = .(scenario, site, md)]
+
+cohort_table_2ch <- function(sc_a, sc_b) {
+  a <- merge(surv_by_md[scenario == sc_a, .(site, md, S_a = S)],
+             w_alt[scenario == sc_a, .(site, md, w_a = N)],
+             by = c("site", "md"))
+  b <- merge(surv_by_md[scenario == sc_b, .(site, md, S_b = S)],
+             w_alt[scenario == sc_b, .(site, md, w_b = N)],
+             by = c("site", "md"))
+  x <- merge(a, b, by = c("site", "md"))
+  # Normalise AFTER the merge, so both weightings sum to 1 over the same
+  # retained (site, md) set. Normalising first would leave the two vectors
+  # summing to different totals and the identity would not close.
+  x[, `:=`(w_a = w_a / sum(w_a), w_b = w_b / sum(w_b))]
+  x[, `:=`(cohort = cohort_bin(md),
+           wbar   = (w_a + w_b) / 2, Sbar = (S_a + S_b) / 2)]
+  out <- x[, .(redd_share_a  = sum(w_a),
+               redd_share_b  = sum(w_b),
+               d_total       = sum(w_a * S_a - w_b * S_b),
+               d_survival    = sum(wbar * (S_a - S_b)),
+               d_composition = sum((w_a - w_b) * Sbar)),
+           by = cohort][order(cohort)]
+  stopifnot(all(abs(out$d_total -
+                    (out$d_survival + out$d_composition)) < 1e-12))
+  out[, comparison := paste(sc_a, "-", sc_b)][]
+}
+
+cohorts2 <- rbindlist(lapply(comparisons,
+                             function(p) cohort_table_2ch(p[1], p[2])))
+
+cat("\n=== Part 3b. Exact two-channel decomposition under Martin ===\n")
+cat("d_survival    = differing survival at the same spawn date\n")
+cat("d_composition = differing spawn-date distribution (zero under pooling)\n")
+for (cmp in unique(cohorts2$comparison)) {
+  x <- cohorts2[comparison == cmp]
+  cat(sprintf("\n-- %s -- total %+0.5f = survival %+0.5f + composition %+0.5f\n",
+              cmp, sum(x$d_total), sum(x$d_survival), sum(x$d_composition)))
+  print(as.data.frame(x[, .(cohort,
+                            share_a    = round(redd_share_a, 4),
+                            share_b    = round(redd_share_b, 4),
+                            total      = round(d_total, 5),
+                            survival   = round(d_survival, 5),
+                            composition = round(d_composition, 5))]),
+        row.names = FALSE)
+}
+
+comp_share <- cohorts2[, .(total = sum(d_total), survival = sum(d_survival),
+                           composition = sum(d_composition)), by = comparison][
+  , pct_composition := round(100 * composition / total, 1)][]
+cat("\nComposition channel as a percentage of each total gap:\n")
+print(as.data.frame(comp_share), digits = 4, row.names = FALSE)
+
+write.csv(cohorts2, here("output", "frontloading_cohort_two_channel.csv"),
+          row.names = FALSE)
 
 # ---- 4. Is egg survival really the channel? --------------------------------
 chan <- as.data.table(results_full)[variant == "lin_Martin"][

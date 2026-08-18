@@ -1357,17 +1357,28 @@ pairs_for_env_year <- function(red_this, sim_yr, env_nm) {
 #'   indexed `[[alternative]][[year]]`.
 #' @param env_cache A cached list of environment-specific assets.
 #' @param tdm_defs A data frame defining the TDM model variants.
-#' @param alt_specific Logical. If TRUE, each alternative is evaluated against
-#'   the redds simulated under its own temperatures, so the CLM's
-#'   temperature-driven shift in spawn timing affects the result. If FALSE
-#'   (the published behaviour), every alternative is evaluated against a single
-#'   redd set pooled across all alternatives for that year. See G1.
+#' @param alt_specific Logical, required — there is no default. If TRUE (the
+#'   current behaviour), each alternative is evaluated against the redds
+#'   simulated under its own temperatures, so the CLM's temperature-driven shift
+#'   in spawn timing affects the result. If FALSE (superseded, retained for
+#'   reproduction), every alternative is evaluated against a single redd set
+#'   pooled across all alternatives for that year. See G1_FINDINGS.md.
 #'
 #' @return A data.table summarizing the mean cumulative survival for the year
 #'   across all alternatives and variants.
 #' @keywords internal
 eval_year <- function(sim_yr, sim_redds_split, env_cache, tdm_defs,
-                      alt_specific = FALSE) {
+                      alt_specific) {
+  # Deliberately no default. The two settings expect different shapes of
+  # sim_redds_split and produce materially different survival, so a caller that
+  # forgets the argument should fail loudly rather than silently get whichever
+  # behaviour happened to be the default.
+  if (missing(alt_specific) || !is.logical(alt_specific) ||
+      length(alt_specific) != 1L || is.na(alt_specific)) {
+    stop("eval_year(): `alt_specific` must be supplied as TRUE or FALSE. ",
+         "TRUE expects sim_redds_split[[alt]][[year]]; FALSE expects ",
+         "sim_redds_split[[year]] pooled across alternatives.")
+  }
   yr_key <- as.character(sim_yr)
 
   if (!alt_specific) {

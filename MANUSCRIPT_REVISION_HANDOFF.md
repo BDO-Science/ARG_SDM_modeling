@@ -212,11 +212,22 @@ mechanism needs to be invoked.
 
 **⚠️ REQUIRED WORDING CHANGE — "late-spawning cohorts" is wrong.** Both documents
 currently attribute the deficit to late-spawning cohorts. The cohort
-decomposition (§2.4) shows the affected group is **November spawners**. December
-and January spawners are the latest of all and are affected *not at all*, because
-their incubation runs in water already below the 12.14 °C Martin threshold.
-Replace "late-spawning cohorts" with "November-spawning cohorts" or "cohorts whose
+decomposition (§2.4) shows the affected group is **November spawners**. Replace
+"late-spawning cohorts" with "November-spawning cohorts" or "cohorts whose
 incubation window covers late November" everywhere it appears.
+
+**⚠️ But the stated justification is now wrong — revised 2026-08-18.** This entry
+previously justified the change by saying December and January spawners "are
+affected *not at all*, because their incubation runs in water already below the
+12.14 °C Martin threshold". The first clause is false, though the second is true.
+December spawners' *survival* is indeed identical under every alternative — but
+once spawn timing is alternative-specific, alternatives differ in **how many
+redds land in that safe December window**, and that channel is large: Dec 1–15
+accounts for about a third of the PB6−PB4 gap, entirely through composition
+rather than survival. Front-loading shifts fish out of the safe window. Attribute
+the deficit to the November window while describing *both* channels — worse
+conditions for eggs in the gravel, and more eggs placed there. See
+`G1_FINDINGS.md` and `output/frontloading_cohort_two_channel.csv`.
 
 **⚠️ SUPERSEDED 2026-08-18 — the PB3 vs PB5 comparison must be rewritten, not
 retained.** This entry previously read "Retain as written… the manuscript's '36'

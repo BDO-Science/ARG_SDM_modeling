@@ -203,3 +203,47 @@ paper's own numbers, not from a re-derivation of them.
 The Spearman ρ has no seed spread — it is rank-based, and run-to-run noise
 shifts all nine alternatives together without reordering them. That claim is
 stable from a single run; the abundance claims are not.
+
+---
+
+## A second mechanism the correction exposes
+
+The fix broke the premise behind the cohort decomposition, and repairing it
+turned up something worth reporting in its own right.
+
+The PB6/PB4 egg-survival gap was split by spawn cohort on the assumption that
+both alternatives share one redd distribution. They no longer do, so the gap
+splits exactly into two channels (`frontloading_cohort_decomposition.R` Part 3b,
+identity asserted in code):
+
+| | PB6 − PB4 | PB6 − NB | PB4 − NB |
+|---|---|---|---|
+| Survival response (as previously reported) | −0.01401 | −0.01341 | +0.00052 |
+| **Composition (spawn-date shift)** | **−0.00983** | **−0.00510** | **+0.00482** |
+| Total | −0.02385 | −0.01850 | +0.00534 |
+| Composition share | **41%** | **28%** | **90%** |
+
+The survival channel reproduces the existing Part 3 result under the simulated
+weighting (−0.01392 and +0.00035), which validates the implementation. What was
+missing is the composition channel, and it is not small.
+
+**The December cohorts are the headline.** Their survival contribution is exactly
+zero in every comparison — December incubation runs below the 12.14 °C Martin
+threshold, so survival is identical under every alternative. But their
+*contribution to the gap is large and entirely compositional*: Dec 1–15 alone
+accounts for −0.00760, about a third of the PB6−PB4 gap. PB6 holds 29.3% of its
+redds in the December window against PB4's 30.5%; front-loading shifts fish out
+of the safe window and into risky late November.
+
+So front-loading now damages the population two independent ways: eggs already in
+the gravel see a worse thermal window, *and* more eggs get laid into that window
+in the first place. That is a stronger version of the paper's own argument, and
+the second half of it is currently unstated.
+
+**This invalidates a wording instruction, not just a number.**
+`MANUSCRIPT_REVISION_HANDOFF.md` §2.3 flags a "REQUIRED WORDING CHANGE" —
+replace "late-spawning cohorts" with "November-spawning cohorts", on the grounds
+that "December and January spawners are the latest of all and are affected *not
+at all*". The first half still stands; the justification no longer does.
+December spawners are affected substantially, through composition rather than
+survival. Describe the channel, not just the cohort.
