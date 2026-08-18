@@ -595,7 +595,9 @@ invoked.
 Egg survival is the channel: PB6/PB4 ratio is **0.977 for egg survival** but
 **1.0008 for pre-spawn survival**, so the pre-spawn pathway contributes nothing.
 The alternatives share one redd distribution, so the difference in mean
-egg-to-fry survival decomposes exactly by spawn cohort.
+egg-to-fry survival decomposes exactly by spawn cohort. **(That premise was
+removed by the G1 correction on 2026-08-18 — the split below is now the
+survival-response component only. See `MANUSCRIPT_REVISION_HANDOFF.md` §2.4.)**
 
 **PB6 − PB4**, total −0.0076 in mean egg-to-fry survival:
 
