@@ -386,7 +386,47 @@ decisions, not housekeeping.
 
 ------------------------------------------------------------------------
 
-## H. Document changes forced by the G1 correction — **all still open**
+## H. Document changes forced by the G1 correction — **the editing checklist**
+
+**This is the list to work from when making the Word edits.** All items open
+except H11 and H12, which are deliberately held (see Scope at the end).
+
+**Documents.** The authoritative copies are in **Brian's SharePoint** (American
+River SDM → "2026-07-20 - First Review and Revision"). Local copies under
+`Documents/projects/american_power_bypass_sdm/` and the pre-edit backups in
+`manuscript_backup/` are snapshots and will fall behind:
+
+- `FolsomBypass_manuscript_2026-07-28_revised.docx`
+- `FolsomBypass_SupportingInformation_2026-07-28_revised.docx`
+- `Response_to_Reviewers_RiverResearchandApps_v3.docx`
+
+**Pull Brian's current version before starting.** He is mid-edit; working from a
+stale local copy risks reverting his changes.
+
+**Suggested order.** Do the pure retypes first (H1, H1a, H3, H4, H5, H14, H18,
+H19) — they are mechanical and finish fast. Then the four rewrites (H2, H6, H7,
+H16) with the draft text from `G1_DISCLOSURE.md` and §2.4 of the handoff. Then
+the new material (H9, H10). Then re-embed figures (H13, H15) **together with the
+four exhibits from §A that were promised to reviewers and are still not in the
+documents** — one figure pass, not two.
+
+**Search strings** for the rewrites, to find them in Word:
+
+| Item | Search for |
+|---|---|
+| H2 | `fewer than 40` |
+| H3 | `9,350` |
+| H4 | `per million` |
+| H5 | `Spearman` |
+| H7 | `late-spawning` |
+| H16 | `0.988` |
+| H17 | `inverse order` |
+| H18 | `7,600` |
+| H19 | `13,178` or `59%` |
+
+Every "becomes" value regenerates from `analysis/reporting_values.R` (levels) and
+`analysis/g1_revision_numbers.R` (contrasts). If a number here is ever in doubt,
+those two scripts are the authority, not this table.
 
 The code side of G1 is finished and verified. Everything in this section is
 Word-document work that nobody has done yet. Numbers are means over five seeds;
@@ -438,29 +478,51 @@ cost to internal consistency.
 continues to be developed past the journal version, so the two are expected to
 drift.
 
-| \# | Location | Was | Becomes | Kind of change |
+> **⚠️ Where the authoritative documents actually are.** The editable copies live
+> in Brian's SharePoint (American River SDM → "2026-07-20 - First Review and
+> Revision"), not in this repo and not in the local `Documents/projects/` folder.
+> **Brian is actively editing them**, so they will differ from anything checked
+> here.
+>
+> The occurrence counts in the *Where* column were measured on 2026-08-18 against
+> the local `2026-07-28_revised` copies. Treat them as **an indication of which
+> document each item lives in, not a precise count**, and re-verify against
+> Brian's returned version before relying on any of them. In particular, "not yet
+> inserted" (H8) and the "only in RSP" markers could be stale if he has since
+> added that material.
+>
+> The **search strings** are the durable part — those phrases and numbers will
+> still be findable whatever else moves.
+
+MS = manuscript, SI = Supporting Information, RSP = Response to Reviewers.
+
+| \# | Where (hits) | Was | Becomes | Kind of change |
 |----|----|----|----|----|
-| H1 | MS Table 3, abundance column | 7,600 / 8,560 / 10,505 / 10,974 / 11,073 / 9,116 / 9,545 / 9,080 / 9,350 (NB→PB6) | **7,412 / 8,306 / 10,443 / 10,992 / 11,274 / 8,954 / 9,427 / 9,194 / 9,091** | retype all nine; add the ±173–217 run-to-run note |
-| H1a | MS §3.2, composite scores | PB1 0.573, PB2 0.534, PB4 0.530 (values from the last pass) | PB1 **0.555**, PB4 **0.514**, PB2 **0.513**, PB3 0.508, PB2c 0.502, NB 0.500, PB5 0.479, PB2b 0.465, PB6 0.403 | retype |
-| H1b | MS §3.2, MCDA ordering | PB1 > PB2 > PB4 > PB3 > PB2c > NB > PB2b > PB5 > PB6 | PB1 > **PB4 > PB2** > PB3 > PB2c > NB > **PB5 > PB2b** > PB6 | **two swaps** — see caveat below |
-| H2 | MS Discussion, PB3 vs PB5 | "differed by fewer than 40 adults… consequential at specific points" | PB5 leads by 261 ± 36; schedule matters throughout | **rewrite, sign reversed** |
-| H3 | MS Discussion, PB6 vs PB4 | "9,350 against 9,545" | "**9,091 against 9,427**"; the gap itself is **−352 ± 21** (paired, per H0) | retype |
-| H4 | MS Discussion, efficiency | "roughly 47… against 76 for PB4 and PB2c" | PB6 **45**, PB4 **78**, PB2c **84** | **restructure** — PB4 and PB2c no longer share a value |
-| H5 | MS Discussion, volume correlation | "Spearman ρ = 0.95" (edited to 0.96 last pass) | 0.92 | retype |
-| H6 | MS Discussion, mechanism | one channel (worse incubation window) | two channels: worse window **and** redds displaced into it, ~59% / 41% | **rewrite** — see handoff §2.4 |
-| H7 | MS + SI, "late-spawning cohorts" | attributed to late spawners | November window, but say *which channel* | rewrite; the old justification that December spawners are unaffected is **false** |
-| H8 | SI, cohort decomposition table | Nov 1–15 49%, Nov 16–30 49%, Dec 0% | Nov 16–30 44%, Dec 1–15 32%, Dec 16–Jan 15%, Nov 1–15 8% | replace table |
-| H9 | MS Methods, spawn timing | pooling not described | state that each alternative uses its own simulated redds | **new sentence** — draft in `G1_DISCLOSURE.md` §1 |
-| H10 | Response to reviewers | — | disclose the correction | **new section** — draft in `G1_DISCLOSURE.md` §2 |
-| H11 | SI reproducibility | — | `ARG_G1_ALT_SPAWN` / `ARG_SEED`, five-seed reporting | **new note** — draft in `G1_DISCLOSURE.md` §3 |
-| H12 | Anywhere quoting a difference between alternatives | subtraction of two table values | **paired within-seed contrast** (per H0) | quote the contrast, not the subtraction — see the scope note below |
-| H13 | All figures embedded in MS/SI | 2026-07-21 images | regenerated versions in `figures/` | re-embed; see §A, none of the promised exhibits are in the documents yet either |
-| H14 | MS §4.3 + Response, EVPI | range 0.000–0.027, upper bound 0.026 (4.6%) | range **0.000–0.034**, upper bound **0.034 (6.1%)**; two of four combinations now give zero, not one | retype + adjust the sentence about how many cases are zero |
-| H15 | Figure 5 / MCDA composite chart | pre-correction bar values | regenerated `figures/mcda_composite_scores.png` | already regenerated in the repo; re-embed |
-| H16 | MS §3.2, Figure 6 sensitivity paragraph | PB1 to 0.988, then NB at 1.000; span 3.6–84.8 | PB1 to **0.972**, **PB2c 0.974–0.996**, NB from **0.998**; span **3.5–171** | **rewrite** — a regime that did not exist appears; replacement text in §A-bis above |
-| H17 | MS §2.3 / SI, Martin index vs net hazard | "exact inverse order, ρ = −1.00" | ρ = **−0.983**; PB1 and PB3 swap | **soften the claim** — it is now falsifiable against the repo as written |
-| H18 | SI S2, "in contrast to 7,600–11,073 seen in Table 3" | 7,600–11,073 | **7,412–11,274** | retype |
-| H19 | Anywhere quoting projected vs observed | NB Bratovich 13,178 = 59% of observed; model-averaged = 34% | **12,828 = 57%**; **33%** | retype |
+| H1 | MS ×2, SI ×1, RSP ×1 | 7,600 / 8,560 / 10,505 / 10,974 / 11,073 / 9,116 / 9,545 / 9,080 / 9,350 (NB→PB6) | **7,412 / 8,306 / 10,443 / 10,992 / 11,274 / 8,954 / 9,427 / 9,194 / 9,091** | retype all nine |
+| H1a | MS ×1, SI ×1, RSP ×1 | PB1 0.573, PB2 0.534, PB4 0.530 | PB1 **0.555**, PB4 **0.514**, PB2 **0.513**, PB3 0.508, PB2c 0.502, NB 0.500, PB5 0.479, PB2b 0.465, PB6 0.403 | retype |
+| H1b | MS §3.2 | PB1 > PB2 > PB4 > PB3 > PB2c > NB > PB2b > PB5 > PB6 | PB1 > **PB4 ≈ PB2** > PB3 > PB2c > NB > **PB5 > PB2b** > PB6 | one real swap (PB5/PB2b), one that is seed noise (PB4/PB2) — **write that pair as comparable, do not rank them**; see caveat below |
+| H2 | **MS ×1 only** | "differed by fewer than 40 adults… consequential at specific points" | PB5 leads by 261; schedule matters throughout | **rewrite, sign reversed** |
+| H3 | MS ×3, **RSP ×3** | "9,350 against 9,545" | "**9,091 against 9,427**" | retype — appears in the response letter as often as the paper |
+| H4 | **MS ×1 only** | "roughly 47… against 76 for PB4 and PB2c" | PB6 **45**, PB4 **78**, PB2c **84** | **restructure** — PB4 and PB2c no longer share a value |
+| H5 | MS ×3, **RSP ×3** | Spearman ρ = 0.96 | **0.92** | retype |
+| H6 | MS Discussion | one channel (worse incubation window) | two channels: worse window **and** redds displaced into it, ~59% / 41% | **rewrite** — see handoff §2.4 |
+| H7 | **RSP ×1 only** — not MS or SI | "late-spawning cohorts" | November window, and say *which channel* | rewrite; the old justification that December spawners are unaffected is **false** |
+| H8 | **nowhere — not yet inserted** | — | Nov 16–30 44%, Dec 1–15 32%, Dec 16–Jan 15%, Nov 1–15 8% | **no edit needed.** The 49%/49% table was proposed, never added. If it goes in, use the corrected figures |
+| H9 | MS Methods | pooling not described | each alternative uses its own simulated redds | **new sentence** — draft in `G1_DISCLOSURE.md` §1 |
+| H10 | RSP | — | disclose the correction | **new section** — draft in `G1_DISCLOSURE.md` §2 |
+| H11 | SI | — | `ARG_G1_ALT_SPAWN` / `ARG_SEED` | **held** — see Scope |
+| H12 | anywhere quoting a difference | subtraction of two table values | paired within-seed contrast | **held** — see Scope |
+| H13 | MS + SI figures | 2026-07-21 images | regenerated versions in `figures/` | re-embed; do this in one pass with the §A exhibits |
+| H14 | **MS ×13, RSP ×18** | range 0.000–0.027, upper bound 0.026 (4.6%) | range **0.000–0.034**, upper bound **0.034 (6.1%)**; two of four combinations now give zero, not one | retype + adjust the "how many are zero" sentence. **Heaviest item by occurrence — budget time for it** |
+| H15 | MS Figure 5 | pre-correction bar values | regenerated `figures/mcda_composite_scores.png` | already regenerated; re-embed |
+| H16 | **RSP ×2 only** — not MS | PB1 to 0.988, then NB at 1.000; span 3.6–84.8 | PB1 to **0.972**, **PB2c 0.974–0.996**, NB from **0.998**; span **3.5–171** | **rewrite** — a regime that did not exist appears. Replacement text in §A-bis. Note the MS paragraph is still a *promised addition* (§A1), so write it correct first time |
+| H17 | **RSP ×1 only** — not MS | "exact inverse order, ρ = −1.00" | ρ = **−0.983**; PB1 and PB3 swap | **soften** — falsifiable against the repo as written |
+| H18 | MS ×2, SI ×1, RSP ×1 | 7,600–11,073 | **7,412–11,274** | retype |
+| H19 | **RSP ×1 only** | NB Bratovich 13,178 = 59%; model-averaged 34% | **12,828 = 57%**; **33%** | retype |
+
+**Four items are Response-letter only** (H7, H16, H17, H19) and one more is
+mostly there (H3, H14). It is easy to correct the manuscript and leave the
+response letter contradicting it — check RSP explicitly.
 
 ### Scope: keep the revision to what is now factually wrong
 
