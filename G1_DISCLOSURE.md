@@ -55,16 +55,22 @@ before survival was computed, so only the first pathway was active.
 > revised that passage accordingly. The revised text is more consistent with the
 > front-loading mechanism developed in the preceding section.
 >
-> We also take the opportunity to report uncertainty more honestly. Because the
-> corrected pipeline evaluates each alternative against its own redd sample
+**⚠️ The paragraph below is held in reserve — do not include it unprompted.**
+It volunteers a methodological point no reviewer raised, and it applies to the
+submitted numbers as much as the corrected ones, so leading with it invites a
+methods argument mid-revision. Use it only if precision, seeding or Monte Carlo
+variability is queried. (`OUTSTANDING_ITEMS.md` §H12.)
+
+> We also verified the stability of these results across random seeds. Because
+> the corrected pipeline evaluates each alternative against its own redd sample
 > rather than a pooled sample roughly 36 times larger, per-alternative estimates
-> carry substantially more Monte Carlo variability than the original analysis
-> implied. Across five random seeds the run-to-run standard deviation of the
-> adult population index is approximately 170–220 fish per alternative, against
-> 15–20 under pooling. We now report the mean across five seeds with the
-> run-to-run range, and we no longer draw conclusions from differences smaller
-> than roughly 400 fish. This constraint applied equally to the originally
-> submitted values; pooling concealed it rather than avoiding it.
+> carry more Monte Carlo variability than the pooled analysis implied — a
+> run-to-run standard deviation of roughly 170–220 fish per alternative across
+> five seeds, against 15–20 under pooling. The differences we interpret are
+> substantially larger than this: the PB3–PB5 and PB6–PB4 contrasts hold the same
+> sign and similar magnitude at every seed tested. We note that this variability
+> applied equally to the originally submitted values, where pooling concealed it
+> rather than avoiding it.
 
 ---
 

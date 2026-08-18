@@ -453,7 +453,7 @@ drift.
 | H9 | MS Methods, spawn timing | pooling not described | state that each alternative uses its own simulated redds | **new sentence** — draft in `G1_DISCLOSURE.md` §1 |
 | H10 | Response to reviewers | — | disclose the correction | **new section** — draft in `G1_DISCLOSURE.md` §2 |
 | H11 | SI reproducibility | — | `ARG_G1_ALT_SPAWN` / `ARG_SEED`, five-seed reporting | **new note** — draft in `G1_DISCLOSURE.md` §3 |
-| H12 | Anywhere quoting a difference between alternatives | subtraction of two table values | **paired within-seed contrast with its own spread** (per H0) | **differences under ~400 fish are not supportable from a subtraction of levels** — true of the submitted numbers too |
+| H12 | Anywhere quoting a difference between alternatives | subtraction of two table values | **paired within-seed contrast** (per H0) | quote the contrast, not the subtraction — see the scope note below |
 | H13 | All figures embedded in MS/SI | 2026-07-21 images | regenerated versions in `figures/` | re-embed; see §A, none of the promised exhibits are in the documents yet either |
 | H14 | MS §4.3 + Response, EVPI | range 0.000–0.027, upper bound 0.026 (4.6%) | range **0.000–0.034**, upper bound **0.034 (6.1%)**; two of four combinations now give zero, not one | retype + adjust the sentence about how many cases are zero |
 | H15 | Figure 5 / MCDA composite chart | pre-correction bar values | regenerated `figures/mcda_composite_scores.png` | already regenerated in the repo; re-embed |
@@ -462,11 +462,32 @@ drift.
 | H18 | SI S2, "in contrast to 7,600–11,073 seen in Table 3" | 7,600–11,073 | **7,412–11,274** | retype |
 | H19 | Anywhere quoting projected vs observed | NB Bratovich 13,178 = 59% of observed; model-averaged = 34% | **12,828 = 57%**; **33%** | retype |
 
-**H12 is the one with teeth.** Pooling suppressed run-to-run noise about
-fourteen-fold (±15–21 fish reported, ±173–217 actual). Any comparison in the
-current text resting on a margin under ~400 fish was never resolvable from a
-single run, and reporting it to the digit overstates precision. This applies to
-the submitted numbers as much as the corrected ones.
+### Scope: keep the revision to what is now factually wrong
+
+**Decided 2026-08-18.** Every item above except H11 and H12 is a *correction* —
+the number currently in the document is wrong and has to change. H11 and H12 are
+*improvements*, and they are deliberately **held in reserve**: raising unasked-for
+methodological changes during a revision invites an editor or reviewer to reopen
+questions that are not on the table. Do them only if asked.
+
+| | Item | Status |
+|---|---|---|
+| H11 | SI reproducibility note (`ARG_G1_ALT_SPAWN`, `ARG_SEED`) | hold — one short paragraph, add if reproducibility is queried |
+| H12 | Report run-to-run uncertainty on every value | **hold** — see below |
+
+**On H12, for the record.** Pooling suppressed run-to-run noise about
+fourteen-fold (±15–21 fish reported, ±173–217 actual), so single-run values in
+the submitted paper were always less precise than they looked. That is true, and
+it is worth knowing internally. But it is not a *correction*: it applies equally
+to the submitted numbers, no reviewer raised it, and volunteering it invites a
+methods argument mid-revision. The claims the paper actually makes survive
+without it — PB3−PB5 at 261 and PB6−PB4 at 352 are both far outside the noise.
+Five-seed evidence is ready in `output/g1_revision_*.csv` if it is ever needed.
+
+**The one place noise cannot be ignored, even under this scope:** PB4 and PB2
+land 0.0009 apart in the composite (H1b). That ordering is decided by the seed.
+Report the scores as computed, but do not assert PB4 outranks PB2 in prose — it
+is a claim the model does not support, and it costs nothing to avoid.
 
 **Caveat on H1b — only one of the two swaps is real.** PB5 overtaking PB2b is a
 genuine, reproducible effect of the correction: same direction at all five seeds,
