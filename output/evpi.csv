@@ -1,0 +1,5 @@
+"weight_set","normalisation","baseline_alt","max_expected","expected_max","evpi","evpi_pct","best_by_state"
+"elicited (0.40/0.50/0.10)","per-state","PB1",0.542970832310765,0.555003889686276,0.0120330573755107,2.21615170824199,"exp_SM->PB2c; exp_WF->PB1; lin_Martin->NB"
+"elicited (0.40/0.50/0.10)","pooled","NB",0.674150498444916,0.674150498444916,0,0,"exp_SM->NB; exp_WF->NB; lin_Martin->NB"
+"re-derived (0.75/0.20/0.05)","per-state","PB2c",0.796938485183688,0.796938485183688,0,0,"exp_SM->PB2c; exp_WF->PB2c; lin_Martin->PB2c"
+"re-derived (0.75/0.20/0.05)","pooled","PB1",0.559137092908492,0.593261029994098,0.0341239370856065,6.10296428521711,"exp_SM->PB2c; exp_WF->PB1; lin_Martin->NB"
