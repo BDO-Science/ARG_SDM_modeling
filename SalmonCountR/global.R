@@ -3,24 +3,6 @@
 library(tidyverse); library(lubridate); library(here)
 source("functions.R")
 
-# ---- Scenario engine (the "Add a Year" tab) ---------------------------------
-# Loaded defensively: if either the engine or the spawn-timing model is absent
-# the rest of the app must still start, and the tab reports the problem rather
-# than erroring on launch.
-scenario_engine_loaded <- FALSE
-spawn_timing_model     <- NULL
-try({
-  source(here("SalmonCountR", "scenario_engine.R"))
-  stm <- here("SalmonCountR", "app_data", "spawn_timing_model.rds")
-  if (file.exists(stm)) {
-    spawn_timing_model     <- readRDS(stm)
-    scenario_engine_loaded <- TRUE
-  } else {
-    warning("app_data/spawn_timing_model.rds not found; the 'Add a Year' tab will be disabled. ",
-            "Run analysis/build_spawn_timing_model.R to create it.")
-  }
-}, silent = TRUE)
-
 # load precomputed data (fast)
 # NOTE: This script now assumes that the 'env_ext_list.rds' file in the
 # 'app_data' directory contains the real temperature data for all alternatives.
@@ -40,50 +22,7 @@ steelhead_metrics <- readRDS(here("SalmonCountR", "app_data", "steelhead_metrics
 swing_ranges <- readRDS(here("SalmonCountR", "app_data", "swing_ranges.rds"))
 results_full <- readRDS(here("SalmonCountR", "app_data", "results_full.rds"))
 
-# ---- Data vintage -----------------------------------------------------------
-# Written by analysis/refresh_data_year.R --apply. Absent until the first applied
-# refresh, which is not an error: the app says "not recorded" and carries on.
-# Surfacing it here is what closes G4 -- app_data/*.rds otherwise carry no record
-# of which data vintage or commit produced them.
-data_vintage <- NULL
-try({
-  dv <- here("SalmonCountR", "app_data", "data_vintage.rds")
-  if (file.exists(dv)) data_vintage <- readRDS(dv)
-}, silent = TRUE)
-
-#' One-line provenance stamp, for the app footer and the head of every export
-data_vintage_label <- function() {
-  if (is.null(data_vintage)) {
-    return("Data vintage: not recorded (run analysis/refresh_data_year.R --apply)")
-  }
-  cmt <- data_vintage$git_commit
-  paste0("Data vintage: refreshed ",
-         format(as.POSIXct(data_vintage$refreshed), "%Y-%m-%d"),
-         if (!is.null(cmt) && !is.na(cmt)) paste0(", commit ", cmt) else "")
-}
-
-#' Snapshot rows that are actually on disk, or NULL
-data_vintage_sources <- function() {
-  s <- data_vintage$sources
-  if (is.null(s) || !is.data.frame(s)) return(NULL)
-  s <- s[!is.na(s$file), , drop = FALSE]
-  if (!nrow(s)) NULL else s
-}
-
-#' The stamp plus per-source detail as `#` comment lines, to head a CSV export
-data_vintage_lines <- function(extra = character()) {
-  hdr <- c(paste0("# ", data_vintage_label()),
-           paste0("# Exported ", format(Sys.time(), "%Y-%m-%d %H:%M")))
-  src <- data_vintage_sources()
-  if (!is.null(src)) {
-    hdr <- c(hdr, "# Snapshots:",
-             sprintf("#   %s: %s (%s)", src$source, src$file,
-                     format(as.POSIXct(src$modified), "%Y-%m-%d")))
-  }
-  c(hdr, if (length(extra)) paste0("# ", extra))
-}
-
-real_years <- 2011:2024
+real_years <- 2011:2024 
 n_sim      <- 114
 sim_years_full <- real_years[1] + seq(0, n_sim - 1)   # e.g. 2011:2060
 
@@ -96,25 +35,128 @@ get_K_spawners <- function(flow_vec) {
   interp_fun(flow_vec)
 }
 
-# ---- Working copies of the loaded data --------------------------------------
-# Historical note: this file used to synthesise placeholder rows for a set of
-# "new alternatives" whose model output did not exist yet, then merge them into
-# df_all / egg_summary. That block was removed because it had stopped doing
-# anything useful and had become actively misleading:
-#   * df_all_orig has columns env/Date/site/temp/alt -- no year, variant or
-#     sar_name -- so the df_all placeholder branch never fired and df_all was
-#     left as an empty tibble.
-#   * egg_summary_orig DOES have a `variant` column but no `alternative`
-#     column, so the merge kept only the synthetic rows and silently dropped
-#     the real data. `egg_summary` was therefore 100% runif() noise.
-#   * The factor-ordering pass keyed off an `alternative` column that none of
-#     these objects has, so it was a no-op on every object including
-#     env_ext_list.
-# Nothing in app.R referenced df_all or egg_summary (only df_temp_2025, built
-# from df_all_orig below), so no app behaviour changes. The 36 alternatives are
-# real model output now and are addressed by `env` throughout.
-df_all      <- df_all_orig
-egg_summary <- egg_summary_orig
+# ---- ADD PLACEHOLDERS FOR NEW ALTERNATIVES ----
+new_alt_names <- c(
+  "NB: No Bypass",
+  "PB1: 125-250cfs Oct15-Nov14",
+  "PB2: 250-500cfs Oct15-Nov30",
+  "PB3: 250-500cfs Oct21-Nov14",
+  "PB4: 250-500cfs Oct21-Nov21",
+  "PB5: 500-250cfs Oct28-Nov21",
+  "PB6: 100-500cfs Step-up Oct1-Nov14"
+)
+
+hydro_years_placeholder <- c(2011, 2014, 2017, 2020)
+placeholder_df_all <- tibble()
+placeholder_egg_summary <- tibble()
+
+# --- Safely generate placeholder data ---
+# Only create placeholders if the original data has the required structure
+required_cols_df <- c("year", "variant", "sar_name")
+if (exists("df_all_orig") && is.data.frame(df_all_orig) && all(required_cols_df %in% names(df_all_orig))) {
+  all_sim_years <- unique(df_all_orig$year)
+  variants <- unique(df_all_orig$variant)
+  sar_options <- unique(df_all_orig$sar_name)
+  
+  placeholder_df_all_list <- list()
+  if (length(all_sim_years) > 0 && length(variants) > 0 && length(sar_options) > 0) {
+    for (alt in new_alt_names) {
+      for (yr in all_sim_years) {
+        for (var in variants) {
+          for (sar in sar_options) {
+            set.seed(which(new_alt_names == alt) * yr + which(variants == var))
+            placeholder_df_all_list[[length(placeholder_df_all_list) + 1]] <-
+              tibble(
+                alternative = alt,
+                year = yr,
+                spawners = round(runif(1, 15000, 40000)),
+                variant = var,
+                sar_name = sar
+              )
+          }
+        }
+      }
+    }
+    placeholder_df_all <- bind_rows(placeholder_df_all_list)
+  }
+}
+
+required_cols_egg <- c("variant")
+if (exists("egg_summary_orig") && is.data.frame(egg_summary_orig) && all(required_cols_egg %in% names(egg_summary_orig))) {
+  variants <- unique(egg_summary_orig$variant)
+  placeholder_egg_summary_list <- list()
+  if (length(variants) > 0) {
+    for (alt in new_alt_names) {
+      for (yr in hydro_years_placeholder) {
+        for (var in variants) {
+          set.seed(which(new_alt_names == alt) * yr * 2 + which(variants == var))
+          placeholder_egg_summary_list[[length(placeholder_egg_summary_list) + 1]] <-
+            tibble(
+              alternative = alt,
+              year = yr,
+              days_lt_18.3C = round(runif(1, 50, 61)),
+              variant = var
+            )
+        }
+      }
+    }
+    placeholder_egg_summary <- bind_rows(placeholder_egg_summary_list)
+  }
+}
+
+# ---- DATA COMBINATION AND FACTORING (ROBUST METHOD) ----
+
+# 1. Safely combine original and placeholder data.
+# Start with placeholders, which are known to be well-formed.
+df_all <- placeholder_df_all
+egg_summary <- placeholder_egg_summary
+
+# If original data exists and has the 'alternative' column, add it.
+if (exists("df_all_orig") && is.data.frame(df_all_orig) && "alternative" %in% names(df_all_orig)) {
+  df_all <- bind_rows(
+    ungroup(df_all_orig) %>% mutate(alternative = as.character(alternative)), 
+    df_all
+  )
+}
+if (exists("egg_summary_orig") && is.data.frame(egg_summary_orig) && "alternative" %in% names(egg_summary_orig)) {
+  egg_summary <- bind_rows(
+    ungroup(egg_summary_orig) %>% mutate(alternative = as.character(alternative)), 
+    egg_summary
+  )
+}
+
+# 2. Proceed with factoring only if we have data with an 'alternative' column.
+if (nrow(df_all) > 0 && "alternative" %in% names(df_all)) {
+  all_found_alts <- unique(as.character(df_all$alternative))
+  
+  # Separate numeric-like from text-like alternatives
+  suppressWarnings({
+    numeric_alts <- all_found_alts[!is.na(as.numeric(all_found_alts))]
+    text_alts <- all_found_alts[is.na(as.numeric(all_found_alts))]
+  })
+  
+  # Sort the numeric ones numerically, and the text ones alphabetically
+  sorted_numeric_alts <- if(length(numeric_alts) > 0) as.character(sort(as.numeric(numeric_alts))) else character(0)
+  sorted_text_alts <- sort(text_alts)
+  
+  # The final, robust order
+  new_order <- c(sorted_numeric_alts, sorted_text_alts)
+  
+  # 3. Apply this final factor ordering to all relevant data frames.
+  df_all$alternative <- factor(df_all$alternative, levels = new_order)
+  
+  if (nrow(egg_summary) > 0 && "alternative" %in% names(egg_summary)) {
+    egg_summary$alternative <- factor(egg_summary$alternative, levels = new_order)
+  }
+  
+  # Also update the temperature data list
+  for(yr_name in names(env_ext_list)) {
+    if (!is.null(env_ext_list[[yr_name]]) && nrow(env_ext_list[[yr_name]]) > 0 && "alternative" %in% names(env_ext_list[[yr_name]])) {
+      env_ext_list[[yr_name]]$alternative <- factor(as.character(env_ext_list[[yr_name]]$alternative), levels = new_order)
+    }
+  }
+}
+
 
 # ---- Pre-computed temperature explorer data (2025 only, climate-labelled) ----
 # Doing year(Date) / month(Date) on the full df_all_orig on every render is
