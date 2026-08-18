@@ -96,7 +96,7 @@ DATA_SOURCES <- list(
     used_for    = "smolt-to-adult return ratio",
     preliminary = FALSE,
     note        = paste("Hand-built. The sar_percent column is a copy of sar, NOT a",
-                        "percentage -- see OUTSTANDING_ITEMS.md G3.")
+                        "percentage -- see docs/spawn-timing.md G3.")
   ),
 
   hydropower = list(
