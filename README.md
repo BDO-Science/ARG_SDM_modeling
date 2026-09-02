@@ -27,17 +27,17 @@ file. A full run takes roughly fifteen minutes; wait it out.
 
 | Variable | Default | Effect |
 |---|---|---|
-| `ARG_G1_ALT_SPAWN` | `1` | `1` — each alternative is evaluated against the redds simulated under its own temperatures. `0` — reproduces the **superseded** behaviour in which redds were pooled across all 36 alternatives before survival was computed, which is what the submitted manuscript used. |
+| `ARG_SPAWN_TIMING` | `alternative` | `alternative` — each alternative is evaluated against the redds simulated under its own temperatures. `pooled` — the **superseded** behaviour, in which redds were pooled across all 36 alternatives before survival was computed. |
 | `ARG_SEED` | `123` | Overrides `set.seed(123)`, for replicating across seeds. |
 
-The pooling behaviour was a defect, corrected on 2026-08-18: it severed the
-temperature → spawn timing → thermal mortality channel that the model's ordinal
-spawn-timing regression exists to represent. `ARG_G1_ALT_SPAWN=0` is retained
-only so the submitted numbers stay reproducible; the state of the model as
-submitted is also tagged `as-submitted-2026-07-28`. Full write-up and the list of
-values that moved: `G1_FINDINGS.md`.
+Pooling severed the temperature → spawn timing → thermal mortality channel that
+the model's ordinal spawn-timing regression exists to represent, leaving
+alternatives to differ only through incubation exposure. Changed to
+alternative-specific on 2026-08-18; `pooled` is retained so earlier results can
+be regenerated, and the repository state before the change is tagged
+`as-submitted-2026-07-28`. What it moves, and by how much: **`docs/spawn-timing.md`**.
 
-Reproducing the manuscript figures and tables does **not** require re-running
+Reproducing the figures and tables does **not** require re-running
 `precompute.R` — the scripts in `analysis/` read the saved `app_data/*.rds` and
 finish in seconds. The exception is the multi-seed scripts below, which need
 several `app_data` snapshots.
@@ -179,7 +179,7 @@ downloaded file can be traced back to the data behind it:
 
 The file is absent until the first `--apply` run. That is not an error — the app reports
 "not recorded" and runs normally, but nothing then ties `app_data/` to a dated snapshot
-(`OUTSTANDING_ITEMS.md` G4).
+(`docs/spawn-timing.md` G4).
 
 ---
 
@@ -214,27 +214,29 @@ than in this repo; point it there with the `ARG_SCORESHEET` environment variable
 All of these read precomputed `.rds` files, so they run in seconds without
 re-running `precompute.R`.
 
-### Multi-seed scripts (G1)
+### Multi-seed scripts
 
 These need snapshots of `app_data` from several `precompute.R` runs rather than
 the single committed copy, so they do **not** run in seconds. Point
-`G1_SNAPROOT` at a directory of `<arm>_seed<n>/` folders, built by running
-`precompute.R` with `ARG_G1_ALT_SPAWN` in `{0,1}` and `ARG_SEED` in
-`{123,456,789,1011,1213}` — about 14 minutes per run.
+`SPAWN_TIMING_SNAPROOT` at a directory of `<mode>_seed<n>/` folders, built by
+running `precompute.R` with `ARG_SPAWN_TIMING` in `{alternative,pooled}` and
+`ARG_SEED` in `{123,456,789,1011,1213}` — about 15 minutes per run.
 
 | Script | Produces |
 |---|---|
-| `g1_revision_numbers.R` | Every objective value the correction moves, as means over seeds with the run-to-run range: per-alternative index and composite, paired contrasts, volume-normalised benefit, and the volume-vs-benefit rank correlation |
+| `spawn_timing_effect.R` | Every objective value the spawn-timing change moves, as means over seeds with the run-to-run range: per-alternative index and composite, paired contrasts, volume-normalised benefit, and the volume-vs-benefit rank correlation |
 | `figure4_seed_uncertainty.R` | Figure 4 variant drawing both uncertainty tiers — year-to-year IQR and run-to-run spread across seeds |
-| `compare_g1.R` | One legacy-vs-corrected pair, for a quick check |
-| `compare_g1_seeds.R` | The full multi-seed replication, separating G1 effect from Monte Carlo noise |
-| `g1_helpers.R` | Shared composite/normalisation helpers — sourced by the above, mirrors `mcda.R` so the two cannot drift |
+| `compare_spawn_timing.R` | One pooled-vs-alternative pair, for a quick check |
+| `compare_spawn_timing_seeds.R` | The full multi-seed replication, separating the effect from Monte Carlo noise |
+| `composite_helpers.R` | Shared composite/normalisation helpers — sourced by the above, mirrors `mcda.R` so the two cannot drift |
+
+Background and results: **`docs/spawn-timing.md`**.
 
 **Why seeds matter here.** The correction evaluates each alternative against its
 own redd sample rather than a pooled sample ~36× larger, so per-alternative
 estimates carry ±173–217 fish of run-to-run noise where pooling reported ±15–21.
 Differences under roughly 400 fish are not resolvable from a single run. See
-`G1_FINDINGS.md`.
+`docs/spawn-timing.md`.
 
 The remaining scripts in `analysis/` derive model parameters from raw data in
 `data_raw/` (age structure, CWT returns, flow, spawning habitat, juvenile
@@ -265,12 +267,11 @@ Full rationale and the options that were considered:
 > baseline **re-run through the same engine** — which is what the app's "Against
 > the baseline" tab does.
 
-### Revision reports
+### Model change records
 
 | File | Purpose |
 |---|---|
-| `MANUSCRIPT_REVISION_HANDOFF.md` | Findings organised as manuscript/SI/response edits — the one to hand to someone making revisions |
-| `REVISION_FINDINGS.md` | The same work as an analysis record, with method detail |
+| `docs/spawn-timing.md` | Alternative-specific spawn timing — what changed, why, what it moves, and how to reproduce either behaviour |
 
 ---
 

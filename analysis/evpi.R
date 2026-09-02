@@ -3,7 +3,7 @@
 # ============================================================================
 # Reviewer 1 asked for the rationale behind the objective weights used for the
 # EVPI calculation. The published 0.026 (4.6%) uses weights re-derived to
-# reproduce the observed ranking (0.75 salmon / 0.20 hydropower / 0.05
+# reproduce the observed ranking (0.73 salmon / 0.22 hydropower / 0.05
 # steelhead) rather than the elicited weights (0.40 / 0.50 / 0.10). Computing
 # it under both lets the response report a range instead of a single figure.
 #
@@ -94,7 +94,7 @@ evpi <- function(w_salmon, w_hydro, w_steel, pooled) {
 grid <- tribble(
   ~weight_set,                        ~w_salmon, ~w_hydro, ~w_steel,
   "elicited (0.40/0.50/0.10)",              .40,      .50,      .10,
-  "re-derived (0.75/0.20/0.05)",            .75,      .20,      .05
+  "re-derived (0.73/0.22/0.05)",            .73,      .22,      .05
 ) %>%
   crossing(normalisation = c("pooled", "per-state")) %>%
   mutate(res = pmap(list(w_salmon, w_hydro, w_steel, normalisation == "pooled"), evpi)) %>%

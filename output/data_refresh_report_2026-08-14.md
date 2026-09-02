@@ -63,7 +63,7 @@
 2. Re-run `analysis/build_spawn_timing_model.R`.
 3. Re-run `analysis/calibration_fit_statistics.R` and **look at the fit** before
    accepting the new calibration. As of 2026-07-28 it was poor (R2 0.13,
-   Nash-Sutcliffe -0.59); see OUTSTANDING_ITEMS.md D1.
+   Nash-Sutcliffe -0.59); tracked in the project revision notes.
 4. Re-run `analysis/test_scenario_engine.R` and confirm it still passes.
 5. Regenerate figures if any published number moved.
 6. Drop the new CE-QUAL-W2 deliverable in `data_raw/` so the app's baseline

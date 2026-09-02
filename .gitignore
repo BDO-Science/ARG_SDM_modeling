@@ -22,3 +22,27 @@
 
 # Stray device output from headless Rscript runs
 Rplots.pdf
+
+# Manuscript-revision working notes.
+# The technical record of model changes belongs in the repo (see
+# docs/spawn-timing.md); the manuscript-side breadcrumb trail - reviewer
+# responses, document editing checklists, revision audit logs - does not.
+# Those live alongside the manuscript in the project folder, not here.
+MANUSCRIPT_*.md
+REVISION_FINDINGS.md
+OUTSTANDING_ITEMS.md
+*_DISCLOSURE.md
+revision_notes/
+
+# Manuscript editing checklists live alongside the documents, not in the repo
+# (same rule as the retired OUTSTANDING_ITEMS.md / handoff notes above).
+docs/EDIT_LIST_*.md
+
+# Talks live alongside the repo, not in it - same rule as the manuscript.
+# analysis/presentation_bdsc.R IS tracked (it regenerates the figures from
+# committed model output); its rendered figures and the deck are not.
+presentations/
+figures/bdsc/
+
+# Collaborator delivery bundles; extract what is needed into data_raw/ instead
+/ARG SDM revision.zip

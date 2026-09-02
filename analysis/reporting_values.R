@@ -1,11 +1,12 @@
 # ============================================================================
-# The numbers that go in the paper
+# Headline objective values
 # ============================================================================
-# Single source for every value reported in the manuscript and SI, read from the
-# committed app_data so that anyone who clones the repo reproduces the paper's
-# tables in seconds without re-running precompute.R.
+# Single source for the summary values quoted from this model - adult population
+# index, MCDA composite and rank, volume-normalised benefit, and the
+# volume-vs-benefit rank correlation. Reads the committed app_data, so a clone
+# reproduces them in seconds without re-running precompute.R.
 #
-# REPORTING CONVENTION (decided 2026-08-18, OUTSTANDING_ITEMS.md H0)
+# REPORTING CONVENTION (see docs/spawn-timing.md)
 #
 #   Levels     - reported from this single committed run. Every figure, the app
 #                and this table therefore trace to one artefact.
@@ -20,7 +21,7 @@
 # fish of run-to-run noise while the contrasts that matter carry only +/-21-36.
 # Subtracting two levels from this file would discard that cancellation and
 # understate what the model can actually resolve. Contrasts come from
-# analysis/g1_revision_numbers.R (needs G1_SNAPROOT).
+# analysis/spawn_timing_effect.R (needs SPAWN_TIMING_SNAPROOT).
 #
 # Outputs: output/reporting_values.csv
 # ============================================================================
@@ -28,18 +29,18 @@
 suppressPackageStartupMessages({
   library(dplyr); library(tibble); library(readr); library(here)
 })
-source(here("analysis", "g1_helpers.R"))
+source(here("analysis", "composite_helpers.R"))
 
 APP <- here("SalmonCountR", "app_data")
 
 # Bypass volume (Mm3) per alternative - a design input. Kept in step with
-# analysis/g1_revision_numbers.R; see the note there on why these must not be
+# analysis/spawn_timing_effect.R; see the note there on why these must not be
 # derived from the hydropower revenue-loss scores.
 VOLUME_MM3 <- c("NB" = 0.0, "PB1" = 12.2, "PB2" = 42.2, "PB2b" = 49.5,
                 "PB2c" = 45.9, "PB3" = 21.4, "PB4" = 25.7, "PB5" = 21.4,
                 "PB6" = 37.2)
 
-comp <- g1_composite(APP)
+comp <- composite_scores(APP)
 stopifnot(!is.null(comp))
 
 nb_index <- comp$chinook_raw[comp$scenario == "NB"]
@@ -55,7 +56,7 @@ vals <- comp %>%
 
 rho <- cor(vals$volume_Mm3, vals$adult_index, method = "spearman")
 
-g1_rule("Reported values - committed run")
+rule("Reported values - committed run")
 print(as.data.frame(
   vals %>% arrange(desc(composite)) %>%
     mutate(across(c(adult_index, gain_vs_NB), ~round(.x, 0)),
