@@ -1071,11 +1071,18 @@ server <- function(input, output, session) {
       hydro_raw = unname(hs)
     )
 
+    # Chinook is normalised on the year's FIXED bounds, spanning all nine
+    # alternatives and all three TDM models, so the scale does not move when the
+    # user changes the TDM weights. See the note in years.R. Steelhead and
+    # hydropower do not vary with TDM weighting, so their within-set scales are
+    # already stable and are left alone.
+    sb <- B()$salmon_bounds
     perf_data %>%
       left_join(hydro_df, by = "scenario") %>%
       mutate(hydro_raw = ifelse(is.na(hydro_raw), 50, hydro_raw)) %>%
       mutate(
-        chinook_norm = normalize_scores_chinook(chinook_raw),
+        chinook_norm = if (is.null(sb)) normalize_scores_chinook(chinook_raw)
+                       else (chinook_raw - sb[["lo"]]) / (sb[["hi"]] - sb[["lo"]]),
         steelhead_norm = normalize_scores_steelhead(steelhead_raw),
         hydro_norm = normalize_scores_hydro(hydro_raw)
       )

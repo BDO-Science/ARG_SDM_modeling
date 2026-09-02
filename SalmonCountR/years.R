@@ -129,6 +129,39 @@ arg_year_vintage <- function(year) {
 #' Kept here rather than in global.R so a year switched into at runtime gets
 #' exactly the same treatment the startup year got.
 arg_prepare_bundle <- function(raw, cfg) {
+  # Fixed normalisation bounds for the Chinook objective, computed across all
+  # nine alternatives AND all three TDM models.
+  #
+  # WHY THIS EXISTS. The MCDA tab used to min-max the Chinook scores within
+  # whatever the current TDM weighting produced. Push the TDM weights far enough
+  # and the scale moves underneath the composite, which breaks the scoring:
+  # swing weights are defined relative to each objective's range, so a moving
+  # range means the elicited weights no longer describe the trade-off that was
+  # elicited. Same defect B. Mahardja found in the weight-sensitivity analysis;
+  # same fix, and the same bounds analysis/evpi.R and
+  # analysis/tdm_weight_sensitivity.R use.
+  #
+  # NOTE this changes the composite values the app displays relative to the
+  # published Table/Figure 5, which min-max within the nine alternatives at the
+  # elicited TDM weighting. That is a deliberate divergence: the app has to stay
+  # correct while a user moves the weights, the paper does not.
+  raw$salmon_bounds <- local({
+    rf <- raw$results_full
+    if (is.null(rf) || !all(c("env", "variant", "year", "spawners") %in% names(rf))) {
+      return(NULL)
+    }
+    per_state <- rf |>
+      dplyr::filter(year > 2024) |>
+      dplyr::group_by(env, variant) |>
+      dplyr::slice_tail(n = 20) |>
+      dplyr::summarise(med = stats::median(spawners, na.rm = TRUE), .groups = "drop") |>
+      dplyr::mutate(env = as.integer(env),
+                    scenario = ((env - 1) %% 9) + 1) |>
+      dplyr::group_by(scenario, variant) |>
+      dplyr::summarise(value = sum(med * 0.25), .groups = "drop")
+    c(lo = min(per_state$value), hi = max(per_state$value))
+  })
+
   raw$get_K_spawners <- local({
     tbl <- dplyr::mutate(raw$instream, K_spawners = FR_spawn_wua / 9.29)
     interp <- stats::approxfun(tbl$flow_cfs, tbl$K_spawners, rule = 2)
