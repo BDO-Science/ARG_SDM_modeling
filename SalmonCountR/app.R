@@ -61,8 +61,25 @@ get_scenario_alternatives <- function(scenario, hydro_year) {
 }
 
 ui <- navbarPage("Lower American River Power Bypass Decision Support",
-                 useShinyjs(), 
-                 
+                 useShinyjs(),
+
+                 # ---- Analysis-year selector (applies to every tab) ----
+                 # Sits in the navbar header so it is visible from all tabs and
+                 # cannot be mistaken for a per-tab control. Years are declared
+                 # in years.R; one whose data is not present yet still appears,
+                 # labelled, so it is obvious the app is waiting on a delivery.
+                 header = div(
+                   style = "padding: 8px 15px 0 15px; border-bottom: 1px solid #e5e5e5; margin-bottom: 10px;",
+                   fluidRow(
+                     column(3,
+                            selectInput("data_year", "Analysis year",
+                                        choices  = arg_year_choices(),
+                                        selected = ARG_DEFAULT_YEAR,
+                                        width    = "100%")),
+                     column(9, style = "padding-top: 25px;", uiOutput("year_status"))
+                   )
+                 ),
+
                  # ---- About Tab ----
                  tabPanel("About",
                           fluidRow(
@@ -367,8 +384,13 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                                              "Power Bypass 6"="PB6"),
                                                  selected = c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6")),  # Default to comparing NB and PB1
                               radioButtons("temp_site", "Site:", choices = c("Ave Watt"="AveWatt", "Ave Hazel"="AveHazel")),
+                              # Labels name the default year's first projection
+                              # year; the server relabels them on a year switch.
                               radioButtons("temp_period", "Time Period:",
-                                           choices = c("Oct-Dec 2025"="oct_dec", "Full Year 2025"="full")),
+                                           choices = stats::setNames(
+                                             c("oct_dec", "full"),
+                                             c(paste0("Oct-Dec ", arg_year_cfg(ARG_DEFAULT_YEAR)$first_projection_year),
+                                               paste0("Full Year ", arg_year_cfg(ARG_DEFAULT_YEAR)$first_projection_year)))),
                               width = 3
                             ),
                             mainPanel(
@@ -556,13 +578,68 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
 )
 
 server <- function(input, output, session) {
-  
-  # Hard-coded Hydropower Scores
-  hardcoded_hydro_scores <- c(
-    "NB"  = 0, "PB1" = 111422, "PB2" = 370826, "PB2b" = 470090, "PB2c" = 433215,
-    "PB3" = 201552, "PB4" = 241590, "PB5" = 199382, "PB6" = 348806
-  )
-  
+
+  # ---- Active analysis year -------------------------------------------------
+  # Everything the app reads comes from here. The bundle is session-scoped, so
+  # two people can have different years open at once without interfering.
+  # Bundles are cached in years.R, so switching back and forth is free.
+
+  active_year <- reactive({
+    y <- input$data_year
+    if (is.null(y) || !nzchar(y)) ARG_DEFAULT_YEAR else y
+  })
+
+  # NULL when the selected year's files are not present. Every consumer uses
+  # req(), so tabs go blank with the banner explaining why rather than erroring.
+  B <- reactive(load_year_bundle(active_year()))
+
+  year_cfg <- reactive(arg_year_cfg(active_year()))
+
+  output$year_status <- renderUI({
+    y <- active_year()
+    cfg <- arg_year_cfg(y)
+    if (!arg_year_available(y)) {
+      div(style = "color:#a94442;",
+          strong(paste0("No data loaded for ", cfg$label, ".")), " ", cfg$note,
+          br(),
+          span(style = "font-size:90%; color:#777;",
+               paste0("Expected in SalmonCountR/", cfg$dir, "/ -- missing: ",
+                      paste(arg_year_missing(y), collapse = ", "))))
+    } else {
+      v <- arg_year_vintage(y)
+      stamp <- if (!is.null(v) && !is.null(v$refreshed)) {
+        paste0("Data refreshed ", format(v$refreshed))
+      } else "Data vintage not recorded"
+      div(style = "color:#555;",
+          strong(paste0("Showing the ", cfg$label, " analysis.")), " ",
+          span(style = "font-size:90%;", stamp))
+    }
+  })
+
+  # Hydropower replacement cost is a per-year design input, declared in years.R.
+  hydro_scores <- reactive({
+    req(B())
+    year_cfg()$hydro_cost
+  })
+
+  # Objective weights start at whatever that year's elicitation produced.
+  observeEvent(active_year(), {
+    w <- year_cfg()$default_weights
+    updateSliderInput(session, "w_chinook",   value = unname(w["chinook"]))
+    updateSliderInput(session, "w_steelhead", value = unname(w["steelhead"]))
+    updateSliderInput(session, "w_hydro",     value = unname(w["hydro"]))
+  }, ignoreInit = TRUE)
+
+  # Temperature Explorer period labels name the year actually plotted.
+  observeEvent(active_year(), {
+    fy <- year_cfg()$first_projection_year
+    updateRadioButtons(session, "temp_period",
+                       choices = stats::setNames(c("oct_dec", "full"),
+                                                 c(paste0("Oct-Dec ", fy),
+                                                   paste0("Full Year ", fy))),
+                       selected = isolate(input$temp_period) %||% "oct_dec")
+  }, ignoreInit = TRUE)
+
   # Reactive Values
   values <- reactiveValues(
     calib_data = NULL,
@@ -664,21 +741,26 @@ server <- function(input, output, session) {
   
   # Run simulation for a scenario with hydro and TDM weighting
   run_scenario_simulation <- function(scenario, hydro_weights, tdm_weights, n_years, flow_val) {
+    dat <- B(); req(dat)
+    first_year <- year_cfg()$first_projection_year
+
     alts <- get_scenario_alternatives(scenario, "all")
     hydro_years <- c("2011", "2014", "2017", "2020")
-    
+
     # Normalize weights
     hydro_w <- normalize_weights(hydro_weights)
     tdm_w <- normalize_weights(tdm_weights)
-    
-    # Use the actual flow-habitat relationship from instream data
-    K_spawners <- get_K_spawners(flow_val)
-    
-    # Extract forecast years from results_full
-    forecast_data <- results_full %>%
-      filter(year >= 2025) %>%
+
+    # Use the actual flow-habitat relationship from this year's instream data
+    K_spawners <- dat$get_K_spawners(flow_val)
+
+    # Extract forecast years from results_full. The lower bound is the bundle's
+    # first projection year, not a literal 2025 -- a later deliverable projects
+    # from a later year and would otherwise return an empty frame.
+    forecast_data <- dat$results_full %>%
+      filter(year >= first_year) %>%
       slice_head(n = n_years)
-    
+
     if (nrow(forecast_data) == 0) {
       stop("No forecast data available in results_full")
     }
@@ -689,14 +771,14 @@ server <- function(input, output, session) {
     
     # Apply density-dependent scaling based on K change
     # The default K at 1500 cfs (from the slider default)
-    base_K <- get_K_spawners(1000)   # was 1500 — now matches both slider default AND precompute
+    base_K <- dat$get_K_spawners(1000)   # was 1500 — now matches both slider default AND precompute
     K_scalar <- K_spawners / base_K
     
     for (i in seq_along(alts)) {
       alt_id <- as.character(alts[i])
       
       # Get data for all TDM variants for this alternative
-      alt_data <- results_full %>%
+      alt_data <- dat$results_full %>%
         filter(env == alt_id, year %in% years_vec)
       
       if (nrow(alt_data) == 0) next
@@ -741,7 +823,7 @@ server <- function(input, output, session) {
     )
     
     # Add other columns from template for compatibility
-    template_cols <- results_full %>%
+    template_cols <- dat$results_full %>%
       filter(env == as.character(alts[1]), variant == "exp_WF") %>%
       slice_head(n = 1) %>%
       select(-year, -spawners, -env, -variant)
@@ -765,13 +847,15 @@ server <- function(input, output, session) {
   temp_w_2017_d <- debounce(reactive(input$temp_w_2017), 300)
   temp_w_2020_d <- debounce(reactive(input$temp_w_2020), 300)
   
-  # Cache the filtered base data - uses df_temp_2025 (pre-filtered in global.R)
-  # so no year(Date)/month(Date) calls happen at render time
+  # Cache the filtered base data - uses the bundle's pre-filtered first
+  # projection year (built in years.R) so no year(Date)/month(Date) calls
+  # happen at render time
   temp_base_data <- reactive({
-    req(df_temp_2025, input$temp_alternatives, length(input$temp_alternatives) > 0)
+    dat <- B(); req(dat)
+    req(dat$df_temp_first_year, input$temp_alternatives, length(input$temp_alternatives) > 0)
     all_envs <- unlist(lapply(input$temp_alternatives,
                               function(alt) as.character(get_scenario_alternatives(alt, "all"))))
-    df <- df_temp_2025 %>%
+    df <- dat$df_temp_first_year %>%
       filter(env %in% all_envs, site == input$temp_site)
     if (input$temp_period == "oct_dec") {
       df <- df %>% filter(month_num %in% c(10, 11, 12))
@@ -843,20 +927,20 @@ server <- function(input, output, session) {
       slice_tail(n = 20) %>%  # Use last 20 years like boxplot
       summarise(chinook_raw = median(spawners), .groups = "drop")
     
-    # Calculate weighted steelhead scores if steelhead_metrics exists
-    # Calculate weighted steelhead scores if steelhead_metrics exists
-    if(exists("steelhead_metrics")) {
+    # Calculate weighted steelhead scores from the active year's metrics
+    steelhead_metrics_yr <- B()$steelhead_metrics
+    if (!is.null(steelhead_metrics_yr)) {
       steelhead_weighted <- map_dfr(input$cmp_scenarios, function(scen) {
         alts <- get_scenario_alternatives(scen, "all")
         hydro_years <- c("2011", "2014", "2017", "2020")
-        
+
         combined_steelhead <- 0
         for (j in seq_along(alts)) {
           alt_id <- as.character(alts[j])
           hydro_year <- hydro_years[j]
-          
-          steelhead_score <- steelhead_metrics %>% 
-            filter(env == alt_id) %>% 
+
+          steelhead_score <- steelhead_metrics_yr %>%
+            filter(env == alt_id) %>%
             pull(steelhead_score)
           
           if (length(steelhead_score) > 0) {
@@ -960,30 +1044,45 @@ server <- function(input, output, session) {
   
   # Decision Support
   performance_data_full <- reactive({
+    dat <- B(); req(dat)
+
     # Check if user has run Compare Alternatives with custom weights
     if (!is.null(values$performance_auto)) {
       # Use the data from Compare Alternatives for consistency
       perf_data <- values$performance_auto
     } else {
-      # Use pre-computed swing results (based on default weights)
-      perf_data <- swing_scenario_results %>%
+      # Use pre-computed swing results (based on default weights).
+      # BUGFIX: these two objects were read here but never loaded -- precompute.R
+      # wrote them to app_data and nothing in global.R picked them up, so this
+      # branch raised "object not found" on a fresh session and the whole
+      # Decision Support tab only worked after Compare Alternatives had been run.
+      # They are part of the year bundle now.
+      perf_data <- dat$swing_scenario_results %>%
         rename(chinook_raw = spawner_metric) %>%
         left_join(
-          steelhead_scenario_results %>% rename(steelhead_raw = steelhead_score),
+          dat$steelhead_scenario_results %>% rename(steelhead_raw = steelhead_score),
           by = "scenario"
         )
     }
-    
+
+    hs <- hydro_scores()
     hydro_df <- tibble(
-      scenario = names(hardcoded_hydro_scores),
-      hydro_raw = hardcoded_hydro_scores
+      scenario = names(hs),
+      hydro_raw = unname(hs)
     )
-    
+
+    # Chinook is normalised on the year's FIXED bounds, spanning all nine
+    # alternatives and all three TDM models, so the scale does not move when the
+    # user changes the TDM weights. See the note in years.R. Steelhead and
+    # hydropower do not vary with TDM weighting, so their within-set scales are
+    # already stable and are left alone.
+    sb <- B()$salmon_bounds
     perf_data %>%
       left_join(hydro_df, by = "scenario") %>%
       mutate(hydro_raw = ifelse(is.na(hydro_raw), 50, hydro_raw)) %>%
       mutate(
-        chinook_norm = normalize_scores_chinook(chinook_raw),
+        chinook_norm = if (is.null(sb)) normalize_scores_chinook(chinook_raw)
+                       else (chinook_raw - sb[["lo"]]) / (sb[["hi"]] - sb[["lo"]]),
         steelhead_norm = normalize_scores_steelhead(steelhead_raw),
         hydro_norm = normalize_scores_hydro(hydro_raw)
       )
@@ -1159,7 +1258,9 @@ server <- function(input, output, session) {
   # Display hypothetical alternatives
   output$swing_alternatives_table <- renderTable({
     perf_data <- performance_data_full()
-    
+    swing_ranges <- B()$swing_ranges
+    hydro_scores_yr <- hydro_scores()
+
     tibble(
       Alternative = c("Worst Alternative", "Alt 1: Best Chinook", "Alt 2: Best Steelhead", "Alt 3: Best Hydropower"),
       `Chinook Abundance` = c(
@@ -1175,10 +1276,10 @@ server <- function(input, output, session) {
         swing_ranges$worst_case[swing_ranges$objective == "Steelhead"]
       ),
       `Hydropower Cost` = c(
-        max(hardcoded_hydro_scores),
-        max(hardcoded_hydro_scores),
-        max(hardcoded_hydro_scores),
-        min(hardcoded_hydro_scores)
+        max(hydro_scores_yr),
+        max(hydro_scores_yr),
+        max(hydro_scores_yr),
+        min(hydro_scores_yr)
       )
     ) %>%
       mutate(

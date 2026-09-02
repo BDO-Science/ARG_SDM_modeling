@@ -2,6 +2,12 @@
 
 library(tidyverse); library(lubridate); library(here)
 source("functions.R")
+source("years.R")   # analysis-year registry -- read that file's header first
+
+# Startup loads below are the DEFAULT analysis year, unchanged from before the
+# year selector existed. They are what functions.R reads out of the global
+# environment, so they stay. Anything the app itself reads now comes from a
+# per-session bundle (see load_year_bundle) and follows the selector instead.
 
 # load precomputed data (fast)
 # NOTE: This script now assumes that the 'env_ext_list.rds' file in the
@@ -22,7 +28,12 @@ steelhead_metrics <- readRDS(here("SalmonCountR", "app_data", "steelhead_metrics
 swing_ranges <- readRDS(here("SalmonCountR", "app_data", "swing_ranges.rds"))
 results_full <- readRDS(here("SalmonCountR", "app_data", "results_full.rds"))
 
-real_years <- 2011:2024 
+# precompute.R writes these two and app.R's Decision Support tab reads them, but
+# nothing ever loaded them -- see BUGFIX note in app.R's performance_data_full().
+swing_scenario_results     <- readRDS(here("SalmonCountR", "app_data", "swing_scenario_results.rds"))
+steelhead_scenario_results <- readRDS(here("SalmonCountR", "app_data", "steelhead_scenario_results.rds"))
+
+real_years <- 2011:2024
 n_sim      <- 114
 sim_years_full <- real_years[1] + seq(0, n_sim - 1)   # e.g. 2011:2060
 
@@ -158,20 +169,26 @@ if (nrow(df_all) > 0 && "alternative" %in% names(df_all)) {
 }
 
 
-# ---- Pre-computed temperature explorer data (2025 only, climate-labelled) ----
-# Doing year(Date) / month(Date) on the full df_all_orig on every render is
-# the main cause of the 20-second lag in the Temperature Explorer tab.
-# We do it once here at startup instead.
-if (exists("df_all_orig") && is.data.frame(df_all_orig)) {
-  df_temp_2025 <- df_all_orig %>%
-    filter(year(Date) == 2025) %>%
-    mutate(
-      month_num = month(Date),
-      climate = case_when(
-        env %in% as.character(1:9)   ~ "2011",
-        env %in% as.character(10:18) ~ "2014",
-        env %in% as.character(19:27) ~ "2017",
-        env %in% as.character(28:36) ~ "2020"
-      )
-    )
+# ---- Default analysis-year bundle -------------------------------------------
+# Everything the app reads, for the startup year. Loading it here means a cold
+# start pays the cost once; the selector swaps to another year's bundle without
+# touching these globals, so concurrent sessions on shinyapps.io cannot tread on
+# each other.
+#
+# This also builds the Temperature Explorer's pre-filtered frame (previously
+# df_temp_2025, computed here at startup because doing year(Date)/month(Date)
+# over the full df_all_orig on every render was the main cause of the 20-second
+# lag on that tab). It now filters on the bundle's first projection year rather
+# than a literal 2025, which would return zero rows for any later deliverable.
+ARG_BUNDLE_DEFAULT <- load_year_bundle(ARG_DEFAULT_YEAR)
+
+if (is.null(ARG_BUNDLE_DEFAULT)) {
+  stop(
+    "Default analysis year '", ARG_DEFAULT_YEAR, "' is missing required files: ",
+    paste(arg_year_missing(ARG_DEFAULT_YEAR), collapse = ", "),
+    call. = FALSE
+  )
 }
+
+# Kept for backwards compatibility with any code still expecting the old name.
+df_temp_2025 <- ARG_BUNDLE_DEFAULT$df_temp_first_year
