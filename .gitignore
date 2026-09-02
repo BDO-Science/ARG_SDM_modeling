@@ -33,3 +33,16 @@ REVISION_FINDINGS.md
 OUTSTANDING_ITEMS.md
 *_DISCLOSURE.md
 revision_notes/
+
+# Manuscript editing checklists live alongside the documents, not in the repo
+# (same rule as the retired OUTSTANDING_ITEMS.md / handoff notes above).
+docs/EDIT_LIST_*.md
+
+# Talks live alongside the repo, not in it - same rule as the manuscript.
+# analysis/presentation_bdsc.R IS tracked (it regenerates the figures from
+# committed model output); its rendered figures and the deck are not.
+presentations/
+figures/bdsc/
+
+# Collaborator delivery bundles; extract what is needed into data_raw/ instead
+/ARG SDM revision.zip
