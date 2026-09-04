@@ -11,7 +11,7 @@
 # NOT the simulation year inside a projection -- see first_projection_year.
 #
 # HOW TO ADD A YEAR.
-#   1. Put that year's precompute output in SalmonCountR/app_data/<year>/.
+#   1. Put that year's precompute output in the app's app_data/<year>/.
 #      The 2025 bundle is the flat app_data/ directory for historical reasons;
 #      every later year gets its own subdirectory. Nothing has to move.
 #   2. Add an entry to ARG_YEARS with its weights, hydropower costs and first
@@ -28,9 +28,41 @@
 # global.R loaded at startup.
 # -----------------------------------------------------------------------------
 
-# Paths are built exactly the way global.R has always built them, so deployment
-# behaviour is unchanged. If the here() convention is ever fixed, fix it here.
-arg_app_path <- function(...) here::here("SalmonCountR", ...)
+# ---- App directory resolution -----------------------------------------------
+# One rule that holds locally and on the Shiny server, so the same code deploys
+# without being restructured first.
+#
+# WHAT WAS WRONG. This used here::here("SalmonCountR", ...). here() ignores the
+# working directory on purpose and walks up looking for a project marker
+# (.git / .Rproj). Locally that lands on the repo root, so prefixing
+# "SalmonCountR" is correct. In a deployed bundle there is no marker, so here()
+# falls back to the working directory -- which Shiny has ALREADY set to the app
+# directory -- and the "SalmonCountR" prefix pointed one level too deep. Hence
+# the manual reshuffle before every deploy.
+#
+# WHAT IT DOES NOW. Anchor on the directory that actually contains app_data/,
+# probing the two places it can be. Resolved once and cached.
+#
+#   deployed / runApp()      wd is the app dir          -> "."
+#   sourced from repo root   wd is the repo root        -> "SalmonCountR"
+#
+# Add a candidate here if a third layout ever appears; do not reintroduce here().
+.arg_app_dir_cache <- NULL
+
+arg_app_dir <- function() {
+  if (!is.null(.arg_app_dir_cache)) return(.arg_app_dir_cache)
+  candidates <- c(".", "SalmonCountR")
+  hit <- Find(function(p) dir.exists(file.path(p, "app_data")), candidates)
+  if (is.null(hit)) {
+    stop("Cannot locate the SalmonCountR app directory: no app_data/ found ",
+         "relative to '", getwd(), "'. Looked in: ",
+         paste(candidates, collapse = ", "), call. = FALSE)
+  }
+  .arg_app_dir_cache <<- normalizePath(hit, winslash = "/", mustWork = TRUE)
+  .arg_app_dir_cache
+}
+
+arg_app_path <- function(...) file.path(arg_app_dir(), ...)
 
 # The objects the app actually reads, and the file each comes from.
 ARG_YEAR_FILES <- c(
