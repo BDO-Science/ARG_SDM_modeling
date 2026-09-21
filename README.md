@@ -369,6 +369,6 @@ for the published year.
 ## Citation and license
 
 Code: <https://github.com/BDO-Science/ARG_SDM_modeling>. Please cite a tagged
-release (the latest is `v1.2.0`) together with the accompanying manuscript.
+release (listed under the repository's tags; `v1.3.0` for the 2025 analysis as presented in 2026-09) together with the accompanying manuscript.
 
 Licensed under the Apache License 2.0; see `LICENSE`.
