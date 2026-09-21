@@ -1,5 +1,5 @@
 ---
-title: "American River Fall-Run Chinook — Modeling Notes"
+title: "American River Fall-Run Chinook — Model Equations"
 format:
   html:
     theme: cosmo
@@ -12,115 +12,213 @@ format:
 
 ## Overview
 
-This document summarizes the **modeling framework** used in the Shiny application and precompute script. The model simulates the salmon life cycle from spawners to age-structured returns under alternative flow and temperature scenarios.  
+This is the model as `SalmonCountR/precompute.R` and `SalmonCountR/functions.R`
+run it, with the parameter values of the published run. Section references
+(§) are to `precompute.R`.
 
-Key components:
+Notation: $a$ is a power-bypass alternative (one of 36: nine alternatives × four
+meteorological years), $y$ a brood year, $r$ a simulated redd, $T$ daily mean
+water temperature in °C.
 
-- **Spawn timing**: An ordinal cumulative logit model (CLM) predicts spawn timing based on October/November mean temperatures.
-- **Egg → fry survival**: Temperature-dependent mortality (TDM) is calculated using three different models (two exponential, one linear-threshold) across incubation windows defined by Accumulated Thermal Units (ATUs).
-- **Pre-spawn adult survival**: A logistic function of cumulative pre-spawn degree-days.
-- **Density dependence & rear survival**: Fry production is capped via a Beverton–Holt term, followed by a constant fry-to-smolt survival rate.
-- **Smolt-to-adult returns (SAR)**: Calibrated smolt-to-adult return rates are applied to smolt production to determine adult returns at ages 3–5.
-- **Calibration**: The model jointly optimizes mean SAR and rearing survival against observed escapement data from 2011–2024.
-
----
-
-## Master Life-Cycle Recursion
-
-Spawner abundance in a future year \\(y+a\\) is the sum of returning adults from multiple brood years. The contribution from a single brood year \\(y\\) is given by the master equation:
-
-$$
-S_{y+a} \;\leftarrow\; S_{y+a} +
-\underbrace{S_y \cdot f \cdot S_{\mathrm{pre},y} \cdot F}_{\text{Total Eggs}} \cdot \underbrace{S_{\mathrm{egg},y} \cdot dd_y}_{\text{Effective Egg Survival}} \cdot \underbrace{S_{\mathrm{rear}}}_{\text{Rearing Survival}} \cdot \underbrace{\mathrm{SAR}_y \cdot P(\mathrm{age}=a)}_{\text{Ocean Survival & Return}},
-\quad a \in \{3,4,5\}.
-$$
-
-This recursion integrates all key biological processes.
+A bypass alternative changes one input, the daily temperature series at Watt and
+Hazel Avenues. Three components read that series: **spawn timing**, **pre-spawn
+survival** and **egg-to-fry survival**. Everything else is shared by all
+alternatives, except density dependence, which responds to the number of redds.
 
 ---
 
-## Process Modules
+## Life-cycle recursion
 
-### 1. Spawn Timing
-
-Spawning is distributed across 11 fixed 10-day bins from October–January.  
-
-- **Model**: An ordinal cumulative logit model (CLM) predicts the probability of spawning in a given bin:
-
-  $$
-  \Pr(\text{Bin} \le k \mid y) = \operatorname{logit}^{-1}(\zeta_k - \eta_y),
-  $$
-
-  $$
-  \eta_y = \beta_{\text{Oct}} \overline{T}^{\*}_{y,\text{Oct}} +
-           \beta_{\text{Nov}} \overline{T}^{\*}_{y,\text{Nov}},
-  $$
-
-  with thresholds \\(\zeta_k\\) and fixed effects \\(\beta\\) for standardized October and November temperatures.
-
-### 2. Pre-Spawn Survival
-
-Adults accumulate thermal stress prior to spawning. Survival is a logistic function of cumulative degree-days (DD):
+Each brood year $y$ sends returns to spawning years $y+3$, $y+4$ and $y+5$:
 
 $$
-S_{\mathrm{pre},y} = \operatorname{logit}^{-1}(\theta_0 + \theta_1 \cdot \mathrm{DD}_y),
+S_{a,\,y+j} \;\mathrel{+}=\;
+\underbrace{S_{a,y}\,\phi\,S_{\mathrm{pre},a,y}}_{\text{redds } R_{a,y}}
+\cdot f \cdot S_{\mathrm{egg},a,y} \cdot dd_{a,y} \cdot S_{\mathrm{rear}} \cdot \mathrm{SAR} \cdot p_j,
+\qquad j \in \{3,4,5\}
 $$
 
-$$
-\mathrm{DD}_y = \sum_{t=\text{Oct 1}}^{\text{spawn}_y} \max(T_t - T_{\text{base}}, 0).
-$$
+| Symbol | Meaning | Value |
+|---|---|---|
+| $S_{a,y}$ | spawners | 2011–2013 seeded from GrandTab; set to 0 below 1 |
+| $\phi$ | female fraction | 0.5 |
+| $f$ | fecundity, eggs per female | 5,522 |
+| $S_{\mathrm{pre}}$ | pre-spawn survival | [below](#pre-spawn-survival) |
+| $S_{\mathrm{egg}}$ | egg-to-fry survival | [below](#egg-to-fry-survival) |
+| $dd$ | density dependence | [below](#density-dependence) |
+| $S_{\mathrm{rear}}$ | fry-to-smolt survival | 0.543 (calibrated) |
+| $\mathrm{SAR}$ | smolt-to-adult return | 0.00268 (calibrated) |
+| $p_j$ | age at return, 3 / 4 / 5 | 0.829 / 0.169 / 0.002 (coded-wire tags) |
 
-- Low degree-days → high survival.  
-- High degree-days → survival declines steeply.
-
-### 3. Egg → Fry Survival (TDM)
-
-The incubation window is determined by **Accumulated Thermal Units (ATUs)**. Survival over this period is computed as:
-
-$$
-S_{\mathrm{egg},y} = \exp(-H_y),
-$$
-
-where \\(H_y\\) is the cumulative hazard across all incubation days.
-
-- **Exponential TDM (WaterForum 2020, SALMOD 2006):** The daily hazard rate increases exponentially with temperature.
-
-  $$
-  H_y = \sum_i \alpha \, e^{\beta T_i}.
-  $$
-
-- **Linear-threshold TDM (Martin et al. 2017):** The daily hazard rate increases linearly, but only for temperatures above a specific threshold.
-
-  $$
-  H_y = \alpha \sum_i \max(T_i - \beta, 0).
-  $$
-
-### 4. Density Dependence & Rearing Survival
-
-The number of surviving fry is limited by habitat capacity, modeled with a Beverton-Holt relationship.
-
-$$
-\text{Redds}_y = S_y \cdot f \cdot S_{\mathrm{pre},y}
-$$
-
-$$
-dd_y = \frac{S_0}{1 + \text{Redds}_y / K_y}
-$$
-
-The number of smolts produced is then:
-$$
-\text{Smolts}_y = (\text{Redds}_y \cdot F \cdot S_{\mathrm{egg},y} \cdot dd_y) \cdot S_{\mathrm{rear}}
-$$
-
-where \\(S_{\mathrm{eff},y} = S_{\mathrm{egg},y} \cdot dd_y\\) is the effective egg-to-fry survival.
-
-### 5. Smolt → Adult Returns (SAR)
-
-Reared smolts return as adults after age-structured delays, governed by the smolt-to-adult return (SAR) rate. The number of returning adults from brood year \\(y\\) that contribute to the spawner population in year \\(y+a\\) is:
-
-$$
-\text{Returns}_{y \to y+a} = \text{Smolts}_y \cdot \mathrm{SAR}_y \cdot P(\mathrm{age}=a),
-\quad a \in \{3,4,5\}.
-$$
+Implemented in `simulate_variant()`.
 
 ---
+
+## Spawn timing
+
+The spawning season is divided into 10-day bins from early October (11 bins in
+the fitted model). A cumulative-link (ordinal logit) model gives the probability
+that a redd is built in bin $k$ or earlier:
+
+$$
+\Pr(\text{bin}_r \le k) = \operatorname{logit}^{-1}\!\big(\zeta_k - \beta_{\mathrm{Oct}}\,\tilde T_{\mathrm{Oct},a,y} - \beta_{\mathrm{Nov}}\,\tilde T_{\mathrm{Nov},a,y}\big)
+$$
+
+- $\tilde T_{\mathrm{Oct}}, \tilde T_{\mathrm{Nov}}$: monthly mean temperature,
+  standardized to the carcass-survey brood years.
+- $\beta_{\mathrm{Oct}} = +0.186$, $\beta_{\mathrm{Nov}} = -0.070$ per standard
+  deviation. A positive coefficient moves spawning later.
+- Fitted by maximum likelihood (`ordinal::clm`) to about 10,000 carcass-survey
+  redds, brood years 2011–2024 (§10–14).
+
+For each alternative and year, redds are simulated (§17): a bin drawn from that
+alternative's bin probabilities, a date drawn uniformly within the bin, and a
+survey site drawn from the observed sites. These redd draws are the only random
+element in the model, and the source of the ±173–217 adults of run-to-run spread
+(`docs/spawn-timing.md`).
+
+---
+
+## Egg-to-fry survival
+
+Each redd is exposed from its construction date $d_r$ until emergence, set by
+accumulated thermal units (ATU) at the redd's site:
+
+$$
+e_r = \min\Big\{t : \sum_{i=d_r}^{t} \max(T_i, 0) \ge 958\Big\},
+\qquad
+S_r = \exp\!\Big(-\sum_{i=d_r}^{e_r} h(T_i)\Big)
+$$
+
+Hatch is at 400 ATU and emergence at 958 ATU (SacPAS Fish Model v3 / Zeug et al.
+2012). Survival is the exponential of the summed daily hazard, i.e. daily
+survival $e^{-h}$ multiplied over independent days (derivation in `math.qmd`).
+
+The year-level survival for an alternative is the redd-weighted mean:
+
+$$
+S_{\mathrm{egg},a,y} = \frac{\sum_r N_r\, S_r}{\sum_r N_r}
+$$
+
+where $N_r$ counts redds sharing a date and site (`eval_year()`).
+
+Temperature enters twice: it sets the daily hazard, and it sets how many days
+of hazard a redd is exposed to.
+
+### Daily hazard models
+
+Three published models are run side by side (`tdm_exp()`, `tdm_lin_martin()`):
+
+| Model | Code name | Hazard $h(T)$ | Parameters | Weight |
+|---|---|---|---|---|
+| Bratovich et al. 2020 | `exp_WF` (Water Forum 2020) | $\alpha e^{\beta T}$ | egg $\alpha = 3.408\times10^{-11}$, $\beta = 1.211$; alevin $\alpha = 1.018\times10^{-10}$, $\beta = 1.241$ | 0.51 |
+| Bartholow & Heasley 2006 | `exp_SM` (SALMOD 2006) | $\alpha e^{\beta T}$ | egg $\alpha = 1.475\times10^{-11}$, $\beta = 1.392$; alevin $\alpha = 2.521\times10^{-12}$, $\beta = 1.461$ | 0.24 |
+| Martin et al. 2017 | `lin_Martin` | $\alpha \max(T - T_{\mathrm{crit}}, 0)$ | $\alpha = 0.026$, $T_{\mathrm{crit}} = 12.14$ °C; no stage split | 0.25 |
+
+The exponential models use egg parameters up to hatch and alevin parameters from
+hatch to emergence. Weights are from expert elicitation and are applied to the
+outputs (see [Combining runs](#combining-runs)).
+
+---
+
+## Pre-spawn survival
+
+Adults accumulate degree-days from river entry (October 1) to spawning:
+
+$$
+DD_{a,y} = \sum_{t=\text{Oct 1}}^{\tilde d_{a,y}} \max(T_t, 0),
+\qquad
+S_{\mathrm{pre},a,y} = \operatorname{logit}^{-1}(3.0 - 0.00067\,DD_{a,y})
+$$
+
+- $\tilde d_{a,y}$ is the **median** simulated redd date for that alternative
+  and year, so there is one exposure per alternative-year, not one per redd.
+- $T_t$ is the daily mean across the two sites.
+- Parameters from Colvin et al. (2018), not refitted. Over the observed range
+  (about 790–880 degree-days) survival is about 0.92 and changes little.
+
+Later spawning lengthens holding, so this term is coupled to spawn timing
+(`compute_deg_day_adult()`, `surv_adult_prespawn()`).
+
+---
+
+## Density dependence
+
+Beverton–Holt on redds:
+
+$$
+R_{a,y} = S_{a,y}\,\phi\,S_{\mathrm{pre},a,y},
+\qquad
+dd_{a,y} = \frac{S_0}{1 + R_{a,y}/K}
+$$
+
+- $S_0 = 0.347$: egg-to-fry survival at low density.
+- $K = \mathrm{WUA}(Q)/9.29\ \mathrm{m}^2$ per redd, from the 2023 PHABSIM
+  habitat curve (`american_river_instream.rds`). $K$ ranges 16,349–35,171 across
+  flows.
+- **The projections use $K$ at 1,000 cfs (33,185) for every alternative** (§31.3, §35;
+  `sim_forecast_fn()` is called with `flow_cfs = NULL`). The app's flow slider
+  rescales results afterwards; it does not rerun the model.
+
+Because $dd$ depends on redds, not on egg survival, a bypass does not change it
+in the bypass year. It bites later, when the extra fry return as spawners.
+
+---
+
+## Calibration
+
+SAR and rearing survival are fitted jointly by least squares against GrandTab
+escapement, summed over the three hazard models (`combined_sse()`, §32):
+
+$$
+(\widehat{\mathrm{SAR}}, \widehat{S}_{\mathrm{rear}}) =
+\arg\min \sum_{m} \sum_{y=2014}^{2024} \big(\hat S^{(m)}_y - S^{\mathrm{obs}}_y\big)^2
+$$
+
+- 2011–2013 are the seed; 2014–2024 are fitted. L-BFGS-B, bounds
+  $\mathrm{SAR} \in [10^{-4}, 0.1]$, $S_{\mathrm{rear}} \in [0.01, 1]$.
+- Temperatures are the observed record, which is identical for every
+  alternative, using the degree-days of alternative 1.
+- **Only the product is identified.** $\mathrm{SAR}$ and $S_{\mathrm{rear}}$ enter
+  the recursion only as $\mathrm{SAR}\times S_{\mathrm{rear}} \approx 1.46\times10^{-3}$;
+  the split between them reflects the starting values (0.0025, 0.542).
+- Fit over 2014–2024 (TDM-weighted): $r^2 \approx 0.14$, MAPE ≈ 51%
+  (`output/calibration_fit_statistics.csv`).
+
+---
+
+## Combining runs
+
+Each of the 36 alternatives × 3 hazard models runs the full life cycle for 114
+years: the 2011–2024 calibration years, then a 100-year projection seeded from
+2022–2024 escapement. The projection's temperature series repeats each year, so
+it settles, and the median of the final 20 years is taken. For bypass
+alternative $b$:
+
+$$
+C_b = \sum_{\text{met}} 0.25 \sum_{m} w_m \cdot \operatorname{median}_{\text{final 20 yr}} S^{(b,\,\text{met},\,m)}_t
+$$
+
+with $w_m$ = 0.51 / 0.24 / 0.25 as above. Averaging happens on adults, after each
+hazard model has run its own life cycle, not on survival beforehand.
+
+---
+
+## Where temperature comes from
+
+`analysis/temperature_data.R` builds each alternative's daily series:
+
+- **Through 2025-09-21:** observed USGS gauge data (Watt Avenue 11446980, Hazel
+  Avenue 11446500), identical for every alternative. Gaps are filled with, and
+  values floored at, 7 °C (Hazel) and 8 °C (Watt).
+- **After that, October 18 to December 31 (the published 2025 run):** the
+  CE-QUAL-W2 scenario temperatures, matched by day of year and repeated every
+  year, wherever the deliverable has a value. The 2025 deliverable starts
+  September 22; its September 22–October 17 values were not used. From the next
+  deliverable the window starts on the deliverable's first date
+  (`ARG_SCENARIO_START` in `temperature_data.R`).
+- **After that, all other days:** the 2011–2025 day-of-year average for the site,
+  identical for every alternative.
+
+See `docs/new-temperature-scenario.md` for the input format and the limitations
+this implies.

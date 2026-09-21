@@ -8,7 +8,7 @@
 #     # compatibility
 #     calib_pred_by_variant <- list()
 #
-# and writes a 0-byte calib_pred_by_variant.rds, so the fit statistics quoted in
+# and wrote a 0-byte calib_pred_by_variant.rds (it now writes none at all), so the fit statistics quoted in
 # SI Section S2.8 (R2 = 0.72, RMSE = 8,240 spawners, MAPE = 24%) could not be
 # reproduced from the repository. This script reproduces them from saved
 # artifacts alone, without re-running precompute.R and therefore without

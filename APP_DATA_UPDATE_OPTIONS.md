@@ -13,6 +13,32 @@ request through one person?
 
 ------------------------------------------------------------------------
 
+## Current status — 2026-09-21
+
+**Option 1 (the "Add a Year" upload tab) is not on `main`.** It was built
+and tested on `revision-2026-08` as described below, then held back when
+app development moved to a contractor (commit `6b574ac`, 2026-08-18). On
+`main` there is no upload tab, no `SalmonCountR/scenario_engine.R`, and
+`analysis/test_scenario_engine.R` fails because the file it tests is
+absent. `git revert 6b574ac` restores all three.
+
+What `main` has instead:
+
+- **New temperatures** go through the scripts: `analysis/temperature_data.R`
+  → `SalmonCountR/precompute.R` → a folder under `app_data/`, registered
+  in `SalmonCountR/years.R` as an extra analysis year. Step by step:
+  `docs/new-temperature-scenario.md`.
+- **Job B** (`analysis/refresh_data_year.R`, `analysis/data_sources.R`) is
+  as described below. The SacPAS query links are still `NA`.
+- **Data vintage** is shown only in the banner under the app's Analysis
+  year selector; the footer, About-tab section and CSV comment lines were
+  part of the held-back app changes.
+
+The rest of this document is the 2026-07 record and describes the
+`revision-2026-08` app.
+
+------------------------------------------------------------------------
+
 ## ✅ Status: Options 1 and 3 are built — 2026-07-29
 
 The recommendation below was adopted. What now exists:

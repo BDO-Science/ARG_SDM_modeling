@@ -48,8 +48,20 @@ in a paired contrast and in the min–max normalisation the composite uses.
 |---|---|---|
 | PB3 − PB5 adult index | +43 (PB3 ahead) | **−261 (PB5 ahead)** |
 | PB2b − PB5 composite | +0.018 (PB2b ahead) | **−0.012 (PB5 ahead)** |
-| Composite, PB1 / PB2 / PB4 | 0.573 / 0.534 / 0.530 | 0.555 / 0.513 / 0.514 |
+| Composite, PB1 / PB2 / PB4 | 0.574 / 0.527 / 0.530 | 0.558 / 0.508 / 0.515 |
 | Rank correlation, bypass volume vs adult index | 0.962 | 0.921 |
+
+Every value is a mean over the five seeds (123, 456, 789, 1011, 1213), paired
+within seed; `output/spawn_timing_numbers.csv`, `spawn_timing_contrasts.csv` and
+`spawn_timing_efficiency.csv`. Single-run values from the committed seed-123 run
+are in `output/reporting_values.csv` and differ by up to the run-to-run spread.
+
+PB2's composite uses the corrected hydropower cost ($376,671, previously entered
+as $370,826). `spawn_timing_numbers.csv` predates that correction and lists PB2's
+composite 0.0062 higher in both columns. The shift is exact for every seed:
+hydropower cost enters the composite linearly, PB2b's cost still sets the top of
+the range, so only PB2 moves, by 0.5 × (370,826 − 376,671) / 470,090. Rerunning
+`spawn_timing_effect.R` on the snapshots reproduces it.
 
 PB1 remains the highest-scoring alternative under both. PB4's abundance is the
 least affected of the nine, changing by about 4 fish.
@@ -77,7 +89,7 @@ extra precision.
 
 **Report differences between alternatives as paired within-seed contrasts, not
 as subtractions of two levels.** The common seed shift cancels in a pairing, so
-contrasts are far tighter than levels: ±21–36 against ±173–217. Subtracting two
+contrasts are far tighter than levels: ±21–47 against ±173–217. Subtracting two
 numbers out of a summary table discards that cancellation.
 
 ## Two channels in the front-loading mechanism
@@ -117,7 +129,7 @@ ARG_SPAWN_TIMING=pooled Rscript SalmonCountR/precompute.R   # superseded
 ARG_SEED=456 Rscript SalmonCountR/precompute.R              # different draw
 ```
 
-The repository state prior to this change is tagged `as-submitted-2026-07-28`.
+The repository state prior to this change is tagged `pre-g1-correction`.
 
 ## Scripts
 

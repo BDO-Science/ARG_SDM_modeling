@@ -90,7 +90,12 @@ running app uses, and two of which compile from source. It is now excluded.
 
 **3. Bundle size.** 16 of `app_data`'s 25 MB were `precompute.R` intermediates
 that no runtime code reads (`sim_future.rds` alone is 13 MB). The deployed
-bundle is 23 files, 9.2 MB.
+bundle is 24 files, 9.25 MB (checked 2026-09-21).
+
+Analysis-year folders (`app_data/<year>/`) are handled differently: only the
+files the app reads for a year (`ARG_YEAR_FILES` in `years.R`, plus
+`data_vintage.rds` and `README.md`) are uploaded from them, so a precompute run
+into a year folder does not drag its intermediates into the bundle.
 
 Excluded files are listed in `ARG_DEPLOY_EXCLUDE` in `deploy.R`. It is a
 blacklist on purpose: a new data file gets shipped by default, and only the

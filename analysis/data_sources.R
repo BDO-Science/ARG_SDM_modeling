@@ -76,7 +76,7 @@ DATA_SOURCES <- list(
     provider    = "Reclamation temperature modelling team (emailed deliverable)",
     used_for    = "the nine bypass alternatives under each meteorological year",
     preliminary = FALSE,
-    note        = "Not machine-retrievable. Arrives as a spreadsheet; upload it through the app's 'Add a Year' tab, or drop it in data_raw/ for the annual refresh."
+    note        = "Not machine-retrievable. Arrives as a spreadsheet; run it through analysis/temperature_data.R and precompute.R (docs/new-temperature-scenario.md)."
   ),
 
   wua = list(

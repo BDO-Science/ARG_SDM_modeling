@@ -1,6 +1,10 @@
 # ============================================================================
 # Regression test for the scenario engine
 # ============================================================================
+# NOT RUNNABLE ON main. SalmonCountR/scenario_engine.R and the app's "Add a
+# Year" tab were held back on revision-2026-08 (commit 6b574ac); this script
+# sources that file and stops. `git revert 6b574ac` restores it.
+# ============================================================================
 # Feeds the engine the SAME deliverable the published run was built from, and
 # checks it lands in the same place. This is the guard that says the upload path
 # in the app is telling the truth.
@@ -29,7 +33,7 @@ instream         <- readRDS(app("american_river_instream.rds")) %>%
 
 K_fn <- function(f) approx(instream$flow_cfs, instream$K_spawners, xout = f, rule = 2)$y
 
-hydro_loss <- c(NB = 0, PB1 = 111422, PB2 = 370826, PB2b = 470090, PB2c = 433215,
+hydro_loss <- c(NB = 0, PB1 = 111422, PB2 = 376671, PB2b = 470090, PB2c = 433215,
                 PB3 = 201552, PB4 = 241590, PB5 = 199382, PB6 = 348806)
 
 deliverable <- here("data_raw", "SDM Power Bypass Temperature Modeling Results.xlsx")
