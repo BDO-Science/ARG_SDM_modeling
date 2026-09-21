@@ -33,7 +33,7 @@ hydro_years <- c("2011","2014","2017","2020")
 wyt_w       <- c("2011"=.25, "2014"=.25, "2017"=.25, "2020"=.25)
 tdm_prob    <- c(exp_WF = .51, exp_SM = .24, lin_Martin = .25)
 
-hydro_loss <- c(NB=0, PB1=111422, PB2=370826, PB2b=470090, PB2c=433215,
+hydro_loss <- c(NB=0, PB1=111422, PB2=376671, PB2b=470090, PB2c=433215,
                 PB3=201552, PB4=241590, PB5=199382, PB6=348806)
 
 # Adult index by alternative × TDM model, averaged over met years

@@ -20,7 +20,7 @@ steelhead_scenario_results <- readRDS(here("SalmonCountR", "app_data", "steelhea
 
 # --- 2. Hard-coded hydropower revenue-loss scores ($ from SDM alternatives) ---
 hardcoded_hydro_scores <- c(
-  "NB"  = 0,      "PB1" = 111422, "PB2" = 370826,
+  "NB"  = 0,      "PB1" = 111422, "PB2" = 376671,
   "PB2b" = 470090, "PB2c" = 433215, "PB3" = 201552,
   "PB4" = 241590, "PB5" = 199382,  "PB6" = 348806
 )

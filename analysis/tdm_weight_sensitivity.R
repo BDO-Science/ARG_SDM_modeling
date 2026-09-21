@@ -56,7 +56,7 @@ scen_map    <- c(NB=1, PB1=2, PB2=3, PB2b=4, PB2c=5, PB3=6, PB4=7, PB5=8, PB6=9)
 wyt_default <- 0.25
 
 # Hydropower revenue loss ($) per alternative - same source as mcda.R
-hydro_loss <- c(NB=0, PB1=111422, PB2=370826, PB2b=470090, PB2c=433215,
+hydro_loss <- c(NB=0, PB1=111422, PB2=376671, PB2b=470090, PB2c=433215,
                 PB3=201552, PB4=241590, PB5=199382, PB6=348806)
 
 W_SALMON <- 0.73

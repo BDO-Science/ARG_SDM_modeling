@@ -79,7 +79,7 @@ ARG_YEAR_FILES <- c(
 # output, so it is declared per year rather than derived. The 2025 values are
 # the ones app.R carried hard-coded.
 ARG_HYDRO_COST_2025 <- c(
-  NB   = 0,      PB1 = 111422, PB2 = 370826,
+  NB   = 0,      PB1 = 111422, PB2 = 376671,
   PB2b = 470090, PB2c = 433215, PB3 = 201552,
   PB4  = 241590, PB5 = 199382, PB6 = 348806
 )
