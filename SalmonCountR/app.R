@@ -95,15 +95,15 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    hr(),
                                    
                                    h3("Application Overview"),
-                                   p("This interactive application simulates fall-run Chinook salmon population dynamics on the American River under different Folsom Dam power bypass flow and temperature management alternatives. The model integrates temperature-dependent mortality, spawn timing, and comprehensive life-cycle processes to project spawner abundance through 2125."),
+                                   p("This interactive application simulates fall-run Chinook salmon population dynamics on the American River under different Folsom Dam power bypass flow and temperature management alternatives. The model integrates temperature-dependent mortality, spawn timing, and comprehensive life-cycle processes to project spawner abundance 100 years ahead (2025-2124)."),
                                    
                                    h4("Management Structure:"),
                                    tags$ul(
                                      tags$li(strong("9 Management Alternatives:"), "No Bypass (NB) and 8 Power Bypass configurations (PB1-PB6, including PB2b and PB2c variants) with varying flow rates and timing"),
                                      tags$li(strong("4 Climate Years:"), "2011 (Cool), 2014 (Warm), 2017 (Warm), 2020 (Cool)"),
                                      tags$li(strong("36 Pre-computed Alternatives:"), "Each alternative modeled under all 4 climate year conditions, allowing dynamic weighting"),
-                                     tags$li(strong("Temperature Data:"), "Sept 22 - Nov 30 forecast window from SDM Power Bypass modeling, combined with 14-year USGS gauge climatology (2011-2025) for full annual cycles"),
-                                     tags$li(strong("Simulation Period:"), "2025-2125 with user-adjustable weighting of climatological conditions and TDM models")
+                                     tags$li(strong("Temperature Data:"), "SDM Power Bypass modeling results (Sept 22 - Nov 30), used from Oct 18 onward, combined with USGS gauge climatology (Sept 2011 - Sept 2025) for the rest of the year"),
+                                     tags$li(strong("Simulation Period:"), "2025-2124 with user-adjustable weighting of climatological conditions and TDM models")
                                    ),
                                    
                                    h4("Power Bypass Alternative Specifications:"),
@@ -202,7 +202,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    p("The model combines multiple temperature data sources:"),
                                    tags$ul(
                                      tags$li(strong("USGS Gauge Data:"), "Daily observations from stations 11446980 (Watt Ave) and 11446500 (Hazel Ave) for 2011-2025"),
-                                     tags$li(strong("Power Bypass Forecasts:"), "Modeled temperatures for Oct 18 - Dec 31 under different bypass scenarios"),
+                                     tags$li(strong("Power Bypass Forecasts:"), "Modeled temperatures for Oct 18 - Nov 30 under different bypass scenarios"),
                                      tags$li(strong("14-Year DOY Climatology:"), "Day-of-year averages from observed data used to fill gaps outside forecast window"),
                                      tags$li(strong("Temperature Floors:"), "7°C minimum for Hazel Ave, 8°C for Watt Ave to reflect thermal refugia")
                                    ),
@@ -244,7 +244,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                      tags$li(HTML("Survival function: S<sub>pre</sub> = 1 / (1 + exp(-(3.0 - 0.00067 × DD)))")),
                                      tags$li("Degree-days: DD = Σ max(T - 0°C, 0) from Oct 1 to spawn date"),
                                      tags$li("Higher accumulated thermal units reduce pre-spawn survival"),
-                                     tags$li("Based on Columbia River Chinook studies (Colvin et al. 2018)")
+                                     tags$li("Parameters from Colvin et al. (2018)")
                                    ),
                                    
                                    h4("5. Population Dynamics"),
@@ -255,7 +255,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                      tags$li(HTML("<strong>Carrying Capacity:</strong> K = 33,185 redds at the 1,000 cfs baseline (flow-dependent via slider)")),
                                      tags$li(HTML("<strong>Fry Production:</strong> Fry = Eggs × S<sub>TDM</sub> × dd")),
                                      tags$li(HTML("<strong>Smolt Production:</strong> Smolts = Fry × rear_surv (calibrated at 0.5428)")),
-                                     tags$li(HTML("<strong>Non-American River Survival:</strong> SAR = 0.00269 (calibrated value representing 0.27% survival from the Sacramento River to returning adults)")),
+                                     tags$li(HTML("<strong>Non-American River Survival:</strong> SAR = 0.00268 (calibrated value representing 0.27% survival from the Sacramento River to returning adults)")),
                                      tags$li(HTML("<strong>Age Structure:</strong> 82.9% age-3, 16.9% age-4, 0.2% age-5 returns (CWT data)")),
                                      tags$li(HTML("<strong>Returns:</strong> Spawners<sub>t+a</sub> = Smolts<sub>t</sub> × SAR × P(age=a)"))
                                    ),
@@ -263,9 +263,9 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    h3("Model Parameters"),
                                    
                                    h4("Calibrated Life-Cycle Parameters:"),
-                                   p("The model uses pre-specified biological parameters rather than statistical calibration:"),
+                                   p("SAR and rearing survival are calibrated jointly against 2011-2024 GrandTab escapement; the other parameters are fixed from the literature and local data:"),
                                    tags$ul(
-                                     tags$li(HTML("<strong>Smolt-to-Adult Return (SAR):</strong> 0.00269 (0.27%) - calibrated value representing ocean survival")),
+                                     tags$li(HTML("<strong>Smolt-to-Adult Return (SAR):</strong> 0.00268 (0.27%) - calibrated value representing ocean survival")),
                                      tags$li(HTML("<strong>Rearing Survival:</strong> 0.5428 (54.28%) - calibrated freshwater survival from fry to smolt")),
                                      tags$li(HTML("<strong>Initial Population:</strong> Years 2011-2013 seeded from CDFW GrandTab observed escapement")),
                                      tags$li(HTML("<strong>Forecast Starting Point:</strong> 2022-2024 observed escapement used as initial conditions for 2025+ projections"))
@@ -310,7 +310,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                                       br(), tags$small(em("Combined temperature and density effects on egg-to-fry"))),
                                               
                                               tags$li(HTML("<strong>Cohort Returns:</strong> N<sub>t+a</sub> = Σ Smolts<sub>t</sub> × SAR<sub>t</sub> × P(age=a)"), 
-                                                      br(), tags$small(em("Age-structured returns with stochastic ocean survival option")))
+                                                      br(), tags$small(em("Age-structured returns with a fixed ocean survival (SAR)")))
                                             )
                                    ),
                                    
@@ -328,12 +328,13 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    tags$ul(
                                      tags$li(strong("Climatology Weights:"), "Adjust relative importance of 4 climate year types (sum to 1.0)"),
                                      tags$li(strong("TDM Model Weights:"), "Combine 3 mortality models with custom weights (sum to 1.0)"),
-                                     tags$li(strong("Objective Weights:"), "Three methods: (1) Equal weights (33.3% each), (2) Manual slider adjustment, or (3) Derive from Swing Weighting tab"),
-                                     tags$li(strong("Default Weights:"), "TDM: 51% Water Forum, 24% SALMOD, 25% Martin; Climatology: 25% each; Objectives: 40% Chinook, 30% Steelhead, 30% Hydropower")
+                                     tags$li(strong("Objective Weights:"), "Equal weights (33.3% each) or manual sliders; the Swing Weighting tab can fill in the manual sliders"),
+                                     tags$li(strong("Default Weights:"), "TDM: 51% Water Forum, 24% SALMOD, 25% Martin; Climatology: 25% each; Objectives: 40% Chinook, 10% Steelhead, 50% Hydropower")
                                    ),
                                    
                                    h3("Technical Implementation"),
                                    
+                                   p("The app reads precomputed results; it does not run the model. The model run itself (precompute.R, run offline) uses:"),
                                    h4("Computational Approach:"),
                                    tags$ul(
                                      tags$li("Parallel processing using furrr package for TDM calculations"),
@@ -345,10 +346,11 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    
                                    h4("File Structure:"),
                                    tags$ul(
-                                     tags$li(strong("temperature_data.R:"), "Processes USGS gauge data and SDM forecasts"),
+                                     tags$li(strong("analysis/temperature_data.R:"), "Processes USGS gauge data and SDM forecasts"),
                                      tags$li(strong("precompute.R:"), "Calibrates models and generates population forecasts"),
                                      tags$li(strong("functions.R:"), "Core TDM and life-cycle simulation functions"),
                                      tags$li(strong("global.R:"), "Loads pre-computed RDS files for app startup"),
+                                     tags$li(strong("years.R:"), "Registry of analysis years shown in the Analysis year selector"),
                                      tags$li(strong("app.R:"), "Shiny interface and reactive logic")
                                    ),
                                    
@@ -356,7 +358,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    tags$ul(
                                      tags$li("Bartholow, J.M. & Heasley, J. (2006). Evaluation of Shasta Dam Alternatives Using a Salmon Production Model. USGS Open-File Report 2004-1351."),
                                      tags$li("Bratovich, P., Neal, M., Ransom, A., et al. (2020). Chinook Salmon Early Lifestage Survival and Folsom Dam Power Bypass Considerations. Water Forum Technical Memorandum."),
-                                     tags$li("Colvin, R., Falke, J.A., Henson, S. (2018). Identifying optimal water temperature and flow regimes for anadromous fish. River Research and Applications 34(6):621-632."),
+                                     tags$li("Colvin, M.E., Peterson, J.T., Sharpe, C., Kent, M.L., Schreck, C.B. (2018). Identifying optimal hauling densities for adult Chinook salmon trap and haul operations. River Research and Applications 34(9):1158-1167."),
                                      tags$li("Martin, B.T., Pike, A., John, S.N., Hamda, N., Roberts, J., Lindley, S.T., Danner, E.M. (2017). Phenomenological vs. biophysical models of thermal stress in aquatic eggs. Ecology Letters 20:50-59."),
                                      tags$li("USFWS (2006). SALMOD: Salmon Population Model Version 3.0. Sacramento Fish and Wildlife Office."),
                                      tags$li("CDFW GrandTab (2024). California Central Valley Chinook Salmon Escapement Database. Available at: https://wildlife.ca.gov/Conservation/Fishes/Chinook-Salmon/Anadromous-Assessment")
