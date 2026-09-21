@@ -80,7 +80,8 @@ ARG_DEPLOY_EXCLUDE <- c(
     "rear_surv_lookup.rds",
     "nonsalmon_objectives.csv",
     "steelhead_objective.csv",
-    "S_seed.rds"
+    "S_seed.rds",
+    "observed_temps.rds"               # frozen USGS record; temperature_data.R only
   ))
 )
 
@@ -89,7 +90,13 @@ arg_bundle_files <- function(app_dir = arg_app_dir()) {
   all <- list.files(app_dir, recursive = TRUE, all.files = FALSE, no.. = TRUE)
   # rsconnect's own deployment records: never part of the app.
   all <- all[!startsWith(all, "rsconnect/")]
-  setdiff(all, ARG_DEPLOY_EXCLUDE)
+  out <- setdiff(all, ARG_DEPLOY_EXCLUDE)
+  # Year/scenario subfolders (app_data/<year>/) are read only through
+  # ARG_YEAR_FILES, so upload just those. A precompute run into a subfolder
+  # also leaves its intermediates there (sim_future.rds alone is 13 MB).
+  in_sub   <- grepl("^app_data/[^/]+/", out)
+  sub_keep <- basename(out) %in% c(unname(ARG_YEAR_FILES), "data_vintage.rds", "README.md")
+  out[!in_sub | sub_keep]
 }
 
 #' Build the app from a copy of the bundle, in a separate R process.

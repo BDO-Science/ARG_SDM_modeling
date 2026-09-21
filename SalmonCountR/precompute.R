@@ -36,6 +36,19 @@ set.seed(.arg_seed)
 cat(sprintf("RNG seed: %d%s\n", .arg_seed,
             if (.arg_seed == 123L) " (published)" else " (replicate)"))
 
+# Scenario data folder. The temperature inputs (env_ext_list.rds, df_all.rds,
+# written by analysis/temperature_data.R) are read from here and every output is
+# written here. The default is the flat app_data/ folder, which holds the
+# published 2025 results; point ARG_APP_DATA_DIR at a subfolder such as
+# SalmonCountR/app_data/2026 to run a new temperature scenario without
+# overwriting them. Fixed inputs (carcass, GrandTab, habitat) are always read
+# from the flat folder. See docs/new-temperature-scenario.md.
+.arg_app_data_flat <- here("SalmonCountR", "app_data")
+.arg_data_dir <- Sys.getenv("ARG_APP_DATA_DIR", .arg_app_data_flat)
+if (!grepl("^([A-Za-z]:)?[/\\\\]", .arg_data_dir)) .arg_data_dir <- here(.arg_data_dir)
+if (!dir.exists(.arg_data_dir)) stop("ARG_APP_DATA_DIR does not exist: ", .arg_data_dir)
+cat(sprintf("Scenario data folder: %s\n", .arg_data_dir))
+
 # ---- 2. TIME PARAMETERS ----
 # Define the historical calibration period for the spawner-escapement model
 # This period contains observed spawner abundance data from CDFW GrandTab
@@ -56,7 +69,7 @@ forecast_years <- (max(real_years)+1):(max(sim_years))  # Future years only (202
 # Each list element represents a different water management alternative/scenario
 # Contains modeled daily water temperatures for different operational scenarios
 env_ext_list <- readRDS(
-  here("SalmonCountR", "app_data", "env_ext_list.rds")
+  file.path(.arg_data_dir, "env_ext_list.rds")
 )
 
 # NOTE: Throughout this code 'env' refers to management alternatives (e.g., different 
@@ -64,13 +77,35 @@ env_ext_list <- readRDS(
 # Create a mapping between management alternatives and their associated river sites
 mgt_alt_sites <- purrr::imap_dfr(env_ext_list, ~ {
   tibble(mgt_alt = as.character(.y), site = unique(.x$site))
-}) %>% distinct(mgt_alt, site)                                              
+}) %>% distinct(mgt_alt, site)
+
+# The first projection year must carry the scenario temperatures. If the
+# observed record (temperature_data.R, ARG_OBS_END = decision date) runs through
+# it, every alternative has the same Oct-Nov there: the steelhead metric and the
+# Temperature Explorer, which both read that year, stop telling alternatives
+# apart. The fix is to extend real_years (and the GrandTab / carcass filters)
+# so the projection starts in the decision year.
+local({
+  fp <- max(real_years) + 1
+  n_distinct_temps <- purrr::map_dfr(env_ext_list, ~ dplyr::filter(
+      .x, lubridate::year(Date) == fp, lubridate::month(Date) %in% 10:11), .id = "env") %>%
+    dplyr::group_by(Date, site) %>%
+    dplyr::summarise(n = dplyr::n_distinct(round(temp, 6)), .groups = "drop")
+  if (nrow(n_distinct_temps) == 0 || all(n_distinct_temps$n == 1)) {
+    stop(sprintf(paste0(
+      "October-November %d, the first projection year, is identical for every ",
+      "alternative, so the scenarios never reach it. The observed temperature record ",
+      "probably runs past the start of the projection: extend real_years (now %d-%d) ",
+      "to include the decision year. See SalmonCountR/app_data/2026/README.md."),
+      fp, min(real_years), max(real_years)))
+  }
+})
 
 # ---- 3.2 Consolidated Temperature Data ----
 # Load temperature data consolidated across all management alternatives
 # This contains the same modeled temperature data as env_ext_list but in a single dataframe
 df_all <- readRDS(
-  here("SalmonCountR", "app_data", "df_all.rds")
+  file.path(.arg_data_dir, "df_all.rds")
 )
 
 # ---- 4. CARCASS SURVEY DATA ----
@@ -1163,7 +1198,7 @@ steelhead_metrics <- df_all %>%
   # 1. Filter for the relevant time period first
   filter(
     month(Date) %in% c(10, 11),      # October and November
-    year(Date) == 2025               # Standard forecast year
+    year(Date) == max(real_years) + 1  # First projection year (2025 for the published run)
   ) %>%
   # 2. For each day in each alternative, calculate the average temperature across sites
   group_by(env, Date) %>%
@@ -1282,17 +1317,17 @@ cat(sprintf("  Steelhead best case: %s\n", round(swing_ranges$best_case[2], 1)))
 # Save all processed data frames and model objects as .rds files. These files
 # will be loaded directly by the Shiny dashboard for fast startup.
 
-saveRDS(calib_results,         here("SalmonCountR","app_data","calib_results.rds"))
-saveRDS(results_full,          here("SalmonCountR","app_data","results_full.rds"))
-saveRDS(egg_summary,           here("SalmonCountR","app_data","egg_summary.rds"))
-saveRDS(surv_lookup_full,      here("SalmonCountR","app_data","surv_lookup_full.rds"))
-saveRDS(base_P_list,           here("SalmonCountR","app_data","base_P_list.rds"))
-saveRDS(base_P,              here("SalmonCountR","app_data","base_P.rds"))
-saveRDS(S_seed_calib,          here("SalmonCountR","app_data","S_seed_calib.rds"))
-saveRDS(S_seed_fore_list,      here("SalmonCountR","app_data","S_seed_fore_list.rds"))
-saveRDS(stoch_SAR_opts,        here("SalmonCountR","app_data","stoch_SAR_opts.rds"))
-saveRDS(sim_years,             here("SalmonCountR","app_data","sim_years.rds"))
-saveRDS(spawn_dates_by_alt,    here("SalmonCountR","app_data","spawn_dates_by_alt.rds"))
+saveRDS(calib_results,         file.path(.arg_data_dir, "calib_results.rds"))
+saveRDS(results_full,          file.path(.arg_data_dir, "results_full.rds"))
+saveRDS(egg_summary,           file.path(.arg_data_dir, "egg_summary.rds"))
+saveRDS(surv_lookup_full,      file.path(.arg_data_dir, "surv_lookup_full.rds"))
+saveRDS(base_P_list,           file.path(.arg_data_dir, "base_P_list.rds"))
+saveRDS(base_P,              file.path(.arg_data_dir, "base_P.rds"))
+saveRDS(S_seed_calib,          file.path(.arg_data_dir, "S_seed_calib.rds"))
+saveRDS(S_seed_fore_list,      file.path(.arg_data_dir, "S_seed_fore_list.rds"))
+saveRDS(stoch_SAR_opts,        file.path(.arg_data_dir, "stoch_SAR_opts.rds"))
+saveRDS(sim_years,             file.path(.arg_data_dir, "sim_years.rds"))
+saveRDS(spawn_dates_by_alt,    file.path(.arg_data_dir, "spawn_dates_by_alt.rds"))
 
 # The simulated redd set is a random draw (section 17). It is reproducible —
 # set.seed(123) at the top of this script covers it, and nothing consumes the
@@ -1303,17 +1338,27 @@ saveRDS(spawn_dates_by_alt,    here("SalmonCountR","app_data","spawn_dates_by_al
 # This also keeps sim_redds.rds current: before this line existed the file on
 # disk was a stale artifact from an older pipeline version, with a different
 # schema, and it did not reproduce egg_summary.rds.
-saveRDS(sim_redds,             here("SalmonCountR","app_data","sim_redds.rds"))
-saveRDS(sim_future,            here("SalmonCountR","app_data","sim_future.rds"))
-saveRDS(swing_scenario_results, here("SalmonCountR","app_data","swing_scenario_results.rds"))
-saveRDS(steelhead_scenario_results, here("SalmonCountR","app_data","steelhead_scenario_results.rds"))
+saveRDS(sim_redds,             file.path(.arg_data_dir, "sim_redds.rds"))
+saveRDS(sim_future,            file.path(.arg_data_dir, "sim_future.rds"))
+saveRDS(swing_scenario_results, file.path(.arg_data_dir, "swing_scenario_results.rds"))
+saveRDS(steelhead_scenario_results, file.path(.arg_data_dir, "steelhead_scenario_results.rds"))
 
 # global.R loads these two, but they were previously computed here and never
 # written, so app_data held stale copies from an earlier run. (The stale
 # swing_ranges.rds carried a Chinook range of 18,521-21,728 against a current
 # range of 7,600-11,073.) Always write what global.R reads.
-saveRDS(swing_ranges,      here("SalmonCountR","app_data","swing_ranges.rds"))
-saveRDS(steelhead_metrics, here("SalmonCountR","app_data","steelhead_metrics.rds"))
+saveRDS(swing_ranges,      file.path(.arg_data_dir, "swing_ranges.rds"))
+saveRDS(steelhead_metrics, file.path(.arg_data_dir, "steelhead_metrics.rds"))
+
+# A scenario folder must hold everything the app's year selector checks for
+# (ARG_YEAR_FILES in years.R). The habitat lookup is a fixed input, not an
+# output, so copy it across when running into a scenario folder.
+if (normalizePath(.arg_data_dir, winslash = "/") !=
+    normalizePath(.arg_app_data_flat, winslash = "/")) {
+  file.copy(file.path(.arg_app_data_flat, "american_river_instream.rds"),
+            .arg_data_dir, overwrite = TRUE)
+}
+cat(sprintf("Outputs written to %s\n", .arg_data_dir))
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                             END OF PRECOMPUTE SCRIPT                          ║
