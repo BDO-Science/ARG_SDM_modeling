@@ -87,12 +87,28 @@ pal_dark <- function(n) {
 # contrast IS the temperature meaning, not a competing one.
 TEMP_WARM <- "#F1E51D"
 
+# COLOUR ROLES, the same on every figure so the audience's eye settles:
+#   SERIES    sky blue     the model or the data, wherever there is one series
+#                          (a curve, a set of bars, the predicted line)
+#   HILITE    vermillion   the one thing the slide is about: the alternative
+#                          Reclamation selected, the PB3/PB5 pair, the
+#                          alternative whose rank collapses under Martin
+#   REF_FILL  grey         the no-bypass reference, on every figure it appears
+#   DIM       dark grey    context that must recede (stable rank lines)
+#   INK       white        observations, on the calibration figure
+#   TEMP_WARM yellow       water temperature, and nothing else
+# Only the three TDM models keep identity colours (TDM_DARK): they are named
+# on the obstacle figure and again on the rank figure's axis, and must be
+# traceable between the two.
+SERIES   <- CAT_SAFE[1]
+HILITE   <- CAT_SAFE[4]
+REF_FILL <- "#9AA4B2"
+DIM      <- "#4A5563"
+
 TDM_DARK <- setNames(pal_dark(3),
                      c("Bratovich et al. (2020)",
                        "Bartholow & Heasley (2006)",
                        "Martin et al. (2017)"))
-
-OBJ_DARK <- setNames(pal_dark(3), c("Chinook salmon", "Steelhead", "Hydropower"))
 
 theme_talk <- function(base_size = 26, legend = "top") {
   theme_minimal(base_size = base_size) +
@@ -187,14 +203,13 @@ rv <- read_csv(here("output", "reporting_values.csv"), show_col_types = FALSE) %
   mutate(
     scenario = factor(scenario, levels = scenario[order(adult_index)]),
     role = case_when(scenario == "NB"  ~ "No bypass (reference)",
-                     scenario == "PB4" ~ "Selected by the team",
+                     scenario == "PB4" ~ "Selected by Reclamation",
                      TRUE              ~ "Other alternatives")
   )
 
-REF_FILL <- "#9AA4B2"   # neutral fill for the reference bar (a mark, not text)
-ROLE_COLS <- c("No bypass (reference)" = REF_FILL,
-               "Selected by the team"  = unname(pal_dark(3)[3]),
-               "Other alternatives"    = unname(pal_dark(3)[1]))
+ROLE_COLS <- c("No bypass (reference)"   = REF_FILL,
+               "Selected by Reclamation" = HILITE,
+               "Other alternatives"      = SERIES)
 
 p2 <- ggplot(rv, aes(scenario, adult_index, fill = role)) +
   geom_col(width = 0.72) +
@@ -223,14 +238,15 @@ ct <- read_csv(here("output", "consequence_table.csv"), show_col_types = FALSE) 
          Steelhead        = `Steelhead (0-1)`,
          Hydropower       = `Hydro (0-1)`) %>%
   pivot_longer(-Alternative, names_to = "objective", values_to = "score") %>%
-  mutate(objective   = factor(objective, levels = names(OBJ_DARK)),
+  mutate(objective   = factor(objective, levels = c("Chinook salmon", "Steelhead", "Hydropower")),
          Alternative = factor(Alternative,
                               levels = c("NB","PB1","PB2","PB2b","PB2c","PB3","PB4","PB5","PB6")))
 
-p3 <- ggplot(ct, aes(Alternative, score, fill = objective)) +
-  geom_col(width = 0.74) +
-  facet_wrap(~ objective, nrow = 1) +
-  scale_fill_manual(values = OBJ_DARK, guide = "none") +
+# One colour: the panels are labelled, and giving each objective its own hue
+# would reuse the TDM identity colours for something that is not a TDM model.
+p3 <- ggplot(ct, aes(Alternative, score)) +
+  geom_col(width = 0.74, fill = SERIES) +
+  facet_wrap(~ objective, nrow = 1, axes = "all", axis.labels = "margins") +
   scale_y_continuous(limits = c(0, 1.05), breaks = c(0, 0.5, 1), expand = c(0, 0)) +
   labs(x = NULL, y = "Normalised performance (0-1, higher is better)",
        caption = "0 = worst of the nine by construction (min-max), not zero benefit") +
@@ -263,8 +279,7 @@ p4 <- ggplot(vb, aes(volume_Mm3, gain_vs_NB)) +
   annotate("text", x = 14.5, y = 2850,
            label = "same volume,\ndifferent schedule:\n261 ± 36 adults apart",
            colour = INK, size = 6.5, lineheight = 1.05, hjust = 0.5) +
-  scale_colour_manual(values = c(`TRUE` = unname(pal_dark(3)[3]),
-                                 `FALSE` = unname(pal_dark(3)[1])), guide = "none") +
+  scale_colour_manual(values = c(`TRUE` = HILITE, `FALSE` = SERIES), guide = "none") +
   scale_size_manual(values = c(`TRUE` = 6.5, `FALSE` = 4), guide = "none") +
   scale_x_continuous(limits = c(8, 54)) +
   scale_y_continuous(limits = c(0, 4300), labels = function(x) format(x, big.mark = ",")) +
@@ -299,15 +314,22 @@ rank_by_tdm <- rf %>%
   ungroup() %>%
   mutate(model = factor(TDM_LAB[variant], levels = unname(TDM_LAB)))
 
-# Colour only the alternatives whose rank actually moves; the rest stay neutral
+# Colour only the alternatives whose rank actually moves; the rest recede.
+# Movers take the deck's role colours rather than a fresh palette: no-bypass is
+# the reference grey it is everywhere else, the alternative that collapses
+# under Martin (PB6) takes the highlight, and any other mover is plain series
+# blue. Nothing here reuses a TDM identity colour, because the x-axis IS the
+# three TDM models and a pink line would read as "Martin".
 movers <- rank_by_tdm %>% group_by(scenario) %>%
   summarise(span = max(rank) - min(rank), .groups = "drop") %>%
   filter(span >= 3) %>% pull(scenario)
 
 rank_by_tdm <- rank_by_tdm %>%
   mutate(grp = ifelse(scenario %in% movers, scenario, "stable"))
-mover_cols <- setNames(pal_dark(length(movers)), movers)
-mover_cols["stable"] <- "#7A8492"
+mover_cols <- setNames(rep(SERIES, length(movers)), movers)
+if ("NB"  %in% movers) mover_cols["NB"]  <- REF_FILL
+if ("PB6" %in% movers) mover_cols["PB6"] <- HILITE
+mover_cols["stable"] <- DIM
 
 ends_r <- rank_by_tdm %>% filter(model == levels(model)[nlevels(model)])
 starts_r <- rank_by_tdm %>% filter(model == levels(model)[1])
@@ -714,11 +736,10 @@ cooling <- by_alt %>%
 
 g9 <- ggplot(cooling, aes(Date, delta)) +
   geom_hline(yintercept = 0, colour = AXIS, linewidth = 0.5) +
-  # Two steps of the same ramp, not the yellow end: yellow is spent on pointing
-  # in this deck, and an eight-panel yellow outline would outrank the map.
-  geom_area(fill = pal_dark(3)[1], alpha = 0.85) +
-  geom_line(colour = pal_dark(3)[2], linewidth = 0.7) +
-  facet_wrap(~ alt, nrow = 2) +
+  geom_area(fill = SERIES, alpha = 0.8) +
+  geom_line(colour = SERIES, linewidth = 0.8) +
+  # Every panel gets its own axis lines and ticks; text only on the margins.
+  facet_wrap(~ alt, nrow = 2, axes = "all", axis.labels = "margins") +
   scale_x_date(date_breaks = "1 month", date_labels = "%b") +
   labs(x = NULL, y = "°C cooler than no bypass") +
   theme_talk(base_size = 22, legend = "none") +
@@ -817,10 +838,9 @@ g10 <- ggplot(spawn_dist, aes(date, p, colour = lvl)) +
   geom_text(data = shift_lab, aes(x = min(bin_start), y = Inf, label = txt),
             inherit.aes = FALSE, vjust = 1.5, hjust = 0, colour = INK_SOFT,
             size = 6.4, fontface = "italic") +
-  facet_wrap(~ panel) +
-  # Warm keeps the deck's temperature yellow; cool takes the ramp's dark end.
-  scale_colour_manual(values = c(Cool = unname(pal_dark(2)[1]),
-                                 Warm = TEMP_WARM)) +
+  facet_wrap(~ panel, axes = "all", axis.labels = "margins") +
+  # Warm keeps the deck's temperature yellow; cool is the plain series colour.
+  scale_colour_manual(values = c(Cool = SERIES, Warm = TEMP_WARM)) +
   scale_x_date(date_breaks = "1 month", date_labels = "%d %b") +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1),
                      expand = expansion(mult = c(0.02, 0.20))) +
@@ -866,7 +886,7 @@ g12 <- ggplot(tibble(dd = dd_grid, s = surv_adult_prespawn(dd_grid)),
            label = sprintf("observed 2011-2024\n%.0f-%.0f °C·days",
                            min(dd_obs), max(dd_obs)),
            colour = INK, size = 6, lineheight = 0.95) +
-  geom_line(colour = pal_dark(3)[2], linewidth = 1.8) +
+  geom_line(colour = SERIES, linewidth = 1.8) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1),
                      limits = c(0, 1)) +
   labs(x = "Accumulated pre-spawn degree-days (°C·days)",
@@ -889,8 +909,8 @@ instream <- readRDS(app("american_river_instream.rds")) %>%
   mutate(K_spawners = FR_spawn_wua / 9.29)
 
 g13a <- ggplot(instream, aes(flow_cfs, K_spawners)) +
-  geom_line(colour = pal_dark(3)[1], linewidth = 1.8) +
-  geom_point(colour = pal_dark(3)[1], size = 2.6) +
+  geom_line(colour = SERIES, linewidth = 1.8) +
+  geom_point(colour = SERIES, size = 2.6) +
   geom_hline(yintercept = P_BASE_K, colour = AXIS, linetype = "22") +
   annotate("text", x = max(instream$flow_cfs), y = P_BASE_K,
            label = sprintf("base K = %s", scales::comma(round(P_BASE_K))),
@@ -902,14 +922,28 @@ g13a <- ggplot(instream, aes(flow_cfs, K_spawners)) +
   theme_talk(base_size = 21, legend = "none") +
   theme(plot.subtitle = element_text(size = 14, colour = INK_SOFT))
 
-bh <- expand_grid(redds = seq(0, 60000, by = 500),
-                  K = c(20000, P_BASE_K, 45000)) %>%
-  mutate(s = P_BASE_S0 / (1 + redds / K),
-         K_lab = factor(sprintf("K = %s", scales::comma(round(K)))))
+# The comparison capacities are read off the habitat curve at real flows, so
+# every K on the right panel is a point on the left panel. (An earlier version
+# used 45,000, which is above anything the habitat curve can give.) Base is the
+# series colour; the two comparison flows recede in grey.
+K_at <- function(q) approx(instream$flow_cfs, instream$K_spawners, xout = q, rule = 2)$y
+bh_levels <- tibble(flow = c(500, 1000, 5000)) %>%
+  mutate(K     = K_at(flow),
+         K_lab = sprintf("%s cfs%s: K = %s", scales::comma(flow),
+                         ifelse(flow == 1000, " (base)", ""),
+                         scales::comma(round(K))),
+         K_lab = factor(K_lab, levels = K_lab))
+bh_cols <- setNames(c(INK_SOFT, SERIES, AXIS), levels(bh_levels$K_lab))
+bh_lty  <- setNames(c("42", "solid", "42"),    levels(bh_levels$K_lab))
 
-g13b <- ggplot(bh, aes(redds, s, colour = K_lab)) +
+bh <- expand_grid(redds = seq(0, 60000, by = 500), K_lab = bh_levels$K_lab) %>%
+  left_join(bh_levels, by = "K_lab") %>%
+  mutate(s = P_BASE_S0 / (1 + redds / K))
+
+g13b <- ggplot(bh, aes(redds, s, colour = K_lab, linetype = K_lab)) +
   geom_line(linewidth = 1.7) +
-  scale_colour_manual(values = unname(pal_dark(3))) +
+  scale_colour_manual(values = bh_cols) +
+  scale_linetype_manual(values = bh_lty) +
   scale_x_continuous(labels = scales::comma) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
   # NOT "egg-to-fry survival": this term multiplies the temperature-dependent
@@ -934,31 +968,25 @@ save_talk(g13, "13_density_dependence.png", width = 15, height = 6.8)
 # ============================================================================
 # 13. Calibration against observed escapement
 # ============================================================================
-# Observed GrandTab escapement against the model's prediction, TDM-weighted.
-# 2011-2013 seed the run and are therefore reproduced by construction; only
-# 2014 onward is a test. The fit over that window is weak, and the figure is
+# Observed GrandTab escapement against the model's prediction, TDM-weighted,
+# over the fitted years only. 2011-2013 seed the run and are reproduced by
+# construction, so showing them would only need explaining away in a short
+# talk; they are left off. The fit over 2014-2024 is weak, and the figure is
 # drawn so that it says so rather than hiding it -- see the speaker notes on
 # the slide, and output/calibration_fit_statistics.csv for the numbers.
 calib <- read_csv(here("output", "calibration_predictions.csv"),
                   show_col_types = FALSE) %>%
-  filter(variant == "TDM-weighted")
+  filter(variant == "TDM-weighted", year >= 2014)
 
 calib_long <- calib %>%
   select(year, Observed = observed, Predicted = predicted) %>%
   pivot_longer(-year, names_to = "series", values_to = "n")
 
-seed_band <- data.frame(xmin = 2010.5, xmax = 2013.5, ymin = -Inf, ymax = Inf)
-
 g11 <- ggplot() +
-  geom_rect(data = seed_band,
-            aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
-            fill = "#FFFFFF", alpha = 0.05) +
-  annotate("text", x = 2012, y = -Inf, label = "seeded, not a test",
-           colour = INK_SOFT, size = 6, vjust = -1.1, fontface = "italic") +
   geom_line(data = calib_long, aes(year, n, colour = series), linewidth = 1.6) +
   geom_point(data = calib_long, aes(year, n, colour = series), size = 3.4) +
-  scale_colour_manual(values = c(Observed = INK, Predicted = pal_dark(3)[2])) +
-  scale_x_continuous(breaks = seq(2011, 2024, 2)) +
+  scale_colour_manual(values = c(Observed = INK, Predicted = SERIES)) +
+  scale_x_continuous(breaks = seq(2014, 2024, 2)) +
   scale_y_continuous(labels = scales::comma) +
   labs(x = NULL, y = "Spawner escapement") +
   theme_talk(base_size = 24)
