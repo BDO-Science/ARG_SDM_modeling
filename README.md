@@ -217,10 +217,11 @@ analysis/                     standalone scripts: manuscript exhibits, parameter
 data_raw/                     raw inputs: temperature deliverables, swing weighting, CWT, HCI,
 │                             american_river_data/, juvenile_data/ (screw traps)
 docs/                         model change records and guides (see below)
-figures/                      figures written by analysis/ (figures/bdsc/: conference talk)
+figures/                      figures written by analysis/ (figures/bdsc/: conference talk, not tracked;
+│                             figures/bdsc/lifecycle/: illustrations the talk script reads, tracked)
 output/                       tables and reports written by analysis/
-presentations/                conference slides (Quarto)
-archive/                      superseded code and outputs, kept for provenance; nothing here is live
+presentations/                conference slides (Quarto); kept alongside the repo, not tracked
+archive/                      superseded code, inputs and outputs, kept for provenance; nothing here is live
 ```
 
 ### `SalmonCountR/app_data/`
@@ -237,16 +238,15 @@ archive/                      superseded code and outputs, kept for provenance; 
 | `swing_scenario_results.rds`, `steelhead_scenario_results.rds`, `swing_ranges.rds`, `steelhead_metrics.rds` | `precompute.R` | app — objective values and ranges |
 | `egg_summary.rds`, `surv_lookup_full.rds`, `spawn_dates_by_alt.rds`, `base_P.rds`, `base_P_list.rds`, `calib_results.rds`, `S_seed_calib.rds`, `S_seed_fore_list.rds`, `sim_years.rds`, `stoch_SAR_opts.rds` | `precompute.R` | egg survival, calibrated parameters, seeds; read by `global.R` and `analysis/` |
 | `sim_redds.rds`, `sim_future.rds` | `precompute.R` | the simulated redd set, kept for reproducibility |
-| `calib_pred_by_variant.rds` | `analysis/calibration_fit_statistics.R` | calibration predictions |
-| `spawn_timing_model.rds` | `analysis/build_spawn_timing_model.R` | the fitted spawn-timing model, standalone |
+| `calib_pred_by_variant.rds` | `analysis/calibration_fit_statistics.R` | calibration predictions; also read by `analysis/presentation_bdsc.R` |
+| `spawn_timing_model.rds` | `analysis/build_spawn_timing_model.R` | the fitted spawn-timing model, standalone; read by `analysis/refresh_data_year.R` and `analysis/presentation_bdsc.R` |
 | `data_vintage.rds` | `analysis/refresh_data_year.R --apply` | app banner — see [Data provenance](#data-provenance) |
 | `SAR LAR Releases.xlsx` | CWT release data | `analysis/sar_from_cwt.R` |
 
-Also in the folder, and read by nothing: `S_seed.rds`, `american_river_instream.rda`,
-`generate_SAR_vec.rds`, `simulate_variant.rds`, `rear_surv_lookup.rds`,
-`spawn_dates.rds`, `spawn_dates_by_env.rds`, `spawn_dates_vec.rds`,
-`swing_extreme_combos.rds`, `nonsalmon_objectives.csv`, `steelhead_objective.csv`.
-Leftovers from earlier pipeline versions; `deploy.R` keeps them out of the bundle.
+Every file in the folder is read by something. Leftovers from earlier pipeline
+versions (`S_seed.rds`, `generate_SAR_vec.rds`, `simulate_variant.rds` and
+eight others) were moved to `archive/legacy_outputs/app_data_leftovers/` in
+September 2026.
 
 **Year labels in `results_full`.** One continuous 114-year run: the 2011–2024
 calibration years followed by a 100-year projection seeded from observed 2022–2024
@@ -305,9 +305,9 @@ running `precompute.R` with `ARG_SPAWN_TIMING` in `{alternative,pooled}` and
 
 | Script | Produces |
 |---|---|
-| `spawn_timing_effect.R` | Every objective value the spawn-timing change moves, as means over seeds with the run-to-run range |
-| `figure4_seed_uncertainty.R` | Figure 4 variant drawing both uncertainty tiers — year-to-year IQR and run-to-run spread across seeds |
-| `compare_spawn_timing.R` | One pooled-vs-alternative pair, for a quick check |
+| `spawn_timing_effect.R` | Every objective value the spawn-timing change moves, as means over seeds with the run-to-run range. `BYPASS_VOLUMES="NB=0,PB1=12.2,…"` overrides the built-in bypass volumes |
+| `figure4_seed_uncertainty.R` | Figure 4 variant drawing both uncertainty tiers — year-to-year IQR and run-to-run spread across seeds. `SPAWN_TIMING_MODE` picks the arm, `fixed` (default) or `legacy` |
+| `compare_spawn_timing.R` | One pooled-vs-alternative pair, for a quick check. Takes two snapshot folders directly as `MODE_A` and `MODE_B` (labels `MODE_A_LABEL`, `MODE_B_LABEL`) rather than `SPAWN_TIMING_SNAPROOT` |
 | `compare_spawn_timing_seeds.R` | The full multi-seed replication, separating the effect from Monte Carlo noise |
 
 **Why seeds matter here.** Each alternative is evaluated against its own redd
@@ -329,10 +329,10 @@ resolvable from a single run; quote them as paired within-seed contrasts. See
 | `spawn_habitat.R` | Builds `american_river_instream.rds`, the flow → spawning habitat (WUA) lookup |
 | `flow_data.R` | Daily discharge and October–January monthly means |
 | `2011_2024_spawners.R` | Modelled against observed escapement, 2011–2024 |
-| `fall_run_spawn_dist_american.R` | Spatial and temporal spawning distribution from carcass data |
 | `juvenile_rst_data.R`, `juvenile_rst_abundance.R` | Rotary screw trap juvenile abundance |
-| `presentation_bdsc.R`, `presentation_plots.R` | Conference figures (`figures/bdsc/`) |
-| `garage.R`, `additions/` | Scratch and exploratory work; not maintained |
+| `presentation_bdsc.R` | Figures for the 2026 Bay-Delta Science Conference talk, written to `figures/bdsc/` (not tracked). Reads the committed results plus `data_raw/study_area_spatial.rds` and the illustrations in `figures/bdsc/lifecycle/` |
+| `presentation_plots.R` | Earlier talk plots (density dependence, TDM daily and cumulative survival), written to `figures/` |
+| `additions/` | Exploratory one-offs; not maintained. Older scratch (`garage.R`, `early_spawners.R`) is in `archive/old_scripts/scratch/` |
 
 ---
 
@@ -352,7 +352,7 @@ for the published year.
 | **The published 2025 results use scenario temperatures only from October 18.** A fixed day-291 start, left over from an earlier deliverable, replaced the 2025 deliverable's September 22–October 17 values with the long-term average, hiding the early cooling of PB1, PB2, PB2b and PB6. The adult index moves by less than the run-to-run noise when corrected; the steelhead metric (days below 18.3 °C in October–November) moves by up to 5.5 days. | **Fixed for future deliverables** (2026-09): the window now starts on the deliverable's first date. The 2025 analysis is kept as published; `ARG_SCENARIO_START = "10-18"` reproduces its temperature series exactly |
 | **Forecast temperatures misalign in leap years.** The series is built by day of year, so leap years shift a day against non-leap years — up to 1.08 °C on a given calendar date. | Not fixed. Immaterial to the conclusions |
 | **`sar_percent` in `app_data/SAR LAR Releases.xlsx` equals `sar`**, never multiplied by 100. | No live consumer is affected: `sar_from_cwt.R` recomputes it and `data_sources.R` records the defect. Fix when the workbook is next regenerated; do not edit the snapshot |
-| **The "Add a Year" upload tab is not on `main`.** It was built on `revision-2026-08` (upload a deliverable in the app, get results back without R) and held back when app development moved to a contractor (commit `6b574ac`). `analysis/test_scenario_engine.R` tests that engine and fails on `main`. | Restore with `git revert 6b574ac` if wanted; design notes in `APP_DATA_UPDATE_OPTIONS.md` |
+| **The "Add a Year" upload tab is not on `main`.** It was built on `revision-2026-08` (upload a deliverable in the app, get results back without R) and held back when app development moved to a contractor (commit `6b574ac`). `analysis/test_scenario_engine.R` tests that engine and fails on `main`. | Restore with `git revert 6b574ac` if wanted; design notes in `docs/APP_DATA_UPDATE_OPTIONS.md` |
 
 ## Model documentation
 
@@ -362,7 +362,8 @@ for the published year.
 | `analysis/math.qmd` | Derivation of the cumulative survival formulas |
 | `docs/new-temperature-scenario.md` | Running the model on new temperatures |
 | `docs/spawn-timing.md` | The alternative-specific spawn-timing correction: what changed, why, what it moves, and how to reproduce either behaviour |
-| `APP_DATA_UPDATE_OPTIONS.md` | Options considered for annual updates, including the upload tab |
+| `docs/APP_DATA_UPDATE_OPTIONS.md` | Options considered for annual updates, including the upload tab |
+| `archive/README.md` | What each archive subfolder holds |
 
 ---
 

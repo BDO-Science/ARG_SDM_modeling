@@ -142,4 +142,6 @@ The repository state prior to this change is tagged `pre-g1-correction`.
 
 The multi-seed scripts need snapshots from several `precompute.R` runs; point
 `SPAWN_TIMING_SNAPROOT` at a directory of `<mode>_seed<n>/` folders. Budget about
-15 minutes per run.
+15 minutes per run. `compare_spawn_timing.R` is the exception: it takes two
+snapshot folders directly, as `MODE_A` and `MODE_B` (labels via `MODE_A_LABEL`
+and `MODE_B_LABEL`).

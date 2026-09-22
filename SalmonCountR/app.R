@@ -377,14 +377,13 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                               sliderInput("temp_w_2017", "2017 (Warm)", value = 0.25, min = 0, max = 1, step = 0.01),
                               sliderInput("temp_w_2020", "2020 (Cool)", value = 0.25, min = 0, max = 1, step = 0.01),
                               hr(),
-                              # In the UI, replace the selectInput with:
                               checkboxGroupInput("temp_alternatives", "Alternatives to Compare:",
                                                  choices = c("No Bypass"="NB", "Power Bypass 1"="PB1", 
                                                              "Power Bypass 2"="PB2", "Power Bypass 2b"="PB2b", 
                                                              "Power Bypass 2c"="PB2c", "Power Bypass 3"="PB3",
                                                              "Power Bypass 4"="PB4", "Power Bypass 5"="PB5", 
                                                              "Power Bypass 6"="PB6"),
-                                                 selected = c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6")),  # Default to comparing NB and PB1
+                                                 selected = c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6")),
                               radioButtons("temp_site", "Site:", choices = c("Ave Watt"="AveWatt", "Ave Hazel"="AveHazel")),
                               # Labels name the default year's first projection
                               # year; the server relabels them on a year switch.
@@ -406,23 +405,23 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                  ),
                  
                  
-                 # Compare Alternatives Tab → Compare Alternatives Tab
-                 tabPanel("Compare Alternatives",  # Changed from "Compare Alternatives"
+                 # Compare Alternatives Tab
+                 tabPanel("Compare Alternatives",
                           sidebarLayout(
                             sidebarPanel(
-                              h4("Alternatives to Compare"),  # Changed from "Alternatives to Compare"
-                              checkboxGroupInput("cmp_scenarios", "Select:",  # Keep the ID for compatibility
+                              h4("Alternatives to Compare"),
+                              checkboxGroupInput("cmp_scenarios", "Select:",
                                                  choices = c("No Bypass"="NB", "Power Bypass 1"="PB1", "Power Bypass 2"="PB2",
                                                              "Power Bypass 2b"="PB2b", "Power Bypass 2c"="PB2c",
                                                              "Power Bypass 3"="PB3", "Power Bypass 4"="PB4",
                                                              "Power Bypass 5"="PB5", "Power Bypass 6"="PB6"),
                                                  selected = c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6")),
                               hr(),
-                              h4("Climatology Weights"),  # Changed from "Hydrology Weights"
-                              sliderInput("cmp_w_2011", "2011 (Cool)", value = 0.25, min = 0, max = 1, step = 0.01),  # Changed from "Wet"
-                              sliderInput("cmp_w_2014", "2014 (Warm)", value = 0.25, min = 0, max = 1, step = 0.01),  # Changed from "Critical"
-                              sliderInput("cmp_w_2017", "2017 (Warm)", value = 0.25, min = 0, max = 1, step = 0.01),  # Changed from "Wet"
-                              sliderInput("cmp_w_2020", "2020 (Cool)", value = 0.25, min = 0, max = 1, step = 0.01),  # Changed from "Dry"
+                              h4("Climatology Weights"),
+                              sliderInput("cmp_w_2011", "2011 (Cool)", value = 0.25, min = 0, max = 1, step = 0.01),
+                              sliderInput("cmp_w_2014", "2014 (Warm)", value = 0.25, min = 0, max = 1, step = 0.01),
+                              sliderInput("cmp_w_2017", "2017 (Warm)", value = 0.25, min = 0, max = 1, step = 0.01),
+                              sliderInput("cmp_w_2020", "2020 (Cool)", value = 0.25, min = 0, max = 1, step = 0.01),
                               hr(),
                               h4("TDM Weights"),
                               sliderInput("cmp_tdm_wf", "Water Forum", value = 0.51, min = 0, max = 1, step = 0.01),

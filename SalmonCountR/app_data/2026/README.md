@@ -16,9 +16,10 @@ swing_scenario_results.rds
 steelhead_scenario_results.rds
 ```
 
-Optional: `data_vintage.rds`, written by `analysis/refresh_data_year.R`. If it
-is present the banner shows the refresh date; if not it says the vintage was not
-recorded.
+Optional: `data_vintage.rds`. If it is present the banner shows the refresh
+date; if not it says the vintage was not recorded. `analysis/refresh_data_year.R`
+writes it only to the flat `app_data/` folder, so copy it here by hand if the
+banner should show a date for this year.
 
 ## Filling it
 

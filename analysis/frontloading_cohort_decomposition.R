@@ -152,10 +152,10 @@ cat(sprintf("  mean pipeline %.4f vs mean recomputed %.4f\n",
 cat(sprintf("  max |difference| %.4f, correlation %.3f\n",
             max(abs(cmp$pipeline - cmp$recomputed)),
             cor(cmp$pipeline, cmp$recomputed)))
-cat("  -> NOT from the saved artifacts. The draw is seeded and reproduces on a\n")
-cat("     full re-run, but it was never saved, and app_data/sim_redds.rds\n")
-cat("     predates the current pipeline. Everything below is therefore computed\n")
-cat("     deterministically instead, with no dependence on the sampled redd set.\n")
+cat("  -> NOT from the saved artifacts of the published run: its redd draw was\n")
+cat("     not saved at the time (precompute.R now saves sim_redds/sim_future).\n")
+cat("     Everything below is therefore computed deterministically instead,\n")
+cat("     with no dependence on the sampled redd set.\n")
 
 # ---- 1. Crossover dates (sub-check 1) --------------------------------------
 hazel <- rbindlist(lapply(names(env_ext_list), function(e) {

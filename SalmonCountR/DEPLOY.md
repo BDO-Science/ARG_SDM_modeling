@@ -85,8 +85,9 @@ correct in `precompute.R`, which runs from the repo root and is never deployed.
 
 **2. `precompute.R` lives in the app directory.** `rsconnect` scans every `.R`
 file in the bundle for `library()` calls, so shipping it made the server install
-`furrr`, `ordinal`, `MASS`, `ggridges`, `readxl` and `here` — none of which the
-running app uses, and two of which compile from source. It is now excluded.
+`furrr`, `ordinal`, `MASS`, `ggridges`, `readxl`, `writexl`, `dataRetrieval` and
+`here` — none of which the running app uses, and two of which compile from
+source. It is now excluded.
 
 **3. Bundle size.** 16 of `app_data`'s 25 MB were `precompute.R` intermediates
 that no runtime code reads (`sim_future.rds` alone is 13 MB). The deployed

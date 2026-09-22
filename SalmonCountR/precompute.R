@@ -1123,7 +1123,8 @@ base_P_list <- calib_results %>%
 
 # ---- 33. GENERATE CALIBRATION PREDICTIONS FOR VALIDATION ----
 
-# Since we're not calibrating, create empty calib_pred_by_variant for compatibility
+# Left empty here; analysis/calibration_fit_statistics.R fills and saves it
+# from the calibrated run above.
 calib_pred_by_variant <- list()
 
 # ---- 34. PREPARE SEED POPULATIONS FOR FORECASTING ----
@@ -1193,7 +1194,7 @@ results_full <- purrr::map_dfr(keys, function(key) {
 # ---- 36.STEELHEAD PERFORMANCE METRIC CALCULATION ----
 # This metric is the number of days below 18.3°C in Oct/Nov for each alternative.
 
-# Calculate the metric for each of the 28 alternatives
+# Calculate the metric for each of the 36 alternative x met-year combinations
 steelhead_metrics <- df_all %>%
   # 1. Filter for the relevant time period first
   filter(

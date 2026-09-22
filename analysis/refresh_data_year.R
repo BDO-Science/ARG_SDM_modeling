@@ -1,7 +1,7 @@
 # ============================================================================
 # Annual data refresh
 # ============================================================================
-# Job B of output/APP_DATA_UPDATE_OPTIONS.md. Run this ONCE A YEAR, before the
+# Job B of docs/APP_DATA_UPDATE_OPTIONS.md. Run this ONCE A YEAR, before the
 # season, by someone who can judge whether the new model fit is acceptable.
 #
 # Why a script and not a button. Adding a year of carcass and escapement data
@@ -19,8 +19,9 @@
 # After --apply you must still:
 #   1. re-run SalmonCountR/precompute.R start to finish in a clean session
 #   2. re-run analysis/calibration_fit_statistics.R and look at the fit
-#   3. re-run analysis/test_scenario_engine.R and confirm it still passes
-#   4. regenerate the manuscript figures if any published number moved
+#   3. regenerate the manuscript figures if any published number moved
+#   (analysis/test_scenario_engine.R only applies on the revision-2026-08
+#   branch, where the upload-tab engine it tests lives; it fails on main)
 #
 # Output: output/data_refresh_report_<date>.md
 #         SalmonCountR/app_data/data_vintage.rds
@@ -175,7 +176,7 @@ if (file.exists(stm_p)) {
   say("- Refit with `Rscript analysis/build_spawn_timing_model.R` after new carcass data lands.")
 } else {
   say("- **Missing.** Run `Rscript analysis/build_spawn_timing_model.R`.")
-  say("  Without it the app's 'Add a Year' tab is disabled.")
+  say("  analysis/presentation_bdsc.R and the revision-2026-08 upload tab read it.")
 }
 say("")
 
@@ -204,10 +205,9 @@ say("   The redd draw is seeded but only reproducible on a full run.")
 say("2. Re-run `analysis/build_spawn_timing_model.R`.")
 say("3. Re-run `analysis/calibration_fit_statistics.R` and **look at the fit** before")
 say("   accepting the new calibration. As of 2026-07-28 it was poor (R2 0.13,")
-say("   Nash-Sutcliffe -0.59); see docs/spawn-timing.md D1.")
-say("4. Re-run `analysis/test_scenario_engine.R` and confirm it still passes.")
-say("5. Regenerate figures if any published number moved.")
-say("6. Drop the new CE-QUAL-W2 deliverable in `data_raw/` so the app's baseline")
+say("   Nash-Sutcliffe -0.59); see output/calibration_fit_statistics.csv.")
+say("4. Regenerate figures if any published number moved.")
+say("5. Drop the new CE-QUAL-W2 deliverable in `data_raw/` so the app's baseline")
 say("   comparison uses the current year.")
 say("")
 

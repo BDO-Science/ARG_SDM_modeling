@@ -65,22 +65,11 @@ ARG_DEPLOY_EXCLUDE <- c(
     "sim_future.rds",                  # 13 MB
     "sim_redds.rds",                   # 2.1 MB
     "carcassdet_1752789274_15.csv",    # 960 KB
-    "simulate_variant.rds",            # 56 KB
-    "generate_SAR_vec.rds",            # 52 KB
     "SAR LAR Releases.xlsx",           # 24 KB
     "grandtab_1752793045_337.csv",
-    "american_river_instream.rda",     # superseded by the .rds
-    "swing_extreme_combos.rds",
     "spawn_timing_model.rds",
-    "spawn_dates_vec.rds",
-    "spawn_dates_by_env.rds",
-    "spawn_dates.rds",
     "calib_pred_by_variant.rds",
     "calib_results.rds",
-    "rear_surv_lookup.rds",
-    "nonsalmon_objectives.csv",
-    "steelhead_objective.csv",
-    "S_seed.rds",
     "observed_temps.rds"               # frozen USGS record; temperature_data.R only
   ))
 )
