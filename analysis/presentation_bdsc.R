@@ -102,8 +102,11 @@ theme_talk <- function(base_size = 26, legend = "top") {
       plot.subtitle    = element_text(size = base_size - 4, colour = INK,
                                       margin = margin(b = 10)),
       plot.caption     = element_text(size = base_size - 10, colour = INK_SOFT),
-      axis.title       = element_text(colour = INK, size = base_size - 3),
-      axis.text        = element_text(colour = INK, size = base_size - 4),
+      # Bold axes: the presenter opens every figure by reading the axes aloud,
+      # and from the back of the room regular-weight axis text is the first
+      # thing to go.
+      axis.title       = element_text(face = "bold", colour = INK, size = base_size - 3),
+      axis.text        = element_text(face = "bold", colour = INK, size = base_size - 4),
       strip.text       = element_text(face = "bold", colour = INK, size = base_size - 1),
       legend.title     = element_blank(),
       legend.text      = element_text(colour = INK, size = base_size - 4),
