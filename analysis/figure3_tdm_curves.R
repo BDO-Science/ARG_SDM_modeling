@@ -8,10 +8,17 @@
 #    15 deg C, where the exponential models still look almost flat — the most
 #    plausible reason Reviewer 2 read TDM.1 as having no temperature response.
 #  * Panel (b) added: cumulative egg-to-fry survival, which is what the life
-#    cycle model actually consumes. The exponential models overtake Martin at
-#    16.6-17.3 deg C, which the daily-hazard panel alone does not show.
-#  * The Lower American River October-November operational range is shaded,
-#    computed from the CE-QUAL-W2 scenario temperatures at Hazel Avenue.
+#    cycle model actually consumes.
+#  * The crossover rules at 16.6/17.3 deg C were dropped (2026-09-03). They were
+#    arithmetically right but unreadable: every curve is under 0.5% survival
+#    there, so the crossing is a sub-pixel event and one label was describing
+#    two different crossings. See output/figure3_etf_survival_by_temp.csv if the
+#    numbers are ever wanted.
+#  * No annotation layers (2026-09-03). The shaded operational range, the
+#    12.14 deg C threshold rule and their labels were all removed: the curves
+#    carry the comparison on their own, and the furniture was competing with
+#    them. The Hazel Avenue range is still computed and printed below, because
+#    the manuscript text quotes it — it is just no longer drawn on the figure.
 #
 # Outputs: figures/figure3_tdm_curves.png
 #          output/figure3_etf_survival_by_temp.csv
@@ -24,6 +31,8 @@ source(here("SalmonCountR", "functions.R"))
 source(here("analysis", "figure_theme.R"))
 
 # ---- 1. Operational temperature range, Oct-Nov at Hazel Avenue --------------
+# Reported to the console only. Nothing here is drawn on the figure any more;
+# it is kept so the range quoted in the text stays reproducible from this script.
 env_ext_list <- readRDS(here("SalmonCountR", "app_data", "env_ext_list.rds"))
 
 oct_nov <- bind_rows(lapply(names(env_ext_list), function(nm) {
@@ -52,6 +61,13 @@ SM_alevin <- list(alpha = 2.521e-12,    beta = 1.461)
 
 T_seq <- seq(10, 18, by = 0.02)
 
+# Viridis, matching every other figure in the manuscript (see analysis/figure_theme.R)
+fam_cols <- TDM_COLS
+stage_labels <- c("Egg" = "Egg", "Alevin" = "Alevin",
+                  "Incubation" = "Not stage-specific")
+stage_types  <- c("Egg" = "solid", "Alevin" = "dashed",
+                  "Not stage-specific" = "dotted")
+
 curves_daily <- bind_rows(
   tibble(T = T_seq, family = "Bratovich et al. (2020)",    stage = "Egg",
          S_day = s_day_exp(T_seq, WF_egg$alpha,    WF_egg$beta)),
@@ -67,36 +83,21 @@ curves_daily <- bind_rows(
   mutate(S_day = pmin(pmax(S_day, 0), 1),
          # Order the legend TDM.1, TDM.2, TDM.3 as the text numbers them,
          # rather than letting ggplot sort it alphabetically.
-         family = factor(family, levels = names(TDM_COLS)))
-
-# Viridis, matching every other figure in the manuscript (see analysis/figure_theme.R)
-fam_cols <- TDM_COLS
-stage_types <- c("Egg" = "solid", "Alevin" = "dashed", "Incubation" = "dotted")
-
-# Build a fresh layer per panel — a single layer object cannot be shared
-# between two ggplot builds. Clamp to the plotted x range: a rect whose xmax
-# falls outside scale_x_continuous(limits = ...) is censored and dropped whole.
-X_LO <- 10; X_HI <- 18
-shade <- function() {
-  annotate("rect",
-           xmin = max(as.numeric(op_range[1]), X_LO),
-           xmax = min(as.numeric(op_range[2]), X_HI),
-           ymin = -Inf, ymax = Inf, fill = "#B0AFA8", alpha = 0.32)
-}
+         family = factor(family, levels = names(TDM_COLS)),
+         # Developmental order, not alphabetical. Martin is not stage-specific,
+         # so its single curve is named as such rather than sitting in the list
+         # as if it were a third stage the other two models also have.
+         stage = factor(stage, levels = names(stage_labels),
+                        labels = unname(stage_labels)))
 
 pA <- ggplot(curves_daily, aes(T, S_day, colour = family, linetype = stage)) +
-  shade() +
-  annotate("text", x = mean(as.numeric(op_range)), y = 0.30,
-           label = sprintf("Lower American River\nOct-Nov range\n(%.1f-%.1f °C)",
-                           op_range[1], op_range[2]),
-           size = 4, fontface = "bold", colour = "black", lineheight = 0.95) +
-  geom_vline(xintercept = 12.14, linetype = "dotdash",
-             colour = "grey25", linewidth = 0.5) +
-  annotate("text", x = 12.14, y = 0.06, label = "Martin threshold 12.14 °C",
-           hjust = -0.05, size = 3.8, fontface = "bold", colour = "black") +
   geom_line(linewidth = 1.2) +
   scale_colour_manual(values = fam_cols, name = "TDM model") +
-  scale_linetype_manual(values = stage_types, name = "Stage") +
+  scale_linetype_manual(values = stage_types, name = "Parameter set") +
+  # Grey the linetype keys so they do not read as a fourth coloured series,
+  # and draw the colour keys solid so they match the curves they name.
+  guides(colour   = guide_legend(order = 1, override.aes = list(linetype = "solid")),
+         linetype = guide_legend(order = 2, override.aes = list(colour = "grey30"))) +
   scale_x_continuous(limits = c(10, 18), breaks = seq(10, 18, 1), expand = c(0, 0)) +
   scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
   labs(subtitle = "(a) Daily survival rate", x = NULL, y = "Daily survival") +
@@ -118,31 +119,8 @@ curves_cum <- tibble(T = T_seq) %>%
   pivot_longer(-T, names_to = "family", values_to = "S") %>%
   mutate(family = factor(family, levels = names(TDM_COLS)))
 
-# Crossovers: where each exponential model becomes harsher than Martin
-cross <- sapply(c("WaterForum2020", "SALMOD2006"), function(m) {
-  f  <- function(x) S_cum(x, m) - S_cum(x, "martin")
-  gr <- seq(13, 20, by = 0.001); v <- sapply(gr, f)
-  i  <- which(diff(sign(v)) != 0)
-  if (length(i)) gr[i[length(i)]] else NA_real_
-})
-cat(sprintf("\nCrossover (exponential model drops below Martin): Bratovich %.2f C, Bartholow %.2f C\n",
-            cross[["WaterForum2020"]], cross[["SALMOD2006"]]))
-
 pB <- ggplot(curves_cum, aes(T, S, colour = family)) +
-  shade() +
   geom_line(linewidth = 1.2) +
-  geom_vline(xintercept = as.numeric(cross), linetype = "dotted",
-             colour = "grey25", linewidth = 0.5) +
-  # Sits in the bottom-right, where every curve is already below ~0.05, so it is
-  # clear of the lines it describes while staying next to the crossover markers.
-  # Drawn as a label rather than plain text: the two dotted crossover rules run
-  # the full height of the panel and would otherwise strike through it.
-  annotate("label", x = 17.92, y = 0.52, hjust = 1, vjust = 0.5,
-           label = sprintf("exponential models\nfall below Martin\n%.1f / %.1f °C",
-                           cross[["SALMOD2006"]], cross[["WaterForum2020"]]),
-           size = 4, fontface = "bold", colour = "black", lineheight = 1.05,
-           fill = "white", alpha = 0.9, label.size = 0, label.r = unit(0, "pt"),
-           label.padding = unit(4, "pt")) +
   scale_colour_manual(values = fam_cols, name = "TDM model") +
   scale_x_continuous(limits = c(10, 18), breaks = seq(10, 18, 1), expand = c(0, 0)) +
   scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
@@ -150,8 +128,14 @@ pB <- ggplot(curves_cum, aes(T, S, colour = family)) +
        x = "Temperature (°C)", y = "Egg-to-fry survival") +
   theme_arg(base_size = 14)
 
+# Pin the collected guides to the top. Left centred, patchwork splits them
+# across the full figure height and the linetype guide ends up alongside panel
+# (b), which has no linetypes at all — it reads as a legend for the wrong panel.
 fig <- pA / pB + plot_layout(guides = "collect") &
-  theme(legend.position = "right")
+  theme(legend.position = "right",
+        legend.justification = "top",
+        legend.box.just = "left",
+        legend.spacing.y = unit(10, "pt"))
 
 dir.create(here("figures"), showWarnings = FALSE)
 dir.create(here("output"),  showWarnings = FALSE)

@@ -40,9 +40,13 @@ docs/EDIT_LIST_*.md
 
 # Talks live alongside the repo, not in it - same rule as the manuscript.
 # analysis/presentation_bdsc.R IS tracked (it regenerates the figures from
-# committed model output); its rendered figures and the deck are not.
+# committed model output); its rendered figures and the deck are not. The
+# life-stage illustrations under figures/bdsc/lifecycle/ are INPUTS to that
+# script, so they are tracked.
 presentations/
-figures/bdsc/
+figures/bdsc/*
+!figures/bdsc/lifecycle/
+figures/bdsc/lifecycle/_unused_*
 
 # Collaborator delivery bundles; extract what is needed into data_raw/ instead
 /ARG SDM revision.zip
