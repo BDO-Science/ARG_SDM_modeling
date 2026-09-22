@@ -952,8 +952,14 @@ g13b <- ggplot(bh, aes(redds, s, colour = K_lab, linetype = K_lab)) +
   labs(x = "Redds", y = "Density-dependent survival",
        subtitle = sprintf("S = %.3f / (1 + redds / K), applied on top of temperature survival",
                           P_BASE_S0)) +
-  theme_talk(base_size = 21) +
-  theme(plot.subtitle = element_text(size = 14, colour = INK_SOFT))
+  # Three labels of this length do not fit across the top of a half-width
+  # panel; stacked in the upper right, where the curves are not.
+  guides(colour = guide_legend(ncol = 1), linetype = guide_legend(ncol = 1)) +
+  theme_talk(base_size = 21, legend = "inside") +
+  theme(plot.subtitle = element_text(size = 14, colour = INK_SOFT),
+        legend.position.inside = c(0.97, 0.95),
+        legend.justification = c(1, 1),
+        legend.key.width = unit(2.2, "lines"))
 
 # patchwork composes onto its own background, which defaults to theme_grey's
 # white and shows as a frame around both panels and a seam between them.
