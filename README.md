@@ -153,6 +153,12 @@ are registered in `ARG_YEARS` in `SalmonCountR/years.R`, each pointing at a fold
 | `2025` (default) | `SalmonCountR/app_data/` | The published analysis |
 | `2026` | `SalmonCountR/app_data/2026/` | Draft: the 23 Sep 2026 temperature deliverable run through the 2025 model, with placeholder weights and hydropower costs. See its [README](SalmonCountR/app_data/2026/README.md) |
 
+Each entry names the calendar year its deliverable models (`temperature_year`,
+2026 for the draft), which the Temperature Explorer shows, separately from the
+year the population model projects from (`first_projection_year`, 2025 for both
+until the calibration is extended). The About tab describes whichever year is
+selected.
+
 Each entry also says how its objectives are scaled to 0–1 in Decision Support
 and Swing Weighting. **2025 scales locally** (0 is the worst and 1 the best of
 its nine alternatives, as published). **2026 scales globally** on fixed ranges

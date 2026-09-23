@@ -37,6 +37,51 @@ alt_choices <- function(bundle) {
   stats::setNames(codes, show)
 }
 
+# ---- About tab: the alternatives of the selected year ------------------------
+# The 2025 alternatives have full specifications (bypass volume, energy, cost,
+# emissions, schedule) from the 2025 deliverable's summary. Later deliverables
+# so far carry only the scenario label and a declared cost, so their table is
+# built from the year's alternative key and years.R.
+about_alternatives_2025 <- function() {
+  spec <- list(
+    list("NB",   "0",      "0",     "$0",       "0",     "No bypass - baseline operations"),
+    list("PB1",  "10,163", "2,424", "$111,422", "1,149", "125 cfs starting Oct 15, 250 cfs on Oct 28, 125 cfs on Nov 7, end bypass on Nov 14"),
+    list("PB2",  "32,224", "7,674", "$376,671", "3,650", "250 cfs starting Oct 15, 500 cfs on Oct 28, 250 cfs on Nov 14, end bypass on Nov 30"),
+    list("PB2b", "40,156", "9,558", "$470,090", "4,522", "250 cfs starting Oct 15, 500 cfs on Oct 28, end bypass on Nov 30"),
+    list("PB2c", "37,181", "8,846", "$433,215", "4,195", "250 cfs starting Oct 21, 500 cfs on Oct 28, end bypass on Nov 30"),
+    list("PB3",  "17,351", "4,135", "$201,552", "1,932", "250 cfs starting Oct 21, 500 cfs on Oct 28, 250 cfs on Nov 7, end bypass on Nov 14"),
+    list("PB4",  "20,822", "4,959", "$241,590", "2,350", "250 cfs starting Oct 21, 500 cfs on Oct 28, 250 cfs on Nov 7, end bypass on Nov 21"),
+    list("PB5",  "17,351", "4,130", "$199,382", "1,974", "500 cfs bypass starting Oct 28, reduce to 250 on Nov 7, end bypass on Nov 21"),
+    list("PB6",  "30,141", "7,100", "$348,806", "3,321", "100 cfs Oct 1, 200 cfs Oct 8, 300 cfs Oct 15, 400 cfs Oct 22, 500 cfs Nov 1, ending Nov 14")
+  )
+  tags$table(class = "table table-striped table-condensed",
+    tags$thead(tags$tr(tags$th("Alternative"), tags$th("Bypass (AF)"), tags$th("Bypass (MWh)"),
+                       tags$th("Loss ($)"), tags$th("Increase (mTCO2)"), tags$th("Description"))),
+    tags$tbody(lapply(spec, function(r) tags$tr(
+      tags$td(strong(r[[1]])), tags$td(r[[2]]), tags$td(r[[3]]),
+      tags$td(r[[4]]), tags$td(r[[5]]), tags$td(r[[6]])))))
+}
+
+about_alternatives_from_key <- function(bundle, cfg) {
+  key   <- bundle$alt_key
+  codes <- bundle$alt_codes
+  rows  <- lapply(codes, function(a) {
+    k <- key[key$alt == a, , drop = FALSE][1, ]
+    cost <- cfg$hydro_cost[[a]]
+    tags$tr(tags$td(strong(a)),
+            tags$td(k$label),
+            tags$td(if (is.na(k$atsp)) "" else k$atsp),
+            tags$td(paste0("$", format(cost, big.mark = ",", scientific = FALSE))))
+  })
+  tagList(
+    tags$table(class = "table table-striped table-condensed",
+      tags$thead(tags$tr(tags$th("Alternative"), tags$th("Deliverable label"),
+                         tags$th("ATSP"), tags$th("Loss ($)"))),
+      tags$tbody(rows)),
+    if (!is.null(cfg$hydro_cost_note)) p(em(cfg$hydro_cost_note))
+  )
+}
+
 ui <- navbarPage("Lower American River Power Bypass Decision Support",
                  useShinyjs(),
 
@@ -74,104 +119,9 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    h3("Application Overview"),
                                    p("This interactive application simulates fall-run Chinook salmon population dynamics on the American River under different Folsom Dam power bypass flow and temperature management alternatives. The model integrates temperature-dependent mortality, spawn timing, and comprehensive life-cycle processes to project spawner abundance 100 years ahead (2025-2124)."),
                                    
-                                   h4("Management Structure:"),
-                                   tags$ul(
-                                     tags$li(strong("Management Alternatives:"), "No Bypass (NB) and the Power Bypass configurations (PB1, PB2, ...) in the selected analysis year's temperature deliverable; the 2025 analysis has nine (NB, PB1-PB6 with PB2b and PB2c variants) with varying flow rates and timing"),
-                                     tags$li(strong("4 Climate Years:"), "2011 (Cool), 2014 (Warm), 2017 (Warm), 2020 (Cool)"),
-                                     tags$li(strong("Pre-computed Runs:"), "Each alternative modeled under all 4 climate year conditions (36 runs for 2025), allowing dynamic weighting"),
-                                     tags$li(strong("Temperature Data:"), "CE-QUAL-W2 power bypass modeling results for the fall decision window (used from Oct 18 onward in the 2025 analysis, and from the deliverable's first day in later years), combined with USGS gauge climatology (Sept 2011 onward) for the rest of the year"),
-                                     tags$li(strong("Simulation Period:"), "2025-2124 with user-adjustable weighting of climatological conditions and TDM models")
-                                   ),
-                                   
-                                   h4("Power Bypass Alternative Specifications:"),
-                                   tags$div(style = "margin-left: 20px;",
-                                            tags$table(class = "table table-striped table-condensed",
-                                                       tags$thead(
-                                                         tags$tr(
-                                                           tags$th("Alternative"),
-                                                           tags$th("Bypass (AF)"),
-                                                           tags$th("Bypass (MWh)"),
-                                                           tags$th("Loss ($)"),
-                                                           tags$th("Increase (mTCO2)"),
-                                                           tags$th("Description")
-                                                         )
-                                                       ),
-                                                       tags$tbody(
-                                                         tags$tr(
-                                                           tags$td(strong("NB")),
-                                                           tags$td("0"),
-                                                           tags$td("0"),
-                                                           tags$td("$0"),
-                                                           tags$td("0"),
-                                                           tags$td("No bypass - baseline operations")
-                                                         ),
-                                                         tags$tr(
-                                                           tags$td(strong("PB1")),
-                                                           tags$td("10,163"),
-                                                           tags$td("2,424"),
-                                                           tags$td("$111,422"),
-                                                           tags$td("1,149"),
-                                                           tags$td("125 cfs starting Oct 15, 250 cfs on Oct 28, 125 cfs on Nov 7, end bypass on Nov 14")
-                                                         ),
-                                                         tags$tr(
-                                                           tags$td(strong("PB2")),
-                                                           tags$td("32,224"),
-                                                           tags$td("7,674"),
-                                                           tags$td("$376,671"),
-                                                           tags$td("3,650"),
-                                                           tags$td("250 cfs starting Oct 15, 500 cfs on Oct 28, 250 cfs on Nov 14, end bypass on Nov 30")
-                                                         ),
-                                                         tags$tr(
-                                                           tags$td(strong("PB2b")),
-                                                           tags$td("40,156"),
-                                                           tags$td("9,558"),
-                                                           tags$td("$470,090"),
-                                                           tags$td("4,522"),
-                                                           tags$td("250 cfs starting Oct 15, 500 cfs on Oct 28, end bypass on Nov 30")
-                                                         ),
-                                                         tags$tr(
-                                                           tags$td(strong("PB2c")),
-                                                           tags$td("37,181"),
-                                                           tags$td("8,846"),
-                                                           tags$td("$433,215"),
-                                                           tags$td("4,195"),
-                                                           tags$td("250 cfs starting Oct 21, 500 cfs on Oct 28, end bypass on Nov 30")
-                                                         ),
-                                                         tags$tr(
-                                                           tags$td(strong("PB3")),
-                                                           tags$td("17,351"),
-                                                           tags$td("4,135"),
-                                                           tags$td("$201,552"),
-                                                           tags$td("1,932"),
-                                                           tags$td("250 cfs starting Oct 21, 500 cfs on Oct 28, 250 cfs on Nov 7, end bypass on Nov 14")
-                                                         ),
-                                                         tags$tr(
-                                                           tags$td(strong("PB4")),
-                                                           tags$td("20,822"),
-                                                           tags$td("4,959"),
-                                                           tags$td("$241,590"),
-                                                           tags$td("2,350"),
-                                                           tags$td("250 cfs starting Oct 21, 500 cfs on Oct 28, 250 cfs on Nov 7, end bypass on Nov 21")
-                                                         ),
-                                                         tags$tr(
-                                                           tags$td(strong("PB5")),
-                                                           tags$td("17,351"),
-                                                           tags$td("4,130"),
-                                                           tags$td("$199,382"),
-                                                           tags$td("1,974"),
-                                                           tags$td("500 cfs bypass starting Oct 28, reduce to 250 on Nov 7, end bypass on Nov 21")
-                                                         ),
-                                                         tags$tr(
-                                                           tags$td(strong("PB6")),
-                                                           tags$td("30,141"),
-                                                           tags$td("7,100"),
-                                                           tags$td("$348,806"),
-                                                           tags$td("3,321"),
-                                                           tags$td("100 cfs Oct 1, 200 cfs Oct 8, 300 cfs Oct 15, 400 cfs Oct 22, 500 cfs Nov 1, ending Nov 14")
-                                                         )
-                                                       )
-                                            )
-                                   ),
+                                   # Follows the selected analysis year: counts, the
+                                   # alternatives and their costs (server, output$about_year).
+                                   uiOutput("about_year"),
                                    
                                    h3("Model Components"),
                                    
@@ -365,8 +315,8 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                               radioButtons("temp_period", "Time Period:",
                                            choices = stats::setNames(
                                              c("oct_dec", "full"),
-                                             c(paste0("Oct-Dec ", arg_year_cfg(ARG_DEFAULT_YEAR)$first_projection_year),
-                                               paste0("Full Year ", arg_year_cfg(ARG_DEFAULT_YEAR)$first_projection_year)))),
+                                             c(paste0("Oct-Dec ", arg_temperature_year(arg_year_cfg(ARG_DEFAULT_YEAR))),
+                                               paste0("Full Year ", arg_temperature_year(arg_year_cfg(ARG_DEFAULT_YEAR)))))),
                               width = 3
                             ),
                             mainPanel(
@@ -618,7 +568,7 @@ server <- function(input, output, session) {
 
   # Temperature Explorer period labels name the year actually plotted.
   observeEvent(active_year(), {
-    fy <- year_cfg()$first_projection_year
+    fy <- arg_temperature_year(year_cfg())
     updateRadioButtons(session, "temp_period",
                        choices = stats::setNames(c("oct_dec", "full"),
                                                  c(paste0("Oct-Dec ", fy),
@@ -1079,6 +1029,43 @@ server <- function(input, output, session) {
         steelhead_norm = arg_scale_objective(steelhead_raw, rng$steelhead),
         hydro_norm     = arg_scale_objective(hydro_raw,     rng$hydro, lower_better = TRUE)
       )
+  })
+
+  # About tab: structure and alternatives of the selected year
+  output$about_year <- renderUI({
+    y   <- active_year()
+    cfg <- year_cfg()
+    dat <- B()
+    if (is.null(dat)) {
+      return(tagList(h4("Management Structure:"),
+                     p(em(paste0("No data loaded for ", cfg$label, ". ", cfg$note)))))
+    }
+    n_alt <- length(dat$alt_codes); n_met <- length(dat$met_years); n_run <- nrow(dat$alt_key)
+    ty <- arg_temperature_year(cfg); fy <- cfg$first_projection_year
+    tagList(
+      h4(paste0("Management Structure (", cfg$label, "):")),
+      tags$ul(
+        tags$li(strong(paste0(n_alt, " Management Alternatives: ")),
+                paste(dat$alt_codes, collapse = ", ")),
+        tags$li(strong(paste0(n_met, " Climate Years: ")),
+                "2011 (Cool), 2014 (Warm), 2017 (Warm), 2020 (Cool)"),
+        tags$li(strong(paste0(n_run, " Pre-computed Runs: ")),
+                "each alternative modeled under every climate year, allowing dynamic weighting"),
+        tags$li(strong("Temperature Data: "),
+                paste0("CE-QUAL-W2 power bypass modeling results for the fall of ", ty,
+                       if (y == "2025") " (used from Oct 18 onward)" else " (used from the deliverable's first day)",
+                       ", combined with USGS gauge climatology (Sept 2011 onward) for the rest of the year")),
+        tags$li(strong("Simulation Period: "),
+                paste0(fy, "-", fy + 99, " with user-adjustable weighting of climatological conditions and TDM models",
+                       if (ty != fy) paste0(". The population model projects from ", fy,
+                                            " because its calibration ends the year before; the ", ty,
+                                            " temperatures are applied by day of year, so the fall pattern is the same in every projection year") else ""))
+      ),
+      if (!is.null(cfg$note)) p(em(cfg$note)),
+      h4("Power Bypass Alternative Specifications:"),
+      tags$div(style = "margin-left: 20px;",
+               if (y == "2025") about_alternatives_2025() else about_alternatives_from_key(dat, cfg))
+    )
   })
 
   output$scaling_note_ds    <- renderUI(tags$p(em(arg_scaling_note(year_cfg()))))

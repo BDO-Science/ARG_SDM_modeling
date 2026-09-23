@@ -135,6 +135,7 @@ ARG_YEARS <- list(
     default_weights       = c(chinook = 0.40, steelhead = 0.10, hydro = 0.50),
     hydro_cost            = ARG_HYDRO_COST_2025,
     first_projection_year = 2025,
+    temperature_year      = 2025,
     # No objective_ranges: the published analysis scales locally, and stays so.
     note                  = "Published analysis. Elicited weights from the 2025 SDM workshop."
   ),
@@ -155,9 +156,20 @@ ARG_YEARS <- list(
     # 2025-09-21 so that the first projection year carries the scenario
     # temperatures. See app_data/2026/README.md for what a true 2026 start needs.
     first_projection_year = 2025,
+    # The deliverable models the fall of 2026, and that is what the Temperature
+    # Explorer shows, even though the population model projects from 2025.
+    temperature_year      = 2026,
+    hydro_cost_note       = "Placeholders: each scenario carries its 2025 cost, ATSP variants their base scenario's, No Bypass $0. Replace when the 2026 alternatives are valued.",
     note                  = "Draft 2026 temperature deliverable (23 Sep 2026) run through the 2025 model. Objective weights and hydropower costs are placeholders carried over from 2025."
   )
 )
+
+#' The calendar year a year's temperature deliverable models, for the
+#' Temperature Explorer. Falls back to the first projection year, which is what
+#' it is whenever the model has been recalibrated up to the decision.
+arg_temperature_year <- function(cfg) {
+  if (!is.null(cfg$temperature_year)) cfg$temperature_year else cfg$first_projection_year
+}
 
 ARG_DEFAULT_YEAR <- "2025"
 
@@ -325,12 +337,13 @@ arg_prepare_bundle <- function(raw, cfg) {
     function(flow_vec) interp(flow_vec)
   })
 
-  # Temperature Explorer data, precomputed once. The filter is on the first
-  # projection year of THIS bundle -- it used to be a literal 2025, which would
-  # have returned zero rows for any later deliverable.
+  # Temperature Explorer data, precomputed once. The filter is on the year the
+  # deliverable models (temperature_year), which is the first projection year
+  # unless the model is lagging the deliverable -- it used to be a literal
+  # 2025, which would have returned zero rows for any later deliverable.
   raw$df_temp_first_year <- if (is.data.frame(raw$df_all_orig)) {
     raw$df_all_orig |>
-      dplyr::filter(lubridate::year(Date) == cfg$first_projection_year) |>
+      dplyr::filter(lubridate::year(Date) == arg_temperature_year(cfg)) |>
       dplyr::mutate(month_num = lubridate::month(Date), env = as.character(env)) |>
       dplyr::left_join(
         stats::setNames(key[, c("env", "met_year")], c("env", "climate")), by = "env")

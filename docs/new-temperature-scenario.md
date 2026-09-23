@@ -204,6 +204,9 @@ and change it:
 - **`first_projection_year` must be `2025`.** The projection starts in the year
   after the calibration period, which is fixed at 2011–2024. It does not follow
   the date in your workbook.
+- **`temperature_year`** is the calendar year your workbook models (its dates).
+  The Temperature Explorer shows and labels that year. Leave it out to use the
+  first projection year.
 - **`hydro_cost`** is the hydropower replacement cost for each alternative, named
   by the codes in your `alt_key.rds`. It is a design input, not a model output.
   **Every alternative in the key needs a cost**, or the year shows as *(data not
