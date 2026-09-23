@@ -1,55 +1,80 @@
 # app_data/2026
 
-The app's **2026** analysis year reads from this folder. Until every file below
-exists, the year selector shows **2026 (data not loaded)** and the banner names
-what is missing. It will not error, and it will not silently fall back to 2025.
+The app's **2026 (draft)** analysis year reads from this folder. It holds the
+draft 2026 temperature deliverable run through the 2025 model.
 
-Required (see `ARG_YEAR_FILES` in `SalmonCountR/years.R`):
+## What is here
 
+| File | From |
+|---|---|
+| `alt_key.rds`, `env_ext_list.rds`, `df_all.rds`, `observed_temps.rds`, `temperature_alternatives.xlsx` | `analysis/temperature_data.R` on `data_raw/TemperatureModelingResults_9-23-26.xlsx`, run on 2026-09-23 with `ARG_OBS_END = "2025-09-21"` |
+| `results_full.rds` and the other model outputs | `SalmonCountR/precompute.R` with `ARG_APP_DATA_DIR` pointed here |
+
+The deliverable (V. Martinez, 23 Sep 2026) is a draft. It has six scenarios,
+and two more are expected: Scenarios 1 and 2 on the ATSP 38 schedule.
+
+| Code | Workbook label |
+|---|---|
+| `NB` | ATSP 41 - No Bypass |
+| `NB-38` | ATSP 38 - No Bypass |
+| `PB1` … `PB4` | ATSP 41 - Scenario 1 … Scenario 4 |
+| `PB1-38`, `PB2-38` | ATSP 38 - Scenario 1, Scenario 2 (expected) |
+
+## When the updated deliverable arrives
+
+Drop the new workbook in `data_raw/`, then from the repo root, in a fresh R
+session:
+
+```r
+Sys.setenv(ARG_TEMP_FILE    = "data_raw/<new file>.xlsx",
+           ARG_APP_DATA_DIR = "SalmonCountR/app_data/2026",
+           ARG_OBS_END      = "2025-09-21")     # see below
+source("analysis/temperature_data.R")
 ```
-results_full.rds
-steelhead_metrics.rds
-swing_ranges.rds
-american_river_instream.rds
-df_all.rds
-swing_scenario_results.rds
-steelhead_scenario_results.rds
+
+Check the printed code mapping (`NB-38`, `PB1-38`, `PB2-38` for the ATSP 38
+scenarios). Then, in another fresh session:
+
+```r
+Sys.setenv(ARG_APP_DATA_DIR = "SalmonCountR/app_data/2026")
+source("SalmonCountR/precompute.R")             # about 15 minutes
 ```
 
-Optional: `data_vintage.rds`. If it is present the banner shows the refresh
-date; if not it says the vintage was not recorded. `analysis/refresh_data_year.R`
-writes it only to the flat `app_data/` folder, so copy it here by hand if the
-banner should show a date for this year.
+`ARG_HYDRO_COST_2026` in `SalmonCountR/years.R` already lists all eight codes.
+If the new file uses other labels, add their codes there or the year shows as
+*(data not loaded)* and the banner says which alternative has no cost. Restart
+the app and pick **2026 (draft)** under Analysis year. Commit the folder.
 
-## Filling it
+## What is placeholder
 
-Follow [`docs/new-temperature-scenario.md`](../../../docs/new-temperature-scenario.md)
-with `ARG_APP_DATA_DIR = "SalmonCountR/app_data/2026"`.
-`analysis/temperature_data.R` writes `df_all.rds` here, and `precompute.R` writes
-the rest (including a copy of `american_river_instream.rds`). The 2025 results in
-the parent folder are not touched.
+- **Hydropower costs** (`ARG_HYDRO_COST_2026` in `years.R`) carry each scenario's
+  2025 value, on the assumption that the bypass schedules are unchanged; ATSP
+  variants take their base scenario's cost, and No Bypass costs nothing under
+  either schedule. Replace when Reclamation values the 2026 alternatives. Confirm
+  with the temperature modeller that Scenarios 1–4 are the 2025 definitions.
+- **Objective weights** are the 2025 elicited set.
+- **Bypass volumes** are not in the deliverable (no `Scenario Summary` sheet), so
+  nothing here reports volume per alternative.
 
-## Before calling it a 2026 analysis
+## Why the decision date is 2025-09-21
 
-That procedure runs the 2026 temperatures through the **2025 model**: calibrated
-on 2011–2024 escapement, with the projection starting in 2025. A 2026 analysis
-that also adds the 2025 escapement and carcass data needs code changes first:
+The run uses the **2025 model**: calibrated on 2011–2024 escapement, with the
+projection starting in 2025. The first projection year has to carry the
+scenario temperatures, so the observed record is cut at 2025-09-21 and the 2026
+scenario pattern is used from the 2025 fall onward. The temperatures are
+matched by day of year, so the calendar year on the workbook does not matter.
+`first_projection_year` for the `"2026"` entry in `years.R` is therefore 2025.
+
+A true 2026 start, adding the 2025 escapement and carcass data, needs code
+changes first:
 
 - `real_years` in `SalmonCountR/precompute.R` and `SalmonCountR/global.R`, and the
   literal `2011, 2024` / `2011:2024` filters on GrandTab and carcass data in
   `precompute.R`;
 - `year > 2024` in `arg_prepare_bundle()` in `SalmonCountR/years.R`;
-- `ARG_OBS_END` when running `temperature_data.R`: set it to the 2026 decision
-  date, so observed temperatures run up to the decision and the scenarios take
-  over after it (the run then freezes that record in `observed_temps.rds`);
-- the carcass and GrandTab snapshots, via `analysis/refresh_data_year.R`.
-
-Then, in the `"2026"` entry of `ARG_YEARS` in `years.R`:
-
-- `first_projection_year` is set to 2026. It must match the first year
-  precompute actually projects: **2025 unless `real_years` was extended.**
-- `default_weights` and `hydro_cost` are copied from 2025 as placeholders. Replace
-  them with the 2026 elicitation and valuation.
+- `ARG_OBS_END` set to the 2026 decision date when running `temperature_data.R`;
+- the carcass and GrandTab snapshots, via `analysis/refresh_data_year.R`;
+- `first_projection_year = 2026` in `years.R`.
 
 Changing the model inputs themselves is a Reclamation decision, not something
 this scaffolding assumes.
