@@ -297,57 +297,85 @@ save_talk(p4, "04_volume_vs_schedule.png")
 # the disagreement is about which alternative is WORST. Bars would need three
 # free y-scales (Bratovich is in the thousands, Martin in the tens), which buries
 # the ranking question under a scale problem.
-rf <- readRDS(here("SalmonCountR", "app_data", "results_full.rds"))
-scen_map <- c(NB=1,PB1=2,PB2=3,PB2b=4,PB2c=5,PB3=6,PB4=7,PB5=8,PB6=9)
+# Two panels ask the same question of the two things the design varies: the
+# mortality model (left) and the meteorological year (right). The model moves
+# the bottom of the ranking; the weather moves the level but not the order.
+rf  <- readRDS(here("SalmonCountR", "app_data", "results_full.rds"))
+key <- readRDS(here("SalmonCountR", "app_data", "alt_key.rds"))
 TDM_LAB  <- c(exp_WF = "Bratovich", exp_SM = "Bartholow", lin_Martin = "Martin")
+TDM_W    <- c(exp_WF = 0.51, exp_SM = 0.24, lin_Martin = 0.25)
+MET_LAB  <- c(`2011` = "2011\ncool", `2020` = "2020\ncool", `2017` = "2017\nwarm", `2014` = "2014\nwarm")
 
-rank_by_tdm <- rf %>%
+med_run <- rf %>%
   filter(year > 2024) %>%
   group_by(env, variant) %>% slice_tail(n = 20) %>%
   summarise(med = median(spawners, na.rm = TRUE), .groups = "drop") %>%
-  mutate(env = as.integer(env),
-         scenario = names(scen_map)[match((env - 1) %% 9 + 1, scen_map)]) %>%
+  mutate(env = as.integer(env)) %>%
+  inner_join(key, by = "env") %>%
+  rename(scenario = alt)
+
+# By mortality model: met years at equal weight, one column per model.
+rank_by_tdm <- med_run %>%
   group_by(scenario, variant) %>%
-  summarise(value = sum(med * 0.25), .groups = "drop") %>%
-  group_by(variant) %>%
-  mutate(rank = rank(-value)) %>%
-  ungroup() %>%
-  mutate(model = factor(TDM_LAB[variant], levels = unname(TDM_LAB)))
+  summarise(value = mean(med), .groups = "drop") %>%
+  group_by(variant) %>% mutate(rank = rank(-value)) %>% ungroup() %>%
+  transmute(scenario, value, rank,
+            x = factor(TDM_LAB[variant], levels = unname(TDM_LAB)))
+
+# By meteorological year: models at the elicited weights, one column per year,
+# ordered cool to warm by the no-bypass level.
+rank_by_met <- med_run %>%
+  group_by(scenario, met_year) %>%
+  summarise(value = sum(med * TDM_W[variant]), .groups = "drop") %>%
+  group_by(met_year) %>% mutate(rank = rank(-value)) %>% ungroup() %>%
+  transmute(scenario, value, rank,
+            x = factor(MET_LAB[met_year], levels = unname(MET_LAB)))
 
 # Colour only the alternatives whose rank actually moves; the rest recede.
 # Movers take the deck's role colours rather than a fresh palette: no-bypass is
 # the reference grey it is everywhere else, the alternative that collapses
 # under Martin (PB6) takes the highlight, and any other mover is plain series
 # blue. Nothing here reuses a TDM identity colour, because the x-axis IS the
-# three TDM models and a pink line would read as "Martin".
-movers <- rank_by_tdm %>% group_by(scenario) %>%
+# three TDM models and a pink line would read as "Martin". The same colours
+# are used in both panels so an alternative can be followed across them.
+movers <- bind_rows(rank_by_tdm, rank_by_met) %>%
+  group_by(scenario, panel = rep(c("tdm", "met"), c(nrow(rank_by_tdm), nrow(rank_by_met)))) %>%
   summarise(span = max(rank) - min(rank), .groups = "drop") %>%
-  filter(span >= 3) %>% pull(scenario)
-
-rank_by_tdm <- rank_by_tdm %>%
-  mutate(grp = ifelse(scenario %in% movers, scenario, "stable"))
+  filter(span >= 3) %>% pull(scenario) %>% unique()
 mover_cols <- setNames(rep(SERIES, length(movers)), movers)
 if ("NB"  %in% movers) mover_cols["NB"]  <- REF_FILL
 if ("PB6" %in% movers) mover_cols["PB6"] <- HILITE
 mover_cols["stable"] <- DIM
 
-ends_r <- rank_by_tdm %>% filter(model == levels(model)[nlevels(model)])
-starts_r <- rank_by_tdm %>% filter(model == levels(model)[1])
+bump <- function(d, ylab) {
+  d <- d %>% mutate(grp = ifelse(scenario %in% movers, scenario, "stable"))
+  ends_r   <- d %>% filter(x == levels(x)[nlevels(x)])
+  starts_r <- d %>% filter(x == levels(x)[1])
+  ggplot(d, aes(x, rank, group = scenario, colour = grp)) +
+    geom_line(aes(linewidth = grp %in% movers)) +
+    geom_point(size = 4) +
+    geom_text(data = starts_r, aes(label = scenario), hjust = 1.35, size = 5.6, show.legend = FALSE) +
+    geom_text(data = ends_r,   aes(label = scenario), hjust = -0.35, size = 5.6, show.legend = FALSE) +
+    scale_y_reverse(breaks = 1:9, expand = expansion(add = 0.6)) +
+    scale_x_discrete(expand = expansion(add = c(0.7, 0.7))) +
+    scale_colour_manual(values = mover_cols, guide = "none") +
+    scale_linewidth_manual(values = c(`TRUE` = 1.8, `FALSE` = 0.8), guide = "none") +
+    labs(x = NULL, y = ylab) +
+    theme_talk(base_size = 24, legend = "none") +
+    theme(panel.grid.major.x = element_blank())
+}
 
-p5 <- ggplot(rank_by_tdm, aes(model, rank, group = scenario, colour = grp)) +
-  geom_line(aes(linewidth = grp %in% movers)) +
-  geom_point(size = 4) +
-  geom_text(data = starts_r, aes(label = scenario), hjust = 1.35, size = 6, show.legend = FALSE) +
-  geom_text(data = ends_r,   aes(label = scenario), hjust = -0.35, size = 6, show.legend = FALSE) +
-  scale_y_reverse(breaks = 1:9, expand = expansion(add = 0.6)) +
-  scale_x_discrete(expand = expansion(add = c(0.55, 0.55))) +
-  scale_colour_manual(values = mover_cols, guide = "none") +
-  scale_linewidth_manual(values = c(`TRUE` = 1.8, `FALSE` = 0.8), guide = "none") +
-  labs(x = NULL, y = "Rank by adult population index  (1 = best)") +
-  theme_talk(legend = "none") +
-  theme(panel.grid.major.x = element_blank())
+p5 <- patchwork::wrap_plots(
+  bump(rank_by_tdm, "Rank by adult population index  (1 = best)") +
+    labs(subtitle = "By egg mortality model (met years equally weighted)"),
+  bump(rank_by_met, NULL) +
+    labs(subtitle = "By meteorological year (models at elicited weights)"),
+  nrow = 1) +
+  patchwork::plot_annotation(
+    theme = theme(plot.background = element_rect(fill = SURFACE, colour = NA),
+                  panel.background = element_rect(fill = SURFACE, colour = NA)))
 
-save_talk(p5, "05_rank_by_tdm.png", width = 12, height = 7.2)
+save_talk(p5, "05_rank_by_tdm.png", width = 15.5, height = 7.2)
 
 
 # ============================================================================
