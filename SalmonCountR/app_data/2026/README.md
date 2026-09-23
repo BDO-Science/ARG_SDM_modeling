@@ -47,11 +47,16 @@ the app and pick **2026 (draft)** under Analysis year. Commit the folder.
 
 ## What is placeholder
 
-- **Hydropower costs** (`ARG_HYDRO_COST_2026` in `years.R`) carry each scenario's
-  2025 value, on the assumption that the bypass schedules are unchanged; ATSP
-  variants take their base scenario's cost, and No Bypass costs nothing under
-  either schedule. Replace when Reclamation values the 2026 alternatives. Confirm
-  with the temperature modeller that Scenarios 1–4 are the 2025 definitions.
+- **Hydropower costs and specifications** (`ARG_ALT_SPECS_2026` in `years.R`)
+  are Reclamation's draft 2026 valuation of Scenarios 1–4
+  (`docs/2026_hydropower_costs_draft.png`, 23 Sep 2026), on the 50% exceedance
+  WY2026 operations forecast; the 90% case is recorded in the comments there.
+  S1–S4 in that table are `PB1`–`PB4` here (the cooling at Hazel Avenue starts
+  on each schedule's first bypass day). ATSP variants take their base
+  scenario's values, and No Bypass costs nothing under either schedule.
+  **The 2026 schedules are not the 2025 ones with the same code**: 2026 PB1 is
+  the 2025 PB2 schedule, 2026 PB2 is the 2025 PB4 schedule, and PB3 and PB4 are
+  new (500 cfs from Oct 28 and from Oct 15, to Nov 30). S5–S8 are TBD.
 - **Objective weights** are the 2025 elicited set. They were elicited against
   2025's local swings, so they do not yet describe the global ranges below;
   re-elicit them in the Swing Weighting tab, which now presents those ranges.

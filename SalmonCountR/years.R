@@ -86,24 +86,76 @@ ARG_HYDRO_COST_2025 <- c(
   PB4  = 241590, PB5 = 199382, PB6 = 348806
 )
 
-# 2026 draft deliverable (TemperatureModelingResults_9-23-26.xlsx): Scenarios
-# 1-4 on the ATSP 41 schedule, No Bypass on ATSP 41 and ATSP 38, with Scenarios
-# 1 and 2 on ATSP 38 still to come. PLACEHOLDERS: no 2026 valuation exists yet.
-# Each scenario carries its 2025 cost on the assumption that the bypass
-# schedule, and so the foregone generation, is unchanged; an ATSP variant costs
-# the same as its base scenario because ATSP is a shutter schedule, not a
-# bypass. No Bypass costs nothing under either schedule. Replace when Reclamation
-# values the 2026 alternatives.
-ARG_HYDRO_COST_2026 <- c(
-  NB      = 0,
-  `NB-38` = 0,
-  PB1     = ARG_HYDRO_COST_2025[["PB1"]],
-  PB2     = ARG_HYDRO_COST_2025[["PB2"]],
-  PB3     = ARG_HYDRO_COST_2025[["PB3"]],
-  PB4     = ARG_HYDRO_COST_2025[["PB4"]],
-  `PB1-38` = ARG_HYDRO_COST_2025[["PB1"]],
-  `PB2-38` = ARG_HYDRO_COST_2025[["PB2"]]
+# ---- Alternative specifications, per year ------------------------------------
+# What each alternative is: bypass volume and energy, the hydropower loss that
+# feeds hydro_cost, emissions, and the operating schedule. Shown on the About
+# tab. Codes match the year's alt_key.
+#
+# 2025: the published deliverable's Scenario Summary, as app.R carried it.
+ARG_ALT_SPECS_2025 <- data.frame(
+  alt   = c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6"),
+  af    = c(0, 10163, 32224, 40156, 37181, 17351, 20822, 17351, 30141),
+  mwh   = c(0, 2424, 7674, 9558, 8846, 4135, 4959, 4130, 7100),
+  loss  = c(0, 111422, 376671, 470090, 433215, 201552, 241590, 199382, 348806),
+  mtco2 = c(0, 1149, 3650, 4522, 4195, 1932, 2350, 1974, 3321),
+  description = c(
+    "No bypass - baseline operations",
+    "125 cfs starting Oct 15, 250 cfs on Oct 28, 125 cfs on Nov 7, end bypass on Nov 14",
+    "250 cfs starting Oct 15, 500 cfs on Oct 28, 250 cfs on Nov 14, end bypass on Nov 30",
+    "250 cfs starting Oct 15, 500 cfs on Oct 28, end bypass on Nov 30",
+    "250 cfs starting Oct 21, 500 cfs on Oct 28, end bypass on Nov 30",
+    "250 cfs starting Oct 21, 500 cfs on Oct 28, 250 cfs on Nov 7, end bypass on Nov 14",
+    "250 cfs starting Oct 21, 500 cfs on Oct 28, 250 cfs on Nov 7, end bypass on Nov 21",
+    "500 cfs bypass starting Oct 28, reduce to 250 on Nov 7, end bypass on Nov 21",
+    "100 cfs Oct 1, 200 cfs Oct 8, 300 cfs Oct 15, 400 cfs Oct 22, 500 cfs Nov 1, ending Nov 14"),
+  stringsAsFactors = FALSE
 )
+
+# 2026 draft: Reclamation's valuation of Scenarios 1-4 (docs/2026_hydropower_
+# costs_draft.png, 23 Sep 2026). S1-S4 there are Scenario 1-4 in the
+# temperature deliverable -- the cooling at Hazel starts on each schedule's
+# first bypass day (Oct 15, Oct 21, Oct 28, Oct 15) and S2's ends after Nov 21
+# -- so they are PB1-PB4 in this year's alt_key. NOTE the 2026 schedules are not
+# the 2025 ones with the same code: 2026 PB1 is the 2025 PB2 schedule and 2026
+# PB2 is the 2025 PB4 schedule; PB3 and PB4 are new. S5-S8 are TBD.
+#
+# The valuation was run on two WY2026 operations forecasts. Bypass volume is
+# the same under both; energy, loss and emissions differ. The 50% exceedance
+# case (Sep50_WY2026_draft) is used here, matching the 2025 values (2025 PB4,
+# the same schedule as 2026 S2, was 4,959 MWh; the 50% case gives 5,056, the
+# 90% case 3,873). The 90% case (Sep90_WY2026_draft) for reference:
+#   S1 5,836 MWh $291,767 2,275 t; S2 3,873 MWh $193,870 1,503 t;
+#   S3 5,855 MWh $300,183 2,451 t; S4 8,556 MWh $427,567 3,273 t.
+# Loss: 2025 hourly DA LMP at WAPA's node (WAPAMEEA3_ACT_ASR_APND). CO2: SGIP
+# SIGNAL MOER v2.0, BANC 2025.
+#
+# ATSP variants carry their base scenario's row: ATSP is a shutter schedule,
+# not a bypass, so the foregone generation is the same. No Bypass costs nothing
+# under either schedule.
+ARG_ALT_SPECS_2026 <- local({
+  s <- data.frame(
+    alt   = c("PB1", "PB2", "PB3", "PB4"),
+    af    = c(31728, 20822, 33711, 46601),
+    mwh   = c(7730, 5056, 8198, 11378),
+    loss  = c(394566, 257482, 427476, 580305),
+    mtco2 = c(3095, 1980, 3472, 4487),
+    description = c(
+      "250 cfs starting Oct 15, 500 cfs on Oct 28, 250 cfs on Nov 14, end bypass on Nov 30",
+      "250 cfs starting Oct 21, 500 cfs on Oct 28, 250 cfs on Nov 7, end bypass on Nov 21",
+      "500 cfs starting Oct 28, end bypass on Nov 30",
+      "500 cfs starting Oct 15, end bypass on Nov 30"),
+    stringsAsFactors = FALSE)
+  nb <- data.frame(alt = c("NB", "NB-38"), af = 0, mwh = 0, loss = 0, mtco2 = 0,
+                   description = c("No bypass - baseline operations (ATSP 41)",
+                                   "No bypass - baseline operations (ATSP 38)"),
+                   stringsAsFactors = FALSE)
+  v38 <- s[s$alt %in% c("PB1", "PB2"), ]
+  v38$alt <- paste0(v38$alt, "-38")
+  v38$description <- paste0(v38$description, " (ATSP 38)")
+  rbind(nb, s, v38)
+})
+
+ARG_HYDRO_COST_2026 <- stats::setNames(ARG_ALT_SPECS_2026$loss, ARG_ALT_SPECS_2026$alt)
 
 # OBJECTIVE SCALING. Decision Support and Swing Weighting put each objective on
 # a 0-1 scale before weighting. Two ways to do that:
@@ -134,6 +186,7 @@ ARG_YEARS <- list(
     dir                   = "app_data",
     default_weights       = c(chinook = 0.40, steelhead = 0.10, hydro = 0.50),
     hydro_cost            = ARG_HYDRO_COST_2025,
+    alt_specs             = ARG_ALT_SPECS_2025,
     first_projection_year = 2025,
     temperature_year      = 2025,
     # No objective_ranges: the published analysis scales locally, and stays so.
@@ -146,6 +199,7 @@ ARG_YEARS <- list(
     # 2026 elicitation is done -- these are placeholders, not results.
     default_weights       = c(chinook = 0.40, steelhead = 0.10, hydro = 0.50),
     hydro_cost            = ARG_HYDRO_COST_2026,
+    alt_specs             = ARG_ALT_SPECS_2026,
     # Global scaling on the ranges B. Mahardja proposed in September 2026 as a
     # starting point (salmon 0-25,000; hydro $0-3M; steelhead the full Oct-Nov
     # window). The 2025 weights above were elicited against LOCAL swings, so
@@ -159,8 +213,8 @@ ARG_YEARS <- list(
     # The deliverable models the fall of 2026, and that is what the Temperature
     # Explorer shows, even though the population model projects from 2025.
     temperature_year      = 2026,
-    hydro_cost_note       = "Placeholders: each scenario carries its 2025 cost, ATSP variants their base scenario's, No Bypass $0. Replace when the 2026 alternatives are valued.",
-    note                  = "Draft 2026 temperature deliverable (23 Sep 2026) run through the 2025 model. Objective weights and hydropower costs are placeholders carried over from 2025."
+    hydro_cost_note       = "Draft 2026 valuation (Reclamation, 23 Sep 2026) on the 50% exceedance WY2026 operations forecast; ATSP 38 variants carry their base scenario's values. Note the 2026 schedules differ from the 2025 alternatives with the same code.",
+    note                  = "Draft 2026 temperature deliverable (23 Sep 2026) run through the 2025 model. Objective weights are placeholders carried over from 2025; hydropower costs are the draft 2026 valuation."
   )
 )
 

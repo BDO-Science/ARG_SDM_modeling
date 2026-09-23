@@ -38,45 +38,27 @@ alt_choices <- function(bundle) {
 }
 
 # ---- About tab: the alternatives of the selected year ------------------------
-# The 2025 alternatives have full specifications (bypass volume, energy, cost,
-# emissions, schedule) from the 2025 deliverable's summary. Later deliverables
-# so far carry only the scenario label and a declared cost, so their table is
-# built from the year's alternative key and years.R.
-about_alternatives_2025 <- function() {
-  spec <- list(
-    list("NB",   "0",      "0",     "$0",       "0",     "No bypass - baseline operations"),
-    list("PB1",  "10,163", "2,424", "$111,422", "1,149", "125 cfs starting Oct 15, 250 cfs on Oct 28, 125 cfs on Nov 7, end bypass on Nov 14"),
-    list("PB2",  "32,224", "7,674", "$376,671", "3,650", "250 cfs starting Oct 15, 500 cfs on Oct 28, 250 cfs on Nov 14, end bypass on Nov 30"),
-    list("PB2b", "40,156", "9,558", "$470,090", "4,522", "250 cfs starting Oct 15, 500 cfs on Oct 28, end bypass on Nov 30"),
-    list("PB2c", "37,181", "8,846", "$433,215", "4,195", "250 cfs starting Oct 21, 500 cfs on Oct 28, end bypass on Nov 30"),
-    list("PB3",  "17,351", "4,135", "$201,552", "1,932", "250 cfs starting Oct 21, 500 cfs on Oct 28, 250 cfs on Nov 7, end bypass on Nov 14"),
-    list("PB4",  "20,822", "4,959", "$241,590", "2,350", "250 cfs starting Oct 21, 500 cfs on Oct 28, 250 cfs on Nov 7, end bypass on Nov 21"),
-    list("PB5",  "17,351", "4,130", "$199,382", "1,974", "500 cfs bypass starting Oct 28, reduce to 250 on Nov 7, end bypass on Nov 21"),
-    list("PB6",  "30,141", "7,100", "$348,806", "3,321", "100 cfs Oct 1, 200 cfs Oct 8, 300 cfs Oct 15, 400 cfs Oct 22, 500 cfs Nov 1, ending Nov 14")
-  )
-  tags$table(class = "table table-striped table-condensed",
-    tags$thead(tags$tr(tags$th("Alternative"), tags$th("Bypass (AF)"), tags$th("Bypass (MWh)"),
-                       tags$th("Loss ($)"), tags$th("Increase (mTCO2)"), tags$th("Description"))),
-    tags$tbody(lapply(spec, function(r) tags$tr(
-      tags$td(strong(r[[1]])), tags$td(r[[2]]), tags$td(r[[3]]),
-      tags$td(r[[4]]), tags$td(r[[5]]), tags$td(r[[6]])))))
-}
-
-about_alternatives_from_key <- function(bundle, cfg) {
+# One row per alternative in the year's key, in deliverable order, with the
+# specification declared for it in years.R (alt_specs): bypass volume and
+# energy, hydropower loss, emissions, schedule. An alternative with no spec row
+# shows its declared cost and the deliverable's label.
+about_alternatives_table <- function(bundle, cfg) {
   key   <- bundle$alt_key
-  codes <- bundle$alt_codes
-  rows  <- lapply(codes, function(a) {
+  specs <- cfg$alt_specs
+  num   <- function(x) if (is.null(x) || is.na(x)) "-" else format(x, big.mark = ",", scientific = FALSE)
+  rows  <- lapply(bundle$alt_codes, function(a) {
     k <- key[key$alt == a, , drop = FALSE][1, ]
-    cost <- cfg$hydro_cost[[a]]
+    s <- if (!is.null(specs) && a %in% specs$alt) specs[specs$alt == a, , drop = FALSE][1, ] else NULL
     tags$tr(tags$td(strong(a)),
-            tags$td(k$label),
-            tags$td(if (is.na(k$atsp)) "" else k$atsp),
-            tags$td(paste0("$", format(cost, big.mark = ",", scientific = FALSE))))
+            tags$td(num(s$af)), tags$td(num(s$mwh)),
+            tags$td(paste0("$", num(cfg$hydro_cost[[a]]))),
+            tags$td(num(s$mtco2)),
+            tags$td(if (!is.null(s)) s$description else k$label))
   })
   tagList(
     tags$table(class = "table table-striped table-condensed",
-      tags$thead(tags$tr(tags$th("Alternative"), tags$th("Deliverable label"),
-                         tags$th("ATSP"), tags$th("Loss ($)"))),
+      tags$thead(tags$tr(tags$th("Alternative"), tags$th("Bypass (AF)"), tags$th("Bypass (MWh)"),
+                         tags$th("Loss ($)"), tags$th("Increase (mTCO2)"), tags$th("Description"))),
       tags$tbody(rows)),
     if (!is.null(cfg$hydro_cost_note)) p(em(cfg$hydro_cost_note))
   )
@@ -1063,8 +1045,7 @@ server <- function(input, output, session) {
       ),
       if (!is.null(cfg$note)) p(em(cfg$note)),
       h4("Power Bypass Alternative Specifications:"),
-      tags$div(style = "margin-left: 20px;",
-               if (y == "2025") about_alternatives_2025() else about_alternatives_from_key(dat, cfg))
+      tags$div(style = "margin-left: 20px;", about_alternatives_table(dat, cfg))
     )
   })
 
