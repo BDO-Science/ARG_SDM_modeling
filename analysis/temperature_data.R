@@ -1,7 +1,7 @@
 # Builds the daily temperature series that precompute.R and the app read, from a
 # CE-QUAL-W2 temperature deliverable plus observed USGS gauge data.
 #
-#   deliverable .xlsx  ->  env_ext_list.rds, df_all.rds  (in the scenario folder)
+#   deliverable .xlsx  ->  env_ext_list.rds, df_all.rds, alt_key.rds  (scenario folder)
 #
 # Settings (environment variables):
 #   ARG_TEMP_FILE     the deliverable workbook
@@ -17,6 +17,9 @@
 #   ARG_SCENARIO_START  first day (MM-DD) the scenario temperatures are used.
 #                     default: the deliverable's first date. The published 2025
 #                     results used "10-18"; set that to reproduce them.
+#   ARG_ATSP_BASE     when the workbook mixes ATSP schedules, the one that keeps
+#                     the plain codes (NB, PB1, ...); the others get a suffix
+#                     (NB-38, PB1-38, ...). default: the most common one.
 #
 # To rebuild the published 2025 temperature series exactly:
 #   Sys.setenv(ARG_SCENARIO_START = "10-18"); source("analysis/temperature_data.R")
@@ -43,10 +46,85 @@ if (!dir.exists(app_data_dir)) dir.create(app_data_dir, recursive = TRUE)
 is_published_dir <- normalizePath(app_data_dir, winslash = "/") ==
   normalizePath(here("SalmonCountR", "app_data"), winslash = "/")
 
-# Checks the deliverable against the layout the rest of this script assumes.
-# Columns are read by POSITION, so a reordered or relabelled file would otherwise
-# run to completion and give wrong answers without any error.
-check_temperature_file <- function(input_path, hydro_years, scenarios) {
+# The meteorological years, one sheet each. The rest of the pipeline (met-year
+# weight sliders in the app, the equal 0.25 weighting in precompute.R) assumes
+# these four; a deliverable with different years is a code change, not a data
+# change.
+HYDRO_YEARS <- c("2011", "2014", "2017", "2020")
+SITES       <- c("AveWatt", "AveHazel")
+
+# ---- Workbook layout ---------------------------------------------------------
+# Scenarios are DISCOVERED from row 1 rather than counted: every non-empty cell
+# in row 1 from column C onward starts a scenario block, and the block runs to
+# the column before the next label. Within a block, row 2 names the sites; the
+# AveWatt and AveHazel columns are used and anything else (the 2026 deliverable
+# adds an AveFol column per scenario; the 2025 one has a Target Temp column at
+# the end) is ignored. So a workbook with six, nine or eleven scenarios reads
+# the same way, and appending a scenario is a data change.
+read_sheet_layout <- function(input_path, sheet) {
+  hdr <- read_excel(input_path, sheet = sheet, col_names = FALSE, n_max = 2,
+                    .name_repair = "minimal")
+  r1 <- trimws(as.character(unlist(hdr[1, ])))
+  r2 <- trimws(as.character(unlist(hdr[2, ])))
+  pos <- which(!is.na(r1) & nzchar(r1) & seq_along(r1) >= 3)
+  if (!length(pos)) {
+    stop("Sheet ", sheet, ", row 1 has no scenario labels from column C onward.")
+  }
+  ends <- c(pos[-1] - 1L, length(r1))
+  cols <- map2(pos, ends, function(a, b) {
+    rng <- a:b
+    vapply(SITES, function(s) {
+      hit <- rng[which(!is.na(r2[rng]) & r2[rng] == s)]
+      if (length(hit)) hit[1] else NA_integer_
+    }, integer(1))
+  })
+  tibble(label = r1[pos], AveWatt = map_int(cols, "AveWatt"), AveHazel = map_int(cols, "AveHazel"))
+}
+
+# Short code for each scenario label, e.g.
+#   "No Bypass"            -> NB        "Scenario 2b"           -> PB2b
+#   "ATSP 41 - No Bypass"  -> NB        "ATSP 38 - Scenario 1"  -> PB1-38
+# The ATSP suffix appears only when the workbook mixes schedules; the base
+# schedule (ARG_ATSP_BASE, default the most common) keeps the plain codes so
+# they line up with earlier years.
+alt_codes_from_labels <- function(labels) {
+  atsp <- str_match(labels, regex("ATSP\\s*(\\d+)", ignore_case = TRUE))[, 2]
+  core <- str_trim(str_remove(labels, regex("^\\s*ATSP\\s*\\d+\\s*[-:–]\\s*", ignore_case = TRUE)))
+  scen <- str_match(core, regex("^scenario\\s*(\\S+)$", ignore_case = TRUE))[, 2]
+  code <- case_when(
+    str_detect(core, regex("^no\\s*bypass$", ignore_case = TRUE)) ~ "NB",
+    !is.na(scen)                                                  ~ paste0("PB", scen),
+    TRUE                                                          ~ make.names(core)
+  )
+  schedules <- unique(na.omit(atsp))
+  if (length(schedules) > 1) {
+    base <- Sys.getenv("ARG_ATSP_BASE", "")
+    if (!nzchar(base)) {
+      counts <- table(atsp)
+      top    <- names(counts)[counts == max(counts)]
+      base   <- if (length(top) == 1) top else atsp[!is.na(atsp)][1]
+    }
+    if (!base %in% schedules) {
+      stop("ARG_ATSP_BASE = ", base, " but the workbook has ATSP ",
+           paste(schedules, collapse = ", "))
+    }
+    code <- ifelse(!is.na(atsp) & atsp != base, paste0(code, "-", atsp), code)
+    message("ATSP schedules ", paste(schedules, collapse = ", "), " in the workbook; ",
+            base, " keeps the plain codes.")
+  }
+  if (anyDuplicated(code)) {
+    stop("Scenario labels map to duplicate codes: ",
+         paste(code[duplicated(code)], collapse = ", "), ". Labels: ",
+         paste(labels, collapse = " | "))
+  }
+  list(code = code, atsp = atsp)
+}
+
+# Checks the deliverable before anything is read from it, and returns the
+# layout (scenario labels and the columns each reads from). Columns are read
+# by position, so a relabelled or reordered file would otherwise run to
+# completion and give wrong answers without any error.
+check_temperature_file <- function(input_path, hydro_years) {
   if (!file.exists(input_path)) stop("Temperature file not found: ", input_path)
   sheets  <- excel_sheets(input_path)
   missing <- setdiff(hydro_years, sheets)
@@ -56,26 +134,25 @@ check_temperature_file <- function(input_path, hydro_years, scenarios) {
          paste(hydro_years, collapse = ", "), ". Sheets found: ",
          paste(sheets, collapse = ", "))
   }
+  layout <- NULL
   for (hy in hydro_years) {
-    hdr <- read_excel(input_path, sheet = hy, col_names = FALSE, n_max = 2,
-                      .name_repair = "minimal")
-    if (ncol(hdr) < 20) {
-      stop("Sheet ", hy, " has ", ncol(hdr), " columns; expected at least 20 ",
-           "(Date, JDAY, then an AveWatt/AveHazel pair for each of 9 scenarios).")
+    lay <- read_sheet_layout(input_path, hy)
+    bad <- lay %>% filter(is.na(AveWatt) | is.na(AveHazel))
+    if (nrow(bad)) {
+      stop("Sheet ", hy, ": scenario '", bad$label[1], "' has no ",
+           paste(SITES[is.na(c(bad$AveWatt[1], bad$AveHazel[1]))], collapse = " or "),
+           " column. Row 2 must name the site columns AveWatt and AveHazel under each ",
+           "row-1 scenario label.")
     }
-    got_scen <- trimws(unlist(hdr[1, seq(3, 19, 2)]))
-    if (!identical(unname(got_scen), scenarios)) {
-      stop("Sheet ", hy, ", row 1: scenario labels in columns C, E, G, ... S must be, in order: ",
-           paste(scenarios, collapse = ", "), ". Found: ",
-           paste(got_scen, collapse = ", "))
+    if (is.null(layout)) {
+      layout <- lay
+    } else if (!identical(lay$label, layout$label)) {
+      stop("Sheet ", hy, " lists different scenarios (", paste(lay$label, collapse = ", "),
+           ") from sheet ", hydro_years[1], " (", paste(layout$label, collapse = ", "),
+           "). Every met-year sheet must have the same scenarios in the same order.")
     }
-    got_site <- trimws(unlist(hdr[2, 3:20]))
-    want_site <- rep(c("AveWatt", "AveHazel"), 9)
-    if (!identical(unname(got_site), want_site)) {
-      stop("Sheet ", hy, ", row 2: columns C to T must alternate AveWatt, AveHazel. Found: ",
-           paste(got_site, collapse = ", "))
-    }
-    dat   <- suppressMessages(read_excel(input_path, sheet = hy, skip = 1))
+    dat   <- suppressMessages(read_excel(input_path, sheet = hy, skip = 2, col_names = FALSE,
+                                         .name_repair = "minimal"))
     dates <- tryCatch(suppressWarnings(as.Date(dat[[1]])),
                       error = function(e) rep(as.Date(NA), nrow(dat)))
     if (all(is.na(dates))) {
@@ -88,17 +165,18 @@ check_temperature_file <- function(input_path, hydro_years, scenarios) {
            "they were stored as text (for example day/month/year) and misread. ",
            "Store them as Excel dates.")
     }
-    temps <- unlist(dat[, 3:20])
-    if (!is.numeric(temps)) stop("Sheet ", hy, ": temperature columns are not numeric.")
+    used  <- c(lay$AveWatt, lay$AveHazel)
+    temps <- suppressWarnings(as.numeric(unlist(dat[, used])))
+    if (all(is.na(temps))) stop("Sheet ", hy, ": temperature columns are not numeric.")
     rng <- range(temps, na.rm = TRUE)
     if (rng[1] < 0 || rng[2] > 30) {
       stop(sprintf(paste0("Sheet %s: temperatures run %.1f to %.1f. Expected degrees ",
                           "Celsius (roughly 4-30); values above 30 usually mean Fahrenheit."),
                    hy, rng[1], rng[2]))
     }
-    message(sprintf("Sheet %s: %s to %s, %d days.",
+    message(sprintf("Sheet %s: %s to %s, %d days, %d scenarios.",
                     hy, format(min(dates, na.rm = TRUE)), format(max(dates, na.rm = TRUE)),
-                    sum(!is.na(dates))))
+                    sum(!is.na(dates)), nrow(lay)))
     # Spawning, incubation and the Oct/Nov means that drive spawn timing all
     # fall in October-December; a file that misses them has nothing to act on.
     if (!any(month(dates) %in% 10:12, na.rm = TRUE)) {
@@ -106,93 +184,54 @@ check_temperature_file <- function(input_path, hydro_years, scenarios) {
            "uses the scenario temperatures.")
     }
   }
-  invisible(TRUE)
+  layout
 }
 
-# This function reads the temperature modeling results and reformats into alternatives
+# Reads the deliverable, reformats it as one sheet per run (scenario x met
+# year, numbered met-year-major), and writes the alternative key.
 prepare_temperature_file <- function() {
   input_path <- temp_file
-
-  sheets <- excel_sheets(input_path)
-  hydro_years <- c("2011", "2014", "2017", "2020")
-  check_temperature_file(
-    input_path, hydro_years,
-    c("No Bypass", "Scenario 1", "Scenario 2", "Scenario 2b", "Scenario 2c",
-      "Scenario 3", "Scenario 4", "Scenario 5", "Scenario 6")
-  )
+  sheets     <- excel_sheets(input_path)
+  layout     <- check_temperature_file(input_path, HYDRO_YEARS)
+  codes      <- alt_codes_from_labels(layout$label)
+  message("Scenarios: ", paste(sprintf("%s = %s", codes$code, layout$label), collapse = "; "))
 
   all_sheets <- list()
-  
-  # Copy metadata sheets
-  if ("Scenario Summary" %in% sheets) {
-    all_sheets[["Scenario Summary"]] <- read_excel(input_path, sheet = "Scenario Summary")
+
+  # Copy metadata sheets, when the deliverable has them
+  for (meta in c("Scenario Summary", "Flow")) {
+    if (meta %in% sheets) all_sheets[[meta]] <- read_excel(input_path, sheet = meta)
   }
-  if ("Flow" %in% sheets) {
-    all_sheets[["Flow"]] <- read_excel(input_path, sheet = "Flow")
-  }
-  
-  # Read each hydro year sheet
-  for (hydro_year in hydro_years) {
-    if (hydro_year %in% sheets) {
-      # Skip the first row to use the second row as headers
-      df <- read_excel(input_path, sheet = hydro_year, skip = 1)
-      all_sheets[[hydro_year]] <- df
+
+  # The alternative key: one row per run. Saved as alt_key.rds for precompute.R
+  # and the app, and as the intermediate workbook's metadata sheet.
+  alt_key <- expand_grid(met_year = HYDRO_YEARS, k = seq_len(nrow(layout))) %>%
+    mutate(env   = row_number(),
+           alt   = codes$code[k],
+           label = layout$label[k],
+           atsp  = codes$atsp[k]) %>%
+    select(env, alt, label, met_year, atsp)
+  all_sheets[["metadata"]] <- alt_key %>%
+    transmute(Alternative = env, Code = alt, Scenario = label, Hydro_Year = met_year, ATSP = atsp) %>%
+    as.data.frame()
+
+  # Extract data for each run
+  for (i in seq_len(nrow(alt_key))) {
+    hy  <- alt_key$met_year[i]
+    k   <- alt_key$env[i] - (match(hy, HYDRO_YEARS) - 1L) * nrow(layout)
+    if (is.null(all_sheets[[hy]])) {
+      all_sheets[[hy]] <- suppressMessages(
+        read_excel(input_path, sheet = hy, skip = 2, col_names = FALSE, .name_repair = "minimal"))
     }
+    df_hy <- all_sheets[[hy]]
+    all_sheets[[as.character(alt_key$env[i])]] <- data.frame(
+      Date     = as.Date(df_hy[[1]]),
+      AveWatt  = suppressWarnings(as.numeric(df_hy[[layout$AveWatt[k]]])),
+      AveHazel = suppressWarnings(as.numeric(df_hy[[layout$AveHazel[k]]]))
+    )
   }
-  
-  # Create alternatives format
-  alternatives_list <- list()
-  
-  # Updated scenarios list to match the actual data
-  scenarios <- c("No Bypass", "Scenario 1", "Scenario 2", "Scenario 2b", 
-                 "Scenario 2c", "Scenario 3", "Scenario 4", "Scenario 5", "Scenario 6")
-  
-  # Metadata
-  metadata_rows <- list()
-  alt_num <- 1
-  for (hydro_year in hydro_years) {
-    for (scenario_idx in 1:length(scenarios)) {
-      metadata_rows[[alt_num]] <- data.frame(
-        Alternative = alt_num,
-        Scenario = scenarios[scenario_idx],
-        Hydro_Year = hydro_year
-      )
-      alt_num <- alt_num + 1
-    }
-  }
-  alternatives_list[["metadata"]] <- do.call(rbind, metadata_rows)
-  
-  # Extract data for each alternative
-  alt_counter <- 1
-  for (hydro_year in hydro_years) {
-    if (hydro_year %in% names(all_sheets)) {
-      df_hydro <- all_sheets[[hydro_year]]
-      
-      # Column pairs for each scenario (columns 3-4, 5-6, 7-8, etc.)
-      # No Bypass: cols 3-4
-      # Scenario 1: cols 5-6
-      # Scenario 2: cols 7-8
-      # Scenario 2b: cols 9-10
-      # Scenario 2c: cols 11-12
-      # Scenario 3: cols 13-14
-      # Scenario 4: cols 15-16
-      # Scenario 5: cols 17-18
-      # Scenario 6: cols 19-20
-      scenario_cols <- list(c(3,4), c(5,6), c(7,8), c(9,10), c(11,12), 
-                            c(13,14), c(15,16), c(17,18), c(19,20))
-      
-      for (cols in scenario_cols) {
-        alt_data <- data.frame(
-          Date = as.Date(df_hydro[[1]]),
-          AveWatt = df_hydro[[cols[1]]],
-          AveHazel = df_hydro[[cols[2]]]
-        )
-        alternatives_list[[as.character(alt_counter)]] <- alt_data
-        alt_counter <- alt_counter + 1
-      }
-    }
-  }
-  
+  all_sheets <- all_sheets[setdiff(names(all_sheets), HYDRO_YEARS)]
+
   # The published run keeps its intermediate workbook in data_raw/; a scenario
   # run keeps it in its own folder so the published one is not overwritten.
   output_path <- if (is_published_dir) {
@@ -200,15 +239,20 @@ prepare_temperature_file <- function() {
   } else {
     file.path(app_data_dir, "temperature_alternatives.xlsx")
   }
-  write_xlsx(alternatives_list, output_path)
-  print(paste("Created", alt_counter - 1, "alternatives in", output_path))
-  return(output_path)
+  write_xlsx(all_sheets, output_path)
+  saveRDS(alt_key, file.path(app_data_dir, "alt_key.rds"))
+  print(paste("Created", nrow(alt_key), "runs (", nrow(layout), "scenarios x",
+              length(HYDRO_YEARS), "met years ) in", output_path))
+  print(paste("Saved alt_key.rds to", app_data_dir))
+  list(path = output_path, key = alt_key)
 }
 
 # --- SCRIPT EXECUTION STARTS HERE ---
 
 # 1) PREPARE DATA: Run the function to reformat the alternatives file
-xlsx_path <- prepare_temperature_file()
+prepared  <- prepare_temperature_file()
+xlsx_path <- prepared$path
+alt_key   <- prepared$key
 
 # 2) SET PARAMETERS
 # obs_end is the DECISION DATE: observed gauge temperatures are used through
@@ -216,8 +260,9 @@ xlsx_path <- prepare_temperature_file()
 # is the same river, so observed data is the right input up to that day.
 # Default: the day before the deliverable starts (2025-09-21 for the 2025 file,
 # which is what the published run used).
-deliverable_start <- min(do.call(c, lapply(c("2011", "2014", "2017", "2020"), function(s)
-  as.Date(suppressMessages(read_excel(temp_file, sheet = s, skip = 1))[[1]]))), na.rm = TRUE)
+deliverable_start <- min(do.call(c, lapply(HYDRO_YEARS, function(s)
+  as.Date(suppressMessages(read_excel(temp_file, sheet = s, skip = 2, col_names = FALSE,
+                                      .name_repair = "minimal"))[[1]]))), na.rm = TRUE)
 obs_start <- as.Date("2011-09-01")
 obs_end   <- as.Date(Sys.getenv("ARG_OBS_END", format(deliverable_start - 1)))
 message(sprintf("Observed temperatures through %s (decision date); scenario temperatures after.",
@@ -293,9 +338,8 @@ clim14 <- amer_obs %>%
   group_by(site, doy) %>%
   summarize(clim_temp = mean(temp, na.rm = TRUE), .groups = "drop")
 
-# 5) READ ALTERNATIVES: Load the generated alternatives
-alts <- excel_sheets(xlsx_path)
-alts <- alts[alts != "metadata"] # Remove the metadata sheet
+# 5) READ ALTERNATIVES: Load the generated runs, in key order
+alts <- as.character(alt_key$env)
 
 pred_by_doy <- map_df(alts, function(alt) {
   read_excel(xlsx_path, sheet=alt) %>%
@@ -342,15 +386,15 @@ env_ext_list <- map(alts, function(alt_nm) {
   obs_block <- amer_obs %>%
     filter(Date <= obs_end) %>%
     mutate(alt = alt_nm)
-  
+
   dedup_pattern <- pred_by_doy %>%
     filter(alt == alt_nm) %>%
     group_by(site, doy) %>%
     summarize(temp_alt = mean(temp_alt, na.rm = TRUE), .groups = "drop")
-  
+
   future_skel <- future_dates %>%
     expand_grid(site = unique(dedup_pattern$site))
-  
+
   pred_block <- future_skel %>%
     left_join(dedup_pattern, by = c("doy","site")) %>%
     left_join(clim14,        by = c("doy","site")) %>%
@@ -364,7 +408,7 @@ env_ext_list <- map(alts, function(alt_nm) {
     ) %>%
     select(Date, site, temp) %>%
     mutate(alt = alt_nm)
-  
+
   bind_rows(obs_block, pred_block) %>%
     arrange(Date, site)
 }) %>% set_names(alts)
@@ -377,27 +421,27 @@ df_all <- bind_rows(env_ext_list, .id = "env")
 saveRDS(env_ext_list, file.path(app_data_dir, "env_ext_list.rds"))
 saveRDS(df_all, file.path(app_data_dir, "df_all.rds"))
 
-print(paste("Saved env_ext_list.rds with", length(env_ext_list), "alternatives to", app_data_dir))
+print(paste("Saved env_ext_list.rds with", length(env_ext_list), "runs to", app_data_dir))
 print(paste("Saved df_all.rds with", nrow(df_all), "rows"))
 
 # 9) VISUALIZATIONS
-# Plot of all alternatives
+# Plot of all runs
 ggplot(df_all, aes(Date, temp, color = site)) +
   geom_line(size = 0.5, alpha = 0.8) +
   facet_wrap(~ env, ncol = 6, scales = "free_y") +
   labs(
-    title = "Observed + Predicted Temp by Alternative (36 total)",
+    title = sprintf("Observed + Predicted Temp by run (%d total)", length(alts)),
     x     = "Date",
     y     = "Temperature (°C)",
     color = "Site"
   ) +
   theme_minimal(base_size = 10)
 
-# Plot focusing on the 2024 forecast window
+# Plot focusing on the first scenario window after the decision date
+win_start <- as.Date(sprintf("%d-10-01", year(obs_end) + (month(obs_end) >= 10)))
 future_temp <- df_all %>%
-  filter(site != "AveFol") %>%
-  filter(Date >= as.Date("2024-10-18") & Date <= as.Date("2024-12-31")) %>%
-  mutate(env = factor(env, levels = as.character(1:36)))
+  filter(Date >= win_start & Date <= win_start + 91) %>%
+  mutate(env = factor(env, levels = alts))
 
 ggplot(future_temp, aes(x = Date, y = temp, color = site)) +
   geom_line(size = 1) +
@@ -415,4 +459,6 @@ ggplot(future_temp, aes(x = Date, y = temp, color = site)) +
   )
 
 print("Temperature data processing complete!")
-print(paste("Created", length(alts), "alternatives (9 scenarios × 4 hydro years)"))
+print(sprintf("Created %d runs (%d scenarios x %d met years): %s",
+              length(alts), n_distinct(alt_key$alt), length(HYDRO_YEARS),
+              paste(unique(alt_key$alt), collapse = ", ")))

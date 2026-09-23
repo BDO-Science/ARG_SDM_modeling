@@ -46,18 +46,17 @@ normalize_scores_hydro <- function(scores) {
   (max_s - scores) / (max_s - min_s)
 }
 
-get_scenario_alternatives <- function(scenario, hydro_year) {
-  # Mapping: Alt 1-9 (2011), 10-18 (2014), 19-27 (2017), 28-36 (2020)
-  # Within each hydro year: 1=NB, 2=PB1, 3=PB2, 4=PB2b, 5=PB2c, 6=PB3, 7=PB4, 8=PB5, 9=PB6
-  scenario_map <- c("NB"=1, "PB1"=2, "PB2"=3, "PB2b"=4, "PB2c"=5, "PB3"=6, "PB4"=7, "PB5"=8, "PB6"=9)
-  hydro_map <- c("2011"=0, "2014"=9, "2017"=18, "2020"=27)
-  
-  if (hydro_year == "all") {
-    base_idx <- scenario_map[scenario]
-    return(c(base_idx, base_idx+9, base_idx+18, base_idx+27))
-  } else {
-    return(hydro_map[hydro_year] + scenario_map[scenario])
-  }
+# get_scenario_alternatives() comes from functions.R (sourced by global.R) and
+# takes the active year's alternative key, so the runs it returns follow the
+# selected analysis year rather than a fixed nine-alternative layout.
+
+# Choices for the alternative pickers: code, with the deliverable's own label
+# when it adds information (e.g. "PB1-38  ATSP 38 - Scenario 1").
+alt_choices <- function(bundle) {
+  codes <- bundle$alt_codes
+  labs  <- bundle$alt_labels[codes]
+  show  <- ifelse(is.na(labs) | labs == codes, codes, paste0(codes, "  (", labs, ")"))
+  stats::setNames(codes, show)
 }
 
 ui <- navbarPage("Lower American River Power Bypass Decision Support",
@@ -99,10 +98,10 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    
                                    h4("Management Structure:"),
                                    tags$ul(
-                                     tags$li(strong("9 Management Alternatives:"), "No Bypass (NB) and 8 Power Bypass configurations (PB1-PB6, including PB2b and PB2c variants) with varying flow rates and timing"),
+                                     tags$li(strong("Management Alternatives:"), "No Bypass (NB) and the Power Bypass configurations (PB1, PB2, ...) in the selected analysis year's temperature deliverable; the 2025 analysis has nine (NB, PB1-PB6 with PB2b and PB2c variants) with varying flow rates and timing"),
                                      tags$li(strong("4 Climate Years:"), "2011 (Cool), 2014 (Warm), 2017 (Warm), 2020 (Cool)"),
-                                     tags$li(strong("36 Pre-computed Alternatives:"), "Each alternative modeled under all 4 climate year conditions, allowing dynamic weighting"),
-                                     tags$li(strong("Temperature Data:"), "SDM Power Bypass modeling results (Sept 22 - Nov 30), used from Oct 18 onward, combined with USGS gauge climatology (Sept 2011 - Sept 2025) for the rest of the year"),
+                                     tags$li(strong("Pre-computed Runs:"), "Each alternative modeled under all 4 climate year conditions (36 runs for 2025), allowing dynamic weighting"),
+                                     tags$li(strong("Temperature Data:"), "CE-QUAL-W2 power bypass modeling results for the fall decision window (used from Oct 18 onward in the 2025 analysis, and from the deliverable's first day in later years), combined with USGS gauge climatology (Sept 2011 onward) for the rest of the year"),
                                      tags$li(strong("Simulation Period:"), "2025-2124 with user-adjustable weighting of climatological conditions and TDM models")
                                    ),
                                    
@@ -377,13 +376,11 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                               sliderInput("temp_w_2017", "2017 (Warm)", value = 0.25, min = 0, max = 1, step = 0.01),
                               sliderInput("temp_w_2020", "2020 (Cool)", value = 0.25, min = 0, max = 1, step = 0.01),
                               hr(),
+                              # Choices follow the analysis year; the server
+                              # refreshes them when the year changes.
                               checkboxGroupInput("temp_alternatives", "Alternatives to Compare:",
-                                                 choices = c("No Bypass"="NB", "Power Bypass 1"="PB1", 
-                                                             "Power Bypass 2"="PB2", "Power Bypass 2b"="PB2b", 
-                                                             "Power Bypass 2c"="PB2c", "Power Bypass 3"="PB3",
-                                                             "Power Bypass 4"="PB4", "Power Bypass 5"="PB5", 
-                                                             "Power Bypass 6"="PB6"),
-                                                 selected = c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6")),
+                                                 choices  = alt_choices(ARG_BUNDLE_DEFAULT),
+                                                 selected = ARG_BUNDLE_DEFAULT$alt_codes),
                               radioButtons("temp_site", "Site:", choices = c("Ave Watt"="AveWatt", "Ave Hazel"="AveHazel")),
                               # Labels name the default year's first projection
                               # year; the server relabels them on a year switch.
@@ -411,11 +408,8 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                             sidebarPanel(
                               h4("Alternatives to Compare"),
                               checkboxGroupInput("cmp_scenarios", "Select:",
-                                                 choices = c("No Bypass"="NB", "Power Bypass 1"="PB1", "Power Bypass 2"="PB2",
-                                                             "Power Bypass 2b"="PB2b", "Power Bypass 2c"="PB2c",
-                                                             "Power Bypass 3"="PB3", "Power Bypass 4"="PB4",
-                                                             "Power Bypass 5"="PB5", "Power Bypass 6"="PB6"),
-                                                 selected = c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6")),
+                                                 choices  = alt_choices(ARG_BUNDLE_DEFAULT),
+                                                 selected = ARG_BUNDLE_DEFAULT$alt_codes),
                               hr(),
                               h4("Climatology Weights"),
                               sliderInput("cmp_w_2011", "2011 (Cool)", value = 0.25, min = 0, max = 1, step = 0.01),
@@ -623,6 +617,17 @@ server <- function(input, output, session) {
     year_cfg()$hydro_cost
   })
 
+  # The alternative pickers list the alternatives the selected year actually
+  # has. Refreshed on a year switch, all selected, so a year with more or
+  # fewer alternatives than 2025 is never stuck with 2025's list.
+  observeEvent(B(), {
+    dat <- B(); req(dat)
+    updateCheckboxGroupInput(session, "temp_alternatives",
+                             choices = alt_choices(dat), selected = dat$alt_codes)
+    updateCheckboxGroupInput(session, "cmp_scenarios",
+                             choices = alt_choices(dat), selected = dat$alt_codes)
+  }, ignoreInit = TRUE)
+
   # Objective weights start at whatever that year's elicitation produced.
   observeEvent(active_year(), {
     w <- year_cfg()$default_weights
@@ -745,10 +750,9 @@ server <- function(input, output, session) {
     dat <- B(); req(dat)
     first_year <- year_cfg()$first_projection_year
 
-    alts <- get_scenario_alternatives(scenario, "all")
-    hydro_years <- c("2011", "2014", "2017", "2020")
+    alts <- get_scenario_alternatives(scenario, "all", key = dat$alt_key)
 
-    # Normalize weights
+    # Normalize weights; indexed by met year below, which the run vector is named by
     hydro_w <- normalize_weights(hydro_weights)
     tdm_w <- normalize_weights(tdm_weights)
 
@@ -810,8 +814,8 @@ server <- function(input, output, session) {
         # This better represents actual density dependence than simple scaling
         tdm_spawners <- tdm_spawners * K_spawners / (base_K + (K_spawners - base_K) * (1 - tdm_spawners/base_K))
         
-        final_spawners[1:length(tdm_spawners)] <- final_spawners[1:length(tdm_spawners)] + 
-          tdm_spawners * hydro_w[i]
+        final_spawners[1:length(tdm_spawners)] <- final_spawners[1:length(tdm_spawners)] +
+          tdm_spawners * hydro_w[names(alts)[i]]
       }
     }
     
@@ -855,7 +859,7 @@ server <- function(input, output, session) {
     dat <- B(); req(dat)
     req(dat$df_temp_first_year, input$temp_alternatives, length(input$temp_alternatives) > 0)
     all_envs <- unlist(lapply(input$temp_alternatives,
-                              function(alt) as.character(get_scenario_alternatives(alt, "all"))))
+                              function(alt) as.character(get_scenario_alternatives(alt, "all", key = dat$alt_key))))
     df <- dat$df_temp_first_year %>%
       filter(env %in% all_envs, site == input$temp_site)
     if (input$temp_period == "oct_dec") {
@@ -869,7 +873,7 @@ server <- function(input, output, session) {
     weights <- normalize_weights(c("2011" = temp_w_2011_d(), "2014" = temp_w_2014_d(),
                                    "2017" = temp_w_2017_d(), "2020" = temp_w_2020_d()))
     plot_data <- map_dfr(input$temp_alternatives, function(alt) {
-      alts <- as.character(get_scenario_alternatives(alt, "all"))
+      alts <- as.character(get_scenario_alternatives(alt, "all", key = B()$alt_key))
       temp_base_data() %>%
         filter(env %in% alts) %>%
         group_by(Date) %>%
@@ -893,7 +897,7 @@ server <- function(input, output, session) {
     weights <- normalize_weights(c("2011" = temp_w_2011_d(), "2014" = temp_w_2014_d(),
                                    "2017" = temp_w_2017_d(), "2020" = temp_w_2020_d()))
     map_dfr(input$temp_alternatives, function(alt) {
-      alts <- as.character(get_scenario_alternatives(alt, "all"))
+      alts <- as.character(get_scenario_alternatives(alt, "all", key = B()$alt_key))
       weighted_temps <- temp_base_data() %>%
         filter(env %in% alts) %>%
         group_by(Date) %>%
@@ -932,13 +936,12 @@ server <- function(input, output, session) {
     steelhead_metrics_yr <- B()$steelhead_metrics
     if (!is.null(steelhead_metrics_yr)) {
       steelhead_weighted <- map_dfr(input$cmp_scenarios, function(scen) {
-        alts <- get_scenario_alternatives(scen, "all")
-        hydro_years <- c("2011", "2014", "2017", "2020")
+        alts <- get_scenario_alternatives(scen, "all", key = B()$alt_key)
 
         combined_steelhead <- 0
         for (j in seq_along(alts)) {
           alt_id <- as.character(alts[j])
-          hydro_year <- hydro_years[j]
+          hydro_year <- names(alts)[j]
 
           steelhead_score <- steelhead_metrics_yr %>%
             filter(env == alt_id) %>%
@@ -1078,9 +1081,14 @@ server <- function(input, output, session) {
     # hydropower do not vary with TDM weighting, so their within-set scales are
     # already stable and are left alone.
     sb <- B()$salmon_bounds
-    perf_data %>%
-      left_join(hydro_df, by = "scenario") %>%
-      mutate(hydro_raw = ifelse(is.na(hydro_raw), 50, hydro_raw)) %>%
+    joined <- perf_data %>% left_join(hydro_df, by = "scenario")
+    # An alternative with no declared cost must not be scored: years.R's
+    # arg_year_missing() keeps such a year from loading, and this is the
+    # backstop if a scenario name slips past it.
+    validate(need(!any(is.na(joined$hydro_raw)),
+                  paste0("No hydropower cost in years.R for: ",
+                         paste(joined$scenario[is.na(joined$hydro_raw)], collapse = ", "))))
+    joined %>%
       mutate(
         chinook_norm = if (is.null(sb)) normalize_scores_chinook(chinook_raw)
                        else (chinook_raw - sb[["lo"]]) / (sb[["hi"]] - sb[["lo"]]),

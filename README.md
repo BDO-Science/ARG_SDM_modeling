@@ -78,11 +78,18 @@ SalmonCountR/app.R                                              the app
         └──► analysis/*.R                                       manuscript figures and tables
 ```
 
-**Terminology.** In code and data, **`env`** means "power-bypass alternative", not
-"environment". There are 36: 9 alternatives (NB, PB1, PB2, PB2b, PB2c, PB3, PB4,
-PB5, PB6) × 4 meteorological years (2011, 2014, 2017, 2020). `env` 1–9 are the 2011
-met year, 10–18 are 2014, 19–27 are 2017, 28–36 are 2020; within each block the
-order is NB, PB1, PB2, PB2b, PB2c, PB3, PB4, PB5, PB6.
+**Terminology.** In code and data, **`env`** means one model run, an alternative
+under one meteorological year, not "environment". Runs are numbered met-year-major:
+every alternative for the first met year, then every alternative for the second,
+and so on, in the order the temperature deliverable lists them. Which run is
+which is recorded in **`alt_key.rds`** next to the temperature series (columns
+`env`, `alt`, `label`, `met_year`, `atsp`), written by `temperature_data.R` and
+read by `precompute.R` and the app; nothing should count alternatives or take
+`%% 9` any more. The published 2025 analysis has 36 runs: 9 alternatives (NB,
+PB1, PB2, PB2b, PB2c, PB3, PB4, PB5, PB6) × 4 met years (2011, 2014, 2017, 2020),
+so `env` 1–9 are 2011, 10–18 are 2014, 19–27 are 2017 and 28–36 are 2020. The
+2026 draft has 24 runs from 6 alternatives, two of them on a second ATSP schedule
+(`NB-38`), and grows when the deliverable does.
 
 **Weights.** The three egg-mortality (TDM) models are combined with elicited
 weights: 0.51 Bratovich et al. 2020 ("Water Forum", `exp_WF`), 0.24 Bartholow &
@@ -144,9 +151,10 @@ are registered in `ARG_YEARS` in `SalmonCountR/years.R`, each pointing at a fold
 | Entry | Folder | State |
 |---|---|---|
 | `2025` (default) | `SalmonCountR/app_data/` | The published analysis |
-| `2026` | `SalmonCountR/app_data/2026/` | Placeholder; shows *(data not loaded)* until filled. See its [README](SalmonCountR/app_data/2026/README.md) |
+| `2026` | `SalmonCountR/app_data/2026/` | Draft: the 23 Sep 2026 temperature deliverable run through the 2025 model, with placeholder weights and hydropower costs. See its [README](SalmonCountR/app_data/2026/README.md) |
 
-A folder counts as loaded once it holds the seven files in `ARG_YEAR_FILES`. The
+A folder counts as loaded once it holds the eight files in `ARG_YEAR_FILES` and
+every alternative in its `alt_key.rds` has a hydropower cost in `years.R`. The
 app reads the list of years once at startup, so restart it after adding one. The
 2025 results load at startup whatever year is selected; `functions.R` is not
 year-aware, which is fine because the app does not call its simulation functions.
@@ -228,7 +236,8 @@ archive/                      superseded code, inputs and outputs, kept for prov
 
 | File | Written by | Read by |
 |---|---|---|
-| `env_ext_list.rds` | `analysis/temperature_data.R` | `precompute.R`, `global.R` — daily temperature per alternative (`Date`, `site`, `temp` °C, `alt`), 2011-09-01 to 2151-08-31 |
+| `alt_key.rds` | `analysis/temperature_data.R` (also saved by `precompute.R`) | `precompute.R`, `years.R` — which run (`env`) is which alternative (`alt`) in which `met_year`; see Terminology above |
+| `env_ext_list.rds` | `analysis/temperature_data.R` | `precompute.R`, `global.R` — daily temperature per run (`Date`, `site`, `temp` °C, `alt`), 2011-09-01 to 2151-08-31 |
 | `df_all.rds` | `analysis/temperature_data.R` | same data in one long table with `env`; app, steelhead metric |
 | `observed_temps.rds` | `analysis/temperature_data.R` | the USGS record as downloaded for the decision date, reused on later runs so the analysis stays frozen (written on the next run; not deployed) |
 | `carcassdet_*.csv` | SacPAS carcass survey download | `precompute.R` (spawn timing) |

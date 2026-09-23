@@ -42,37 +42,48 @@ Nothing here touches the published results, as long as you do step 2.
 
 ## 1. Put your workbook in the expected layout
 
-The model reads the workbook **by column position**, so the layout matters more
-than the labels. It must match the published deliverable,
-`data_raw/SDM Power Bypass Temperature Modeling Results.xlsx`. The easiest route
-is to copy that file and paste your numbers over it.
+The reader **discovers the scenarios from the labels in row 1**, so a workbook
+can carry any number of scenarios, in any order, and adding one is a data
+change. Both deliverables so far read this way: the published 2025 file,
+`data_raw/SDM Power Bypass Temperature Modeling Results.xlsx`, and the 2026
+draft, `data_raw/TemperatureModelingResults_9-23-26.xlsx`.
 
 **One sheet per meteorological year**, named exactly `2011`, `2014`, `2017`,
-`2020`. Other sheets (such as `Scenario Summary` or `Flow`) are copied along but
-not used.
+`2020`. Other sheets (`Scenario Summary`, `Flow`, `Averaged All Years`) are
+ignored.
 
 On each of those sheets:
 
-| Row | Column A | Column B | Columns C–D | Columns E–F | … | Columns S–T |
-|---|---|---|---|---|---|---|
-| 1 | | | `No Bypass` | `Scenario 1` | … | `Scenario 6` |
-| 2 | `Date` | `JDAY` | `AveWatt`, `AveHazel` | `AveWatt`, `AveHazel` | … | `AveWatt`, `AveHazel` |
-| 3+ | a date | day of year | °C, °C | °C, °C | … | °C, °C |
+| Row | Column A | Column B | Scenario block | Scenario block | … |
+|---|---|---|---|---|---|
+| 1 | | | `No Bypass` | `ATSP 38 - Scenario 1` | … |
+| 2 | `Date` | `JDAY` | site names, e.g. `AveFol`, `AveWatt`, `AveHazel` | `AveWatt`, `AveHazel` | … |
+| 3+ | a date | day of year | °C per site | °C per site | … |
 
-- **Scenario order on row 1** (in C, E, G, … S): `No Bypass`, `Scenario 1`,
-  `Scenario 2`, `Scenario 2b`, `Scenario 2c`, `Scenario 3`, `Scenario 4`,
-  `Scenario 5`, `Scenario 6`. These become NB, PB1, PB2, PB2b, PB2c, PB3, PB4, PB5,
-  PB6 in the app.
-- **Sites on row 2:** Watt Avenue first, then Hazel Avenue, for every scenario.
-- **Daily mean water temperature in degrees Celsius.**
+- **A scenario block starts at every non-empty cell in row 1** from column C
+  onward and runs to the column before the next label. The order of blocks is
+  the order the alternatives appear in the app.
+- **Row 2 names the sites.** Each block must contain an `AveWatt` and an
+  `AveHazel` column; any other site column in the block (the 2026 file has
+  `AveFol`) is ignored, as is anything after the last block (the 2025 file has
+  `Target Temp` on the 2011 sheet). The columns can be in any order.
+- **Every met-year sheet must list the same scenarios in the same order.**
+- **Daily mean water temperature in degrees Celsius.** A blank day in a scenario
+  falls back to the climatology for that day.
 - **Dates stored as Excel dates**, not text.
-- Columns after T (the published file has a `Target Temp` column on the 2011
-  sheet) are ignored.
+
+**How labels become codes.** `No Bypass` becomes `NB` and `Scenario 2b` becomes
+`PB2b`. A label may carry an ATSP schedule, as in `ATSP 41 - Scenario 1`. When
+the workbook mixes schedules, the base schedule keeps the plain codes so they
+line up with earlier years, and the others get a suffix: `ATSP 38 - No Bypass`
+becomes `NB-38`. The base is the most common schedule in the file; set
+`ARG_ATSP_BASE` (for example `"41"`) to choose it explicitly. The mapping is
+printed when the script runs and saved as `alt_key.rds` (see step 3).
 
 `temperature_data.R` checks all of this before it does anything else and stops
-with a plain message if something is off: a missing sheet, labels in the wrong
-order, Watt and Hazel swapped, values that look like Fahrenheit, or dates stored
-as text.
+with a plain message if something is off: a missing sheet, a block without both
+site columns, sheets that disagree about the scenarios, values that look like
+Fahrenheit, dates stored as text, or two labels that map to the same code.
 
 ### What the model actually uses from your file
 
@@ -119,9 +130,15 @@ source("analysis/temperature_data.R")
 ```
 
 This checks the workbook, downloads the observed gauge record, and writes
-`env_ext_list.rds`, `df_all.rds` and `temperature_alternatives.xlsx` (the workbook
-split into 36 sheets, one per scenario × met year) into your folder. It finishes
-with two plots of the series; look at them.
+`env_ext_list.rds`, `df_all.rds`, `alt_key.rds` and `temperature_alternatives.xlsx`
+(the workbook split into one sheet per run, scenario × met year) into your
+folder. It finishes with two plots of the series; look at them.
+
+**`alt_key.rds` is the map from run number to alternative.** Runs are numbered
+met-year-major (every scenario for 2011, then every scenario for 2014, and so
+on), and the key records `env`, `alt` (the code), `label` (the workbook's own
+label), `met_year` and `atsp` for each. `precompute.R` and the app read it, so
+they never assume how many alternatives there are.
 
 **The decision date.** Observed USGS temperatures are used through the decision
 date and the scenario temperatures after it. Before the decision every
@@ -187,10 +204,13 @@ and change it:
 - **`first_projection_year` must be `2025`.** The projection starts in the year
   after the calibration period, which is fixed at 2011–2024. It does not follow
   the date in your workbook.
-- **`hydro_cost`** is the hydropower replacement cost for each alternative. It is a
-  design input, not a model output. If your scenarios change the bypass volumes,
-  supply new costs; otherwise the hydropower objective in Decision Support is
-  wrong for your scenarios.
+- **`hydro_cost`** is the hydropower replacement cost for each alternative, named
+  by the codes in your `alt_key.rds`. It is a design input, not a model output.
+  **Every alternative in the key needs a cost**, or the year shows as *(data not
+  loaded)* and the banner names the alternative; an alternative with no cost
+  would otherwise look free. If your scenarios change the bypass volumes, supply
+  new costs; otherwise the hydropower objective in Decision Support is wrong for
+  your scenarios.
 - **`default_weights`** are the objective weights the Decision Support sliders
   start at.
 
@@ -217,16 +237,20 @@ in several places, so changing one is a code change, not a data change:
 
 | Assumption | Where |
 |---|---|
-| Nine scenarios, in the order above, named NB … PB6 | `analysis/temperature_data.R`; `get_scenario_alternatives()` in `SalmonCountR/functions.R` **and** `SalmonCountR/app.R`; `precompute.R` (§37); `years.R` (`ARG_HYDRO_COST_*`, `arg_prepare_bundle()`); app dropdowns |
-| Four met years 2011, 2014, 2017, 2020, weighted equally | the same places |
+| Four met years 2011, 2014, 2017, 2020, weighted equally | `HYDRO_YEARS` in `temperature_data.R`; the met-year weight sliders in `app.R`; the About tab |
 | Two sites, `AveWatt` and `AveHazel` | `temperature_data.R`; carcass section → site map in `precompute.R` (§9) |
 | Calibration period 2011–2024, projection starting 2025 | `real_years` in `precompute.R` and `global.R`; GrandTab and carcass filters in `precompute.R`; `year > 2024` in `arg_prepare_bundle()` in `years.R` |
 | Scenario temperatures used from the file's first date to Dec 31 | `threshold_start` / `threshold_end` in `temperature_data.R` |
+| The About tab's table of alternative specifications (volumes, MWh, cost) | `app.R`; it describes the 2025 alternatives |
 
-Scenario numbering matters here: internally the 36 runs are numbered
-met-year-major (1–9 = 2011 NB…PB6, 10–18 = 2014, and so on). A workbook with a
-different number of scenarios would shift that numbering, which is why the check
-in step 3 refuses one.
+The number and names of the scenarios are **not** on this list any more: they
+come from the workbook, through `alt_key.rds`. The one thing a new scenario
+needs from you is a hydropower cost in `years.R` (step 5).
+
+The manuscript scripts in `analysis/` are the exception. They document the
+published 2025 analysis, read the flat `SalmonCountR/app_data/`, and carry that
+run's nine alternatives, costs and bypass volumes as literals. They are not
+meant to run on a scenario folder.
 
 ## Known limitations
 
@@ -241,8 +265,11 @@ in step 3 refuses one.
 | Symptom | Cause |
 |---|---|
 | `Sheet(s) 2017 not found …` | Sheet names must be exactly the four met years. |
-| `row 1: scenario labels … must be, in order …` | Scenario columns reordered or renamed. |
-| `row 2: columns C to T must alternate AveWatt, AveHazel` | Site columns swapped or renamed. |
+| `row 1 has no scenario labels from column C onward` | Scenario names are not in row 1, or the sheet has extra header rows. |
+| `scenario '…' has no AveWatt or AveHazel column` | A site column is missing or misspelt under that label. |
+| `Sheet 2014 lists different scenarios … from sheet 2011` | Met-year sheets disagree; make the row-1 labels identical on every sheet. |
+| `Scenario labels map to duplicate codes` | Two labels reduce to the same code (e.g. two `Scenario 1` on the same ATSP). |
+| `hydro_cost in years.R for …` in the app banner | An alternative in `alt_key.rds` has no cost in `years.R` (step 5). |
 | `temperatures run 54.0 to 68.1 …` | Values are in Fahrenheit. |
 | `column A has dates in year 1 …` | Dates stored as text. Reformat the column as dates. |
 | `ARG_APP_DATA_DIR does not exist` | Create the folder first (step 2), or fix the path. |

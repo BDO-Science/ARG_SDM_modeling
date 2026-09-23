@@ -72,16 +72,37 @@ ARG_YEAR_FILES <- c(
   instream                   = "american_river_instream.rds",
   df_all_orig                = "df_all.rds",
   swing_scenario_results     = "swing_scenario_results.rds",
-  steelhead_scenario_results = "steelhead_scenario_results.rds"
+  steelhead_scenario_results = "steelhead_scenario_results.rds",
+  alt_key                    = "alt_key.rds"   # which run is which alternative; see functions.R
 )
 
 # Hydropower replacement cost ($) by alternative. A design input, not a model
-# output, so it is declared per year rather than derived. The 2025 values are
-# the ones app.R carried hard-coded.
+# output, so it is declared per year rather than derived. Every alternative in
+# the year's alt_key must have a cost here, or the year shows as not loaded
+# (arg_year_missing) -- an alternative without a cost would otherwise look free.
 ARG_HYDRO_COST_2025 <- c(
   NB   = 0,      PB1 = 111422, PB2 = 376671,
   PB2b = 470090, PB2c = 433215, PB3 = 201552,
   PB4  = 241590, PB5 = 199382, PB6 = 348806
+)
+
+# 2026 draft deliverable (TemperatureModelingResults_9-23-26.xlsx): Scenarios
+# 1-4 on the ATSP 41 schedule, No Bypass on ATSP 41 and ATSP 38, with Scenarios
+# 1 and 2 on ATSP 38 still to come. PLACEHOLDERS: no 2026 valuation exists yet.
+# Each scenario carries its 2025 cost on the assumption that the bypass
+# schedule, and so the foregone generation, is unchanged; an ATSP variant costs
+# the same as its base scenario because ATSP is a shutter schedule, not a
+# bypass. No Bypass costs nothing under either schedule. Replace when Reclamation
+# values the 2026 alternatives.
+ARG_HYDRO_COST_2026 <- c(
+  NB      = 0,
+  `NB-38` = 0,
+  PB1     = ARG_HYDRO_COST_2025[["PB1"]],
+  PB2     = ARG_HYDRO_COST_2025[["PB2"]],
+  PB3     = ARG_HYDRO_COST_2025[["PB3"]],
+  PB4     = ARG_HYDRO_COST_2025[["PB4"]],
+  `PB1-38` = ARG_HYDRO_COST_2025[["PB1"]],
+  `PB2-38` = ARG_HYDRO_COST_2025[["PB2"]]
 )
 
 ARG_YEARS <- list(
@@ -94,14 +115,18 @@ ARG_YEARS <- list(
     note                  = "Published analysis. Elicited weights from the 2025 SDM workshop."
   ),
   "2026" = list(
-    label                 = "2026",
+    label                 = "2026 (draft)",
     dir                   = file.path("app_data", "2026"),
-    # Carried forward from 2025 as a starting point. Replace when the 2026
-    # elicitation and valuation are done -- these are placeholders, not results.
+    # Weights carried forward from 2025 as a starting point. Replace when the
+    # 2026 elicitation is done -- these are placeholders, not results.
     default_weights       = c(chinook = 0.40, steelhead = 0.10, hydro = 0.50),
-    hydro_cost            = ARG_HYDRO_COST_2025,
-    first_projection_year = 2026,
-    note                  = "Awaiting the 2026 temperature deliverable and precompute run. Weights and hydropower costs are placeholders carried over from 2025."
+    hydro_cost            = ARG_HYDRO_COST_2026,
+    # The 2026 temperatures are run through the 2025 model: calibration ends in
+    # 2024 and the projection starts in 2025, with the decision date held at
+    # 2025-09-21 so that the first projection year carries the scenario
+    # temperatures. See app_data/2026/README.md for what a true 2026 start needs.
+    first_projection_year = 2025,
+    note                  = "Draft 2026 temperature deliverable (23 Sep 2026) run through the 2025 model. Objective weights and hydropower costs are placeholders carried over from 2025."
   )
 )
 
@@ -120,10 +145,21 @@ arg_year_cfg <- function(year) {
 arg_year_dir <- function(year) arg_app_path(arg_year_cfg(year)$dir)
 
 #' Which required files a year is missing. character(0) when the year is ready.
+#' A year whose alt_key names an alternative with no hydropower cost in
+#' years.R counts as not ready too, and says so, rather than loading with that
+#' alternative looking free in Decision Support.
 arg_year_missing <- function(year) {
   d <- arg_year_dir(year)
   if (!dir.exists(d)) return(unname(ARG_YEAR_FILES))
-  ARG_YEAR_FILES[!file.exists(file.path(d, ARG_YEAR_FILES))] |> unname()
+  missing <- ARG_YEAR_FILES[!file.exists(file.path(d, ARG_YEAR_FILES))] |> unname()
+  if (!"alt_key.rds" %in% missing) {
+    key <- readRDS(file.path(d, "alt_key.rds"))
+    no_cost <- setdiff(unique(key$alt), names(arg_year_cfg(year)$hydro_cost))
+    if (length(no_cost)) {
+      missing <- c(missing, paste0("hydro_cost in years.R for ", paste(no_cost, collapse = ", ")))
+    }
+  }
+  missing
 }
 
 arg_year_available <- function(year) length(arg_year_missing(year)) == 0
@@ -161,8 +197,19 @@ arg_year_vintage <- function(year) {
 #' Kept here rather than in global.R so a year switched into at runtime gets
 #' exactly the same treatment the startup year got.
 arg_prepare_bundle <- function(raw, cfg) {
+  # The alternative key drives everything that used to count to nine: the
+  # env -> alternative -> met year mapping is data, not arithmetic.
+  key <- as.data.frame(raw$alt_key, stringsAsFactors = FALSE)
+  key$env <- as.character(key$env)
+  raw$alt_key   <- key
+  raw$alt_codes <- unique(key$alt)
+  raw$met_years <- unique(key$met_year)
+  raw$alt_labels <- stats::setNames(
+    vapply(raw$alt_codes, function(a) unique(key$label[key$alt == a])[1], character(1)),
+    raw$alt_codes)
+
   # Fixed normalisation bounds for the Chinook objective, computed across all
-  # nine alternatives AND all three TDM models.
+  # alternatives AND all three TDM models.
   #
   # WHY THIS EXISTS. The MCDA tab used to min-max the Chinook scores within
   # whatever the current TDM weighting produced. Push the TDM weights far enough
@@ -182,15 +229,16 @@ arg_prepare_bundle <- function(raw, cfg) {
     if (is.null(rf) || !all(c("env", "variant", "year", "spawners") %in% names(rf))) {
       return(NULL)
     }
+    met_w <- 1 / length(raw$met_years)
     per_state <- rf |>
       dplyr::filter(year > 2024) |>
       dplyr::group_by(env, variant) |>
       dplyr::slice_tail(n = 20) |>
       dplyr::summarise(med = stats::median(spawners, na.rm = TRUE), .groups = "drop") |>
-      dplyr::mutate(env = as.integer(env),
-                    scenario = ((env - 1) %% 9) + 1) |>
-      dplyr::group_by(scenario, variant) |>
-      dplyr::summarise(value = sum(med * 0.25), .groups = "drop")
+      dplyr::mutate(env = as.character(env)) |>
+      dplyr::inner_join(key[, c("env", "alt")], by = "env") |>
+      dplyr::group_by(alt, variant) |>
+      dplyr::summarise(value = sum(med * met_w), .groups = "drop")
     c(lo = min(per_state$value), hi = max(per_state$value))
   })
 
@@ -206,15 +254,9 @@ arg_prepare_bundle <- function(raw, cfg) {
   raw$df_temp_first_year <- if (is.data.frame(raw$df_all_orig)) {
     raw$df_all_orig |>
       dplyr::filter(lubridate::year(Date) == cfg$first_projection_year) |>
-      dplyr::mutate(
-        month_num = lubridate::month(Date),
-        climate = dplyr::case_when(
-          env %in% as.character(1:9)   ~ "2011",
-          env %in% as.character(10:18) ~ "2014",
-          env %in% as.character(19:27) ~ "2017",
-          env %in% as.character(28:36) ~ "2020"
-        )
-      )
+      dplyr::mutate(month_num = lubridate::month(Date), env = as.character(env)) |>
+      dplyr::left_join(
+        stats::setNames(key[, c("env", "met_year")], c("env", "climate")), by = "env")
   } else NULL
 
   raw$cfg     <- cfg

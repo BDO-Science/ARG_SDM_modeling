@@ -91,7 +91,8 @@ source. It is now excluded.
 
 **3. Bundle size.** 16 of `app_data`'s 25 MB were `precompute.R` intermediates
 that no runtime code reads (`sim_future.rds` alone is 13 MB). The deployed
-bundle is 24 files, 9.25 MB (checked 2026-09-21).
+bundle was 24 files, 9.25 MB (checked 2026-09-21), before `alt_key.rds` and the
+2026 year folder were added.
 
 Analysis-year folders (`app_data/<year>/`) are handled differently: only the
 files the app reads for a year (`ARG_YEAR_FILES` in `years.R`, plus

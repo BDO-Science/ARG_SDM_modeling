@@ -1420,20 +1420,86 @@ eval_year <- function(sim_yr, sim_redds_split, env_cache, tdm_defs,
   rbindlist(env_tables, use.names = TRUE, fill = TRUE)
 }
 
-# ---- Helper function for scenario alternatives ----
-get_scenario_alternatives <- function(scenario, hydro_year) {
-  # Mapping: Alt 1-9 (2011), 10-18 (2014), 19-27 (2017), 28-36 (2020)
-  # Within each hydro year: 1=NB, 2=PB1, 3=PB2, 4=PB2b, 5=PB2c, 6=PB3, 7=PB4, 8=PB5, 9=PB6
-  scenario_map <- c("NB"=1, "PB1"=2, "PB2"=3, "PB2b"=4, "PB2c"=5, "PB3"=6, "PB4"=7, "PB5"=8, "PB6"=9)
-  hydro_map <- c("2011"=0, "2014"=9, "2017"=18, "2020"=27)
-  
-  if (hydro_year == "all") {
-    # Return alternatives for this scenario across all hydro years
-    base_idx <- scenario_map[scenario]
-    return(c(base_idx, base_idx+9, base_idx+18, base_idx+27))
-  } else {
-    return(hydro_map[hydro_year] + scenario_map[scenario])
+# ---- Alternative key --------------------------------------------------------
+# The runs in env_ext_list / results_full are numbered met-year-major: every
+# alternative for the first meteorological year, then every alternative for the
+# second, and so on, in the order the temperature deliverable lists them. The
+# ALTERNATIVE KEY records that numbering as data, one row per run:
+#
+#   env       run index, "1" .. "N x M" (N alternatives x M met years)
+#   alt       short code used everywhere in the app and outputs (NB, PB1, ...)
+#   label     the deliverable's own label for the scenario
+#   met_year  "2011", "2014", "2017", "2020"
+#   atsp      the ATSP schedule in the label, or NA when the label has none
+#
+# analysis/temperature_data.R writes it as alt_key.rds next to env_ext_list.rds.
+# Nothing downstream should count to nine or take `%% 9` any more; it should
+# ask the key. A folder without one (the published 2025 run predates the file)
+# gets the 2025 layout from arg_legacy_alt_key().
+ARG_MET_YEARS_LEGACY <- c("2011", "2014", "2017", "2020")
+ARG_ALTS_LEGACY      <- c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6")
+
+arg_legacy_alt_key <- function() {
+  n <- length(ARG_ALTS_LEGACY)
+  data.frame(
+    env      = seq_len(n * length(ARG_MET_YEARS_LEGACY)),
+    alt      = rep(ARG_ALTS_LEGACY, times = length(ARG_MET_YEARS_LEGACY)),
+    label    = rep(c("No Bypass", paste("Scenario", c("1", "2", "2b", "2c", "3", "4", "5", "6"))),
+                   times = length(ARG_MET_YEARS_LEGACY)),
+    met_year = rep(ARG_MET_YEARS_LEGACY, each = n),
+    atsp     = NA_character_,
+    stringsAsFactors = FALSE
+  )
+}
+
+#' Read a scenario folder's alternative key, or fall back to the 2025 layout.
+arg_read_alt_key <- function(dir) {
+  p <- file.path(dir, "alt_key.rds")
+  if (file.exists(p)) return(as.data.frame(readRDS(p), stringsAsFactors = FALSE))
+  arg_legacy_alt_key()
+}
+
+#' Alternative codes in deliverable order, and met years in sheet order.
+arg_alt_codes <- function(key) unique(key$alt)
+arg_met_years <- function(key) unique(key$met_year)
+
+#' Check that a key describes a set of runs exactly (every env once).
+arg_check_alt_key <- function(key, env_names) {
+  want <- as.character(key$env)
+  got  <- as.character(env_names)
+  if (!setequal(want, got) || anyDuplicated(want)) {
+    stop("alt_key.rds does not match the runs in this folder: key has envs ",
+         paste(range(as.integer(want)), collapse = "-"), " (", length(want), "), data has ",
+         length(got), ". Re-run analysis/temperature_data.R for this folder.", call. = FALSE)
   }
+  invisible(TRUE)
+}
+
+#' The run indices (env) for one alternative.
+#'
+#' @param scenario   an alternative code from the key, e.g. "PB4"
+#' @param hydro_year one met year ("2014"), or "all" for every met year in the
+#'                   key's order. The result is named by met year either way,
+#'                   so callers can weight by name rather than by position.
+#' @param key        an alternative key. Default: an object called `alt_key` in
+#'                   scope (precompute.R loads one), else the 2025 layout.
+get_scenario_alternatives <- function(scenario, hydro_year = "all", key = NULL) {
+  if (is.null(key)) {
+    key <- if (exists("alt_key", inherits = TRUE)) get("alt_key", inherits = TRUE)
+           else arg_legacy_alt_key()
+  }
+  k <- key[key$alt == scenario, , drop = FALSE]
+  if (!nrow(k)) {
+    stop("Unknown alternative '", scenario, "'. This key has: ",
+         paste(arg_alt_codes(key), collapse = ", "), call. = FALSE)
+  }
+  if (identical(hydro_year, "all")) {
+    k <- k[order(match(k$met_year, arg_met_years(key))), , drop = FALSE]
+    return(stats::setNames(as.integer(k$env), k$met_year))
+  }
+  e <- k$env[k$met_year == as.character(hydro_year)]
+  if (!length(e)) stop("No run for ", scenario, " in met year ", hydro_year, call. = FALSE)
+  stats::setNames(as.integer(e), as.character(hydro_year))
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════

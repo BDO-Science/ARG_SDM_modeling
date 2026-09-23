@@ -50,3 +50,10 @@ figures/bdsc/lifecycle/_unused_*
 
 # Collaborator delivery bundles; extract what is needed into data_raw/ instead
 /ARG SDM revision.zip
+
+# Scenario-year folders (app_data/<year>/) get re-run whenever a deliverable is
+# revised; their simulated redd sets (~15 MB a run) are reproducible from the
+# seed on a full precompute run and are not tracked. The published 2025 run in
+# the flat app_data/ keeps its copies.
+SalmonCountR/app_data/*/sim_future.rds
+SalmonCountR/app_data/*/sim_redds.rds

@@ -72,7 +72,17 @@ env_ext_list <- readRDS(
   file.path(.arg_data_dir, "env_ext_list.rds")
 )
 
-# NOTE: Throughout this code 'env' refers to management alternatives (e.g., different 
+# The alternative key: which run (env) is which alternative in which met year.
+# Written by temperature_data.R; the published 2025 folder predates it and gets
+# the fixed 2025 layout. Everything below that needs to know "the alternatives"
+# asks this table rather than counting to nine.
+alt_key <- arg_read_alt_key(.arg_data_dir)
+arg_check_alt_key(alt_key, names(env_ext_list))
+cat(sprintf("Runs: %d (%d alternatives x %d met years): %s\n",
+            nrow(alt_key), length(arg_alt_codes(alt_key)), length(arg_met_years(alt_key)),
+            paste(arg_alt_codes(alt_key), collapse = ", ")))
+
+# NOTE: Throughout this code 'env' refers to management alternatives (e.g., different
 # operational scenarios for water releases, not "environmental" in the general sense)
 # Create a mapping between management alternatives and their associated river sites
 mgt_alt_sites <- purrr::imap_dfr(env_ext_list, ~ {
@@ -1194,7 +1204,7 @@ results_full <- purrr::map_dfr(keys, function(key) {
 # ---- 36.STEELHEAD PERFORMANCE METRIC CALCULATION ----
 # This metric is the number of days below 18.3°C in Oct/Nov for each alternative.
 
-# Calculate the metric for each of the 36 alternative x met-year combinations
+# Calculate the metric for every run (alternative x met year)
 steelhead_metrics <- df_all %>%
   # 1. Filter for the relevant time period first
   filter(
@@ -1215,23 +1225,24 @@ steelhead_metrics <- df_all %>%
 # Calculate Chinook performance under default weight combinations
 # for use in Swing Weighting tool
 
-# Define default weight combinations (matching app defaults)
-wyt_default <- c("2011" = 0.25, "2014" = 0.25, "2017" = 0.25, "2020" = 0.25)
+# Define default weight combinations (matching app defaults): met years equally
+# weighted, TDM models at the elicited weights
+met_years_key <- arg_met_years(alt_key)
+wyt_default <- setNames(rep(1 / length(met_years_key), length(met_years_key)), met_years_key)
 tdm_default <- c("exp_WF" = 0.51, "exp_SM" = 0.24, "lin_Martin" = 0.25)
 
 cat("\nCalculating swing weighting ranges using default weights...\n")
 
 # Calculate weighted average spawner abundance for each scenario (using full 100 years)
-swing_scenario_results <- map_dfr(c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6"), function(scen) {
-  
-  alts <- get_scenario_alternatives(scen, "all")
-  hydro_years <- c("2011", "2014", "2017", "2020")
-  
+swing_scenario_results <- map_dfr(arg_alt_codes(alt_key), function(scen) {
+
+  alts <- get_scenario_alternatives(scen, "all", key = alt_key)
+
   combined_spawners <- 0
-  
+
   for (j in seq_along(alts)) {
     alt_id <- as.character(alts[j])
-    hydro_year <- hydro_years[j]
+    hydro_year <- names(alts)[j]
     
     # Get results for each TDM variant for this alternative
     tdm_spawners <- 0
@@ -1267,16 +1278,15 @@ swing_scenario_results <- map_dfr(c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "
 cat("\nCalculating steelhead swing weighting ranges using default weights...\n")
 
 # For each scenario, calculate weighted average across hydro years
-steelhead_scenario_results <- map_dfr(c("NB", "PB1", "PB2", "PB2b", "PB2c", "PB3", "PB4", "PB5", "PB6"), function(scen) {
-  
-  alts <- get_scenario_alternatives(scen, "all")
-  hydro_years <- c("2011", "2014", "2017", "2020")
-  
+steelhead_scenario_results <- map_dfr(arg_alt_codes(alt_key), function(scen) {
+
+  alts <- get_scenario_alternatives(scen, "all", key = alt_key)
+
   combined_steelhead <- 0
-  
+
   for (j in seq_along(alts)) {
     alt_id <- as.character(alts[j])
-    hydro_year <- hydro_years[j]
+    hydro_year <- names(alts)[j]
     
     # Get steelhead score for this alternative
     steelhead_score <- steelhead_metrics %>%
@@ -1329,6 +1339,7 @@ saveRDS(S_seed_fore_list,      file.path(.arg_data_dir, "S_seed_fore_list.rds"))
 saveRDS(stoch_SAR_opts,        file.path(.arg_data_dir, "stoch_SAR_opts.rds"))
 saveRDS(sim_years,             file.path(.arg_data_dir, "sim_years.rds"))
 saveRDS(spawn_dates_by_alt,    file.path(.arg_data_dir, "spawn_dates_by_alt.rds"))
+saveRDS(alt_key,               file.path(.arg_data_dir, "alt_key.rds"))
 
 # The simulated redd set is a random draw (section 17). It is reproducible —
 # set.seed(123) at the top of this script covers it, and nothing consumes the
