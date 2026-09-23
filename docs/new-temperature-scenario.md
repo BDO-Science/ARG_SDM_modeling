@@ -213,6 +213,10 @@ and change it:
   your scenarios.
 - **`default_weights`** are the objective weights the Decision Support sliders
   start at.
+- **`objective_ranges`** (optional) switches the year to global scaling: fixed
+  0–1 ranges for each objective, as in the `"2026"` entry. Leave it out to scale
+  locally over the alternatives in the run, as the published 2025 analysis does.
+  See OBJECTIVE SCALING in `years.R`.
 
 ## 6. Look at it
 

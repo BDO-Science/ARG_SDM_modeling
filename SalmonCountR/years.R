@@ -105,6 +105,29 @@ ARG_HYDRO_COST_2026 <- c(
   `PB2-38` = ARG_HYDRO_COST_2025[["PB2"]]
 )
 
+# OBJECTIVE SCALING. Decision Support and Swing Weighting put each objective on
+# a 0-1 scale before weighting. Two ways to do that:
+#
+#   local   0 = the worst of the alternatives in the analysis, 1 = the best.
+#           The 2025 analysis did this (min-max over the nine), and its
+#           published weights were elicited against those swings. Adding an
+#           alternative rescales every other one.
+#   global  0 and 1 are FIXED ends of a plausible range for the objective,
+#           declared here per year. Scores stay comparable across years and
+#           across additions to the alternative set, and the swing weights are
+#           elicited against these same ranges. Values outside the range are
+#           clamped.
+#
+# A year with `objective_ranges` scales globally; a year without scales locally.
+# Ranges are c(lo, hi) in the objective's raw units: Chinook adult index,
+# steelhead days below 18.3 C in Oct-Nov (at most 61), hydropower replacement
+# cost in $ (lower is better; the scale is inverted for it).
+ARG_OBJECTIVE_RANGES_2026 <- list(
+  chinook   = c(0, 25000),
+  steelhead = c(0, 61),
+  hydro     = c(0, 3e6)
+)
+
 ARG_YEARS <- list(
   "2025" = list(
     label                 = "2025",
@@ -112,6 +135,7 @@ ARG_YEARS <- list(
     default_weights       = c(chinook = 0.40, steelhead = 0.10, hydro = 0.50),
     hydro_cost            = ARG_HYDRO_COST_2025,
     first_projection_year = 2025,
+    # No objective_ranges: the published analysis scales locally, and stays so.
     note                  = "Published analysis. Elicited weights from the 2025 SDM workshop."
   ),
   "2026" = list(
@@ -121,6 +145,11 @@ ARG_YEARS <- list(
     # 2026 elicitation is done -- these are placeholders, not results.
     default_weights       = c(chinook = 0.40, steelhead = 0.10, hydro = 0.50),
     hydro_cost            = ARG_HYDRO_COST_2026,
+    # Global scaling on the ranges B. Mahardja proposed in September 2026 as a
+    # starting point (salmon 0-25,000; hydro $0-3M; steelhead the full Oct-Nov
+    # window). The 2025 weights above were elicited against LOCAL swings, so
+    # they are only placeholders here until re-elicited against these ranges.
+    objective_ranges      = ARG_OBJECTIVE_RANGES_2026,
     # The 2026 temperatures are run through the 2025 model: calibration ends in
     # 2024 and the projection starts in 2025, with the decision date held at
     # 2025-09-21 so that the first projection year carries the scenario
@@ -143,6 +172,54 @@ arg_year_cfg <- function(year) {
 }
 
 arg_year_dir <- function(year) arg_app_path(arg_year_cfg(year)$dir)
+
+#' A year's objective ranges, validated, or NULL for local scaling.
+arg_objective_ranges <- function(cfg) {
+  r <- cfg$objective_ranges
+  if (is.null(r)) return(NULL)
+  need <- c("chinook", "steelhead", "hydro")
+  if (!all(need %in% names(r))) {
+    stop("objective_ranges for ", cfg$label, " must name ", paste(need, collapse = ", "),
+         call. = FALSE)
+  }
+  for (n in need) {
+    if (length(r[[n]]) != 2 || !all(is.finite(r[[n]])) || r[[n]][2] <= r[[n]][1]) {
+      stop("objective_ranges$", n, " for ", cfg$label, " must be c(lo, hi) with hi > lo",
+           call. = FALSE)
+    }
+  }
+  r[need]
+}
+
+#' 0-1 score for one objective under a year's scaling. `range` NULL means
+#' local min-max over `x`; otherwise the fixed range, clamped. `lower_better`
+#' inverts the scale (hydropower cost).
+arg_scale_objective <- function(x, range = NULL, lower_better = FALSE) {
+  if (is.null(range)) {
+    lo <- min(x, na.rm = TRUE); hi <- max(x, na.rm = TRUE)
+    if (!is.finite(lo) || !is.finite(hi) || hi == lo) return(rep(0.5, length(x)))
+  } else {
+    lo <- range[1]; hi <- range[2]
+  }
+  s <- (x - lo) / (hi - lo)
+  if (lower_better) s <- 1 - s
+  pmin(pmax(s, 0), 1)
+}
+
+#' One line saying how a year's objectives are scaled, for the app.
+arg_scaling_note <- function(cfg) {
+  r <- arg_objective_ranges(cfg)
+  if (is.null(r)) {
+    return(paste0("Objectives are scaled locally: 0 is the worst and 1 the best of the ",
+                  "alternatives in the ", cfg$label, " analysis."))
+  }
+  fmt <- function(x) format(x, big.mark = ",", scientific = FALSE, trim = TRUE)
+  paste0("Objectives are scaled on fixed (global) ranges for ", cfg$label, ": Chinook ",
+         fmt(r$chinook[1]), "-", fmt(r$chinook[2]),
+         " adults; steelhead ", r$steelhead[1], "-", r$steelhead[2], " days below 18.3 °C; ",
+         "hydropower $", fmt(r$hydro[1]), "-$", fmt(r$hydro[2]), " (lower is better). ",
+         "Values outside a range are clamped.")
+}
 
 #' Which required files a year is missing. character(0) when the year is ready.
 #' A year whose alt_key names an alternative with no hydropower cost in

@@ -52,7 +52,13 @@ the app and pick **2026 (draft)** under Analysis year. Commit the folder.
   variants take their base scenario's cost, and No Bypass costs nothing under
   either schedule. Replace when Reclamation values the 2026 alternatives. Confirm
   with the temperature modeller that Scenarios 1–4 are the 2025 definitions.
-- **Objective weights** are the 2025 elicited set.
+- **Objective weights** are the 2025 elicited set. They were elicited against
+  2025's local swings, so they do not yet describe the global ranges below;
+  re-elicit them in the Swing Weighting tab, which now presents those ranges.
+- **Objective ranges** (`ARG_OBJECTIVE_RANGES_2026` in `years.R`) are the
+  global-scaling ranges B. Mahardja proposed in September 2026 as a starting
+  point: Chinook 0–25,000, steelhead 0–61 days, hydropower $0–3 million. The
+  2025 tab is unaffected and keeps its local scaling.
 - **Bypass volumes** are not in the deliverable (no `Scenario Summary` sheet), so
   nothing here reports volume per alternative.
 

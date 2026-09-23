@@ -21,30 +21,8 @@ normalize_weights <- function(weights) {
   setNames(rep(1 / length(weights), length(weights)), names(weights))
 }
 
-# Helper for min-max normalization using actual data ranges
-normalize_scores_chinook <- function(scores) {
-  # Get the actual min and max from the current scores
-  min_s <- min(scores, na.rm = TRUE)
-  max_s <- max(scores, na.rm = TRUE)
-  if (max_s == min_s) return(rep(0.5, length(scores)))
-  (scores - min_s) / (max_s - min_s)
-}
-
-normalize_scores_steelhead <- function(scores) {
-  # Get the actual min and max from the current scores
-  min_s <- min(scores, na.rm = TRUE)
-  max_s <- max(scores, na.rm = TRUE)
-  if (max_s == min_s) return(rep(0.5, length(scores)))
-  (scores - min_s) / (max_s - min_s)
-}
-
-normalize_scores_hydro <- function(scores) {
-  # For hydropower, lower cost is better, so we invert
-  min_s <- min(scores, na.rm = TRUE)
-  max_s <- max(scores, na.rm = TRUE)
-  if (max_s == min_s) return(rep(0.5, length(scores)))
-  (max_s - scores) / (max_s - min_s)
-}
+# Objective scaling (local min-max or a year's fixed global ranges) is
+# arg_scale_objective() in years.R; see OBJECTIVE SCALING there.
 
 # get_scenario_alternatives() comes from functions.R (sourced by global.R) and
 # takes the active year's alternative key, so the runs it returns follow the
@@ -477,6 +455,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    
                                    hr(),
                                    h4("Objective Ranges"),
+                                   uiOutput("scaling_note_swing"),
                                    tableOutput("swing_ranges_table"),
                                    
                                    hr(),
@@ -548,6 +527,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                               tabsetPanel(
                                 tabPanel("Overall Performance",
                                          h4("Overall Weighted Scores"),
+                                         uiOutput("scaling_note_ds"),
                                          plotOutput("overall_scores_plot"),
                                          hr(),
                                          h4("Score Contribution by Objective"),
@@ -1075,12 +1055,6 @@ server <- function(input, output, session) {
       hydro_raw = unname(hs)
     )
 
-    # Chinook is normalised on the year's FIXED bounds, spanning all nine
-    # alternatives and all three TDM models, so the scale does not move when the
-    # user changes the TDM weights. See the note in years.R. Steelhead and
-    # hydropower do not vary with TDM weighting, so their within-set scales are
-    # already stable and are left alone.
-    sb <- B()$salmon_bounds
     joined <- perf_data %>% left_join(hydro_df, by = "scenario")
     # An alternative with no declared cost must not be scored: years.R's
     # arg_year_missing() keeps such a year from loading, and this is the
@@ -1088,14 +1062,27 @@ server <- function(input, output, session) {
     validate(need(!any(is.na(joined$hydro_raw)),
                   paste0("No hydropower cost in years.R for: ",
                          paste(joined$scenario[is.na(joined$hydro_raw)], collapse = ", "))))
+
+    # Scaling follows the year (see OBJECTIVE SCALING in years.R).
+    #   global: each objective on its declared fixed range, clamped.
+    #   local:  Chinook on the year's FIXED bounds spanning all alternatives
+    #           and all three TDM models, so the scale does not move when the
+    #           user changes the TDM weights (B. Mahardja's fix); steelhead
+    #           and hydropower min-max within the set, since they do not vary
+    #           with TDM weighting.
+    rng <- arg_objective_ranges(year_cfg())
+    sb  <- B()$salmon_bounds
+    chinook_range <- if (!is.null(rng)) rng$chinook else if (!is.null(sb)) unname(sb[c("lo", "hi")]) else NULL
     joined %>%
       mutate(
-        chinook_norm = if (is.null(sb)) normalize_scores_chinook(chinook_raw)
-                       else (chinook_raw - sb[["lo"]]) / (sb[["hi"]] - sb[["lo"]]),
-        steelhead_norm = normalize_scores_steelhead(steelhead_raw),
-        hydro_norm = normalize_scores_hydro(hydro_raw)
+        chinook_norm   = arg_scale_objective(chinook_raw,   chinook_range),
+        steelhead_norm = arg_scale_objective(steelhead_raw, rng$steelhead),
+        hydro_norm     = arg_scale_objective(hydro_raw,     rng$hydro, lower_better = TRUE)
       )
   })
+
+  output$scaling_note_ds    <- renderUI(tags$p(em(arg_scaling_note(year_cfg()))))
+  output$scaling_note_swing <- renderUI(tags$p(em(arg_scaling_note(year_cfg()))))
   
   objective_weights <- reactive({
     if (input$weight_method == "equal") {
@@ -1239,24 +1226,32 @@ server <- function(input, output, session) {
     }
   })
   
+  # The swing each objective is scored over: the year's fixed ranges when it
+  # scales globally, otherwise the worst and best of the alternatives shown.
+  # The hypothetical alternatives below are built from the same ends, so the
+  # weights elicited here describe the swings Decision Support actually uses.
+  swing_ends <- reactive({
+    perf_data <- performance_data_full()
+    rng <- arg_objective_ranges(year_cfg())
+    if (!is.null(rng)) {
+      list(chinook   = c(worst = rng$chinook[1],   best = rng$chinook[2]),
+           steelhead = c(worst = rng$steelhead[1], best = rng$steelhead[2]),
+           hydro     = c(worst = rng$hydro[2],     best = rng$hydro[1]))
+    } else {
+      list(chinook   = c(worst = min(perf_data$chinook_raw,   na.rm = TRUE), best = max(perf_data$chinook_raw,   na.rm = TRUE)),
+           steelhead = c(worst = min(perf_data$steelhead_raw, na.rm = TRUE), best = max(perf_data$steelhead_raw, na.rm = TRUE)),
+           hydro     = c(worst = max(perf_data$hydro_raw,     na.rm = TRUE), best = min(perf_data$hydro_raw,     na.rm = TRUE)))
+    }
+  })
+
   # Display objective ranges
   output$swing_ranges_table <- renderTable({
-    # Get the current performance data to find actual ranges
-    perf_data <- performance_data_full()
-    
+    e <- swing_ends()
     tibble(
       Objective = c("Fall-run Chinook", "Steelhead", "Hydropower"),
       Direction = c("Maximize", "Maximize", "Minimize"),
-      `Worst Case` = c(
-        min(perf_data$chinook_raw, na.rm = TRUE),
-        min(perf_data$steelhead_raw, na.rm = TRUE),
-        max(perf_data$hydro_raw, na.rm = TRUE)
-      ),
-      `Best Case` = c(
-        max(perf_data$chinook_raw, na.rm = TRUE),
-        max(perf_data$steelhead_raw, na.rm = TRUE),
-        min(perf_data$hydro_raw, na.rm = TRUE)
-      )
+      `Worst Case` = c(e$chinook[["worst"]], e$steelhead[["worst"]], e$hydro[["worst"]]),
+      `Best Case`  = c(e$chinook[["best"]],  e$steelhead[["best"]],  e$hydro[["best"]])
     ) %>%
       mutate(
         `Worst Case` = if_else(Objective == "Steelhead", round(`Worst Case`, 2), round(`Worst Case`, 0)),
@@ -1266,30 +1261,12 @@ server <- function(input, output, session) {
   
   # Display hypothetical alternatives
   output$swing_alternatives_table <- renderTable({
-    perf_data <- performance_data_full()
-    swing_ranges <- B()$swing_ranges
-    hydro_scores_yr <- hydro_scores()
-
+    e <- swing_ends()
     tibble(
       Alternative = c("Worst Alternative", "Alt 1: Best Chinook", "Alt 2: Best Steelhead", "Alt 3: Best Hydropower"),
-      `Chinook Abundance` = c(
-        min(perf_data$chinook_raw, na.rm = TRUE),
-        max(perf_data$chinook_raw, na.rm = TRUE),
-        min(perf_data$chinook_raw, na.rm = TRUE),
-        min(perf_data$chinook_raw, na.rm = TRUE)
-      ),
-      `Steelhead Score` = c(
-        swing_ranges$worst_case[swing_ranges$objective == "Steelhead"],
-        swing_ranges$worst_case[swing_ranges$objective == "Steelhead"],
-        swing_ranges$best_case[swing_ranges$objective == "Steelhead"],
-        swing_ranges$worst_case[swing_ranges$objective == "Steelhead"]
-      ),
-      `Hydropower Cost` = c(
-        max(hydro_scores_yr),
-        max(hydro_scores_yr),
-        max(hydro_scores_yr),
-        min(hydro_scores_yr)
-      )
+      `Chinook Abundance` = c(e$chinook[["worst"]], e$chinook[["best"]], e$chinook[["worst"]], e$chinook[["worst"]]),
+      `Steelhead Score`   = c(e$steelhead[["worst"]], e$steelhead[["worst"]], e$steelhead[["best"]], e$steelhead[["worst"]]),
+      `Hydropower Cost`   = c(e$hydro[["worst"]], e$hydro[["worst"]], e$hydro[["worst"]], e$hydro[["best"]])
     ) %>%
       mutate(
         `Chinook Abundance` = round(`Chinook Abundance`, 0),

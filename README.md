@@ -153,6 +153,14 @@ are registered in `ARG_YEARS` in `SalmonCountR/years.R`, each pointing at a fold
 | `2025` (default) | `SalmonCountR/app_data/` | The published analysis |
 | `2026` | `SalmonCountR/app_data/2026/` | Draft: the 23 Sep 2026 temperature deliverable run through the 2025 model, with placeholder weights and hydropower costs. See its [README](SalmonCountR/app_data/2026/README.md) |
 
+Each entry also says how its objectives are scaled to 0–1 in Decision Support
+and Swing Weighting. **2025 scales locally** (0 is the worst and 1 the best of
+its nine alternatives, as published). **2026 scales globally** on fixed ranges
+declared in `years.R` (`ARG_OBJECTIVE_RANGES_2026`: Chinook 0–25,000 adults,
+steelhead 0–61 days, hydropower $0–3 million), so its scores stay comparable as
+alternatives are added; the app says which scaling is in use on both tabs. The
+2026 ranges and weights are starting points, not elicited values.
+
 A folder counts as loaded once it holds the eight files in `ARG_YEAR_FILES` and
 every alternative in its `alt_key.rds` has a hydropower cost in `years.R`. The
 app reads the list of years once at startup, so restart it after adding one. The
