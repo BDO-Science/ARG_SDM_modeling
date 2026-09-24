@@ -1126,9 +1126,9 @@ server <- function(input, output, session) {
                (hydro_norm * weights["hydro"]))
     
     ggplot(scores, aes(x = scenario, y = overall_score, fill = scenario)) +
-      geom_col() +
+      geom_col() + geom_text(aes(label = signif(overall_score,4), vjust = -0.5)) +
       scale_fill_viridis_d(guide = "none") +
-      scale_y_continuous(limits = c(0, 1), labels = percent) +
+      scale_y_continuous(limits = c(0, 1)) +
       labs(title = "Overall Performance Scores", y = "Total Weighted Score") +
       theme_minimal(base_size = 14)
   })
