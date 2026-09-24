@@ -1045,7 +1045,14 @@ server <- function(input, output, session) {
       ),
       if (!is.null(cfg$note)) p(em(cfg$note)),
       h4("Power Bypass Alternative Specifications:"),
-      tags$div(style = "margin-left: 20px;", about_alternatives_table(dat, cfg))
+      tags$div(style = "margin-left: 20px;", about_alternatives_table(dat, cfg)),
+      # A year may declare a figure of its bypass schedules (years.R,
+      # schedule_image; the file lives in SalmonCountR/www/).
+      if (!is.null(cfg$schedule_image)) tags$div(
+        style = "margin-left: 20px; max-width: 900px;",
+        tags$img(src = cfg$schedule_image, style = "width: 100%; height: auto;",
+                 alt = "Bypass flow schedules"),
+        if (!is.null(cfg$schedule_caption)) p(em(cfg$schedule_caption)))
     )
   })
 

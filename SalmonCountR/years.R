@@ -117,15 +117,16 @@ ARG_ALT_SPECS_2025 <- data.frame(
 # first bypass day (Oct 15, Oct 21, Oct 28, Oct 15) and S2's ends after Nov 21
 # -- so they are PB1-PB4 in this year's alt_key. NOTE the 2026 schedules are not
 # the 2025 ones with the same code: 2026 PB1 is the 2025 PB2 schedule and 2026
-# PB2 is the 2025 PB4 schedule; PB3 and PB4 are new. S5-S8 are TBD.
+# PB2 is the 2025 PB4 schedule; PB3 and PB4 are new. S5-S8 are TBD. The
+# schedules are drawn in SalmonCountR/www/2026_bypass_schedules_draft.png, from
+# the 24 Sep 2026 ARG ad hoc deck, which confirms this mapping.
 #
 # The valuation was run on two WY2026 operations forecasts. Bypass volume is
-# the same under both; energy, loss and emissions differ. The 50% exceedance
-# case (Sep50_WY2026_draft) is used here, matching the 2025 values (2025 PB4,
-# the same schedule as 2026 S2, was 4,959 MWh; the 50% case gives 5,056, the
-# 90% case 3,873). The 90% case (Sep90_WY2026_draft) for reference:
-#   S1 5,836 MWh $291,767 2,275 t; S2 3,873 MWh $193,870 1,503 t;
-#   S3 5,855 MWh $300,183 2,451 t; S4 8,556 MWh $427,567 3,273 t.
+# the same under both; energy, loss and emissions differ. The 90% exceedance
+# case (Sep90_WY2026_draft) is used here, per K. Thielen (B. Mahardja, 24 Sep
+# 2026). The 50% case (Sep50_WY2026_draft) for reference:
+#   S1 7,730 MWh $394,566 3,095 t; S2 5,056 MWh $257,482 1,980 t;
+#   S3 8,198 MWh $427,476 3,472 t; S4 11,378 MWh $580,305 4,487 t.
 # Loss: 2025 hourly DA LMP at WAPA's node (WAPAMEEA3_ACT_ASR_APND). CO2: SGIP
 # SIGNAL MOER v2.0, BANC 2025.
 #
@@ -213,8 +214,11 @@ ARG_YEARS <- list(
     # The deliverable models the fall of 2026, and that is what the Temperature
     # Explorer shows, even though the population model projects from 2025.
     temperature_year      = 2026,
-    hydro_cost_note       = "Draft 2026 valuation (Reclamation, 23 Sep 2026) on the 50% exceedance WY2026 operations forecast; ATSP 38 variants carry their base scenario's values. Note the 2026 schedules differ from the 2025 alternatives with the same code.",
-    note                  = "Draft 2026 temperature deliverable (23 Sep 2026) run through the 2025 model. Objective weights are placeholders carried over from 2025; hydropower costs are the draft 2026 valuation."
+    hydro_cost_note       = "Draft 2026 valuation (Reclamation, 23 Sep 2026) on the 90% exceedance WY2026 operations forecast; ATSP 38 variants carry their base scenario's values. Note the 2026 schedules differ from the 2025 alternatives with the same code.",
+    # Shown on the About tab under the alternatives table; file in SalmonCountR/www/.
+    schedule_image        = "2026_bypass_schedules_draft.png",
+    schedule_caption      = "Draft bypass schedules for Scenarios 1-4 (ARG ad hoc meeting, 24 Sep 2026). The ATSP 38 variants follow the same schedules.",
+    note                  = "Draft 2026 temperature deliverable (24 Sep 2026, eight scenarios) run through the 2025 model. Objective weights are placeholders carried over from 2025; hydropower costs are the draft 2026 valuation."
   )
 )
 

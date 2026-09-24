@@ -7,18 +7,21 @@ draft 2026 temperature deliverable run through the 2025 model.
 
 | File | From |
 |---|---|
-| `alt_key.rds`, `env_ext_list.rds`, `df_all.rds`, `observed_temps.rds`, `temperature_alternatives.xlsx` | `analysis/temperature_data.R` on `data_raw/TemperatureModelingResults_9-23-26.xlsx`, run on 2026-09-23 with `ARG_OBS_END = "2025-09-21"` |
+| `alt_key.rds`, `env_ext_list.rds`, `df_all.rds`, `observed_temps.rds`, `temperature_alternatives.xlsx` | `analysis/temperature_data.R` on `data_raw/TemperatureModelingResults_9-24-26.xlsx`, run on 2026-09-24 with `ARG_OBS_END = "2025-09-21"` |
 | `results_full.rds` and the other model outputs | `SalmonCountR/precompute.R` with `ARG_APP_DATA_DIR` pointed here |
 
-The deliverable (V. Martinez, 23 Sep 2026) is a draft. It has six scenarios,
-and two more are expected: Scenarios 1 and 2 on the ATSP 38 schedule.
+The deliverable (V. Martinez, 24 Sep 2026, with the ARG ad hoc deck
+`DRAFT_WaterTemperatureModeling_9_24_26_ARGAdhoc.pptx`) is a draft with eight
+scenarios. It replaces the 23 Sep file, which had six and is kept in
+`archive/legacy_inputs/`. The deck's schedule chart is in
+`SalmonCountR/www/2026_bypass_schedules_draft.png` and shown on the About tab.
 
 | Code | Workbook label |
 |---|---|
 | `NB` | ATSP 41 - No Bypass |
 | `NB-38` | ATSP 38 - No Bypass |
 | `PB1` … `PB4` | ATSP 41 - Scenario 1 … Scenario 4 |
-| `PB1-38`, `PB2-38` | ATSP 38 - Scenario 1, Scenario 2 (expected) |
+| `PB1-38`, `PB2-38` | ATSP 38 - Scenario 1, Scenario 2 |
 
 ## When the updated deliverable arrives
 
@@ -49,8 +52,8 @@ the app and pick **2026 (draft)** under Analysis year. Commit the folder.
 
 - **Hydropower costs and specifications** (`ARG_ALT_SPECS_2026` in `years.R`)
   are Reclamation's draft 2026 valuation of Scenarios 1–4
-  (`docs/2026_hydropower_costs_draft.png`, 23 Sep 2026), on the 50% exceedance
-  WY2026 operations forecast; the 90% case is recorded in the comments there.
+  (`docs/2026_hydropower_costs_draft.png`, 23 Sep 2026), on the 90% exceedance (per K. Thielen)
+  WY2026 operations forecast; the 50% case is recorded in the comments there.
   S1–S4 in that table are `PB1`–`PB4` here (the cooling at Hazel Avenue starts
   on each schedule's first bypass day). ATSP variants take their base
   scenario's values, and No Bypass costs nothing under either schedule.

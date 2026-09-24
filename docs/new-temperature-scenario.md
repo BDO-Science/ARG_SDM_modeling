@@ -46,7 +46,7 @@ The reader **discovers the scenarios from the labels in row 1**, so a workbook
 can carry any number of scenarios, in any order, and adding one is a data
 change. Both deliverables so far read this way: the published 2025 file,
 `data_raw/SDM Power Bypass Temperature Modeling Results.xlsx`, and the 2026
-draft, `data_raw/TemperatureModelingResults_9-23-26.xlsx`.
+draft, `data_raw/TemperatureModelingResults_9-24-26.xlsx`.
 
 **One sheet per meteorological year**, named exactly `2011`, `2014`, `2017`,
 `2020`. Other sheets (`Scenario Summary`, `Flow`, `Averaged All Years`) are

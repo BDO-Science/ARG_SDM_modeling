@@ -151,7 +151,7 @@ are registered in `ARG_YEARS` in `SalmonCountR/years.R`, each pointing at a fold
 | Entry | Folder | State |
 |---|---|---|
 | `2025` (default) | `SalmonCountR/app_data/` | The published analysis |
-| `2026` | `SalmonCountR/app_data/2026/` | Draft: the 23 Sep 2026 temperature deliverable run through the 2025 model, with placeholder weights and hydropower costs. See its [README](SalmonCountR/app_data/2026/README.md) |
+| `2026` | `SalmonCountR/app_data/2026/` | Draft: the 24 Sep 2026 temperature deliverable (eight scenarios) run through the 2025 model, with the draft 2026 hydropower valuation and placeholder weights. See its [README](SalmonCountR/app_data/2026/README.md) |
 
 Each entry names the calendar year its deliverable models (`temperature_year`,
 2026 for the draft), which the Temperature Explorer shows, separately from the
