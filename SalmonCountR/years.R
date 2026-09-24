@@ -136,9 +136,9 @@ ARG_ALT_SPECS_2026 <- local({
   s <- data.frame(
     alt   = c("PB1", "PB2", "PB3", "PB4"),
     af    = c(31728, 20822, 33711, 46601),
-    mwh   = c(7730, 5056, 8198, 11378),
-    loss  = c(394566, 257482, 427476, 580305),
-    mtco2 = c(3095, 1980, 3472, 4487),
+    mwh   = c(5836, 3873, 5855, 8556),
+    loss  = c(291767, 193870, 300183, 427567),
+    mtco2 = c(2275, 1503, 2451, 3273),
     description = c(
       "250 cfs starting Oct 15, 500 cfs on Oct 28, 250 cfs on Nov 14, end bypass on Nov 30",
       "250 cfs starting Oct 21, 500 cfs on Oct 28, 250 cfs on Nov 7, end bypass on Nov 21",
