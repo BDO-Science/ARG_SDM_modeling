@@ -1027,4 +1027,57 @@ g11 <- ggplot() +
 
 save_talk(g11, "11_calibration.png", width = 14, height = 6.4)
 
+
+# ============================================================================
+# 14. The other three links on one slide
+# ============================================================================
+# Spawn timing, pre-spawn survival and density dependence on one slide for the
+# main deck; the full single-topic figures (10, 12, 13) move to the appendix.
+# One headline per panel, one colour per role: yellow is a warm month (a
+# temperature effect), blue is the model, grey the reference.
+p14a <- spawn_dist %>% filter(panel == lab_oct) %>%
+  ggplot(aes(date, p, colour = lvl)) +
+  geom_line(linewidth = 1.6) + geom_point(size = 2.4) +
+  scale_colour_manual(values = c(Cool = SERIES, Warm = TEMP_WARM), name = NULL) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(x = "Date", y = "Share of redds",
+       title = "Spawn timing",
+       subtitle = sprintf("Warm October: median spawning %+.0f days", shift_oct)) +
+  theme_talk(base_size = 20, legend = "inside") +
+  theme(legend.position.inside = c(0.98, 0.98), legend.justification = c(1, 1),
+        plot.subtitle = element_text(size = 15, colour = INK_SOFT))
+
+p14b <- ggplot(tibble(dd = dd_grid, s = surv_adult_prespawn(dd_grid)), aes(dd, s)) +
+  annotate("rect", xmin = min(dd_obs), xmax = max(dd_obs), ymin = -Inf, ymax = Inf,
+           fill = "#FFFFFF", alpha = 0.07) +
+  geom_line(colour = SERIES, linewidth = 1.6) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, 1)) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(x = "Degree-days before spawning", y = "Adults surviving to spawn",
+       title = "Pre-spawn survival",
+       subtitle = sprintf("Observed range: %.0f-%.0f%% survival",
+                          100 * surv_adult_prespawn(max(dd_obs)), 100 * surv_adult_prespawn(min(dd_obs)))) +
+  theme_talk(base_size = 20, legend = "none") +
+  theme(plot.subtitle = element_text(size = 15, colour = INK_SOFT))
+
+p14c <- tibble(redds = seq(0, 60000, by = 500)) %>%
+  mutate(s = P_BASE_S0 / (1 + redds / P_BASE_K)) %>%
+  ggplot(aes(redds, s)) +
+  geom_line(colour = SERIES, linewidth = 1.6) +
+  scale_x_continuous(labels = scales::comma) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, NA)) +
+  labs(x = "Redds", y = "Density-dependent survival",
+       title = "Density dependence",
+       subtitle = sprintf("Capacity %s redds at 1,000 cfs", scales::comma(round(P_BASE_K)))) +
+  theme_talk(base_size = 20, legend = "none") +
+  theme(plot.subtitle = element_text(size = 15, colour = INK_SOFT))
+
+g14 <- patchwork::wrap_plots(p14a, p14b, p14c, nrow = 1) +
+  patchwork::plot_annotation(
+    theme = theme(plot.background = element_rect(fill = SURFACE, colour = NA),
+                  panel.background = element_rect(fill = SURFACE, colour = NA)))
+
+save_talk(g14, "14_three_links.png", width = 16, height = 6.2)
+
 cat("\nAll BDSC figures written to figures/bdsc/\n")
