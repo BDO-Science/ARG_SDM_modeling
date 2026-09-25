@@ -367,9 +367,9 @@ bump <- function(d, ylab) {
 
 p5 <- patchwork::wrap_plots(
   bump(rank_by_tdm, "Rank by adult population index  (1 = best)") +
-    labs(subtitle = "By egg mortality model (met years equally weighted)"),
+    labs(subtitle = "By temperature-dependent mortality model"),
   bump(rank_by_met, NULL) +
-    labs(subtitle = "By meteorological year (models at elicited weights)"),
+    labs(subtitle = "By meteorological year"),
   nrow = 1) +
   patchwork::plot_annotation(
     theme = theme(plot.background = element_rect(fill = SURFACE, colour = NA),
