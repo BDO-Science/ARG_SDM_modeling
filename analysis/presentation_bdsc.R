@@ -264,23 +264,27 @@ save_talk(p3, "03_three_objectives.png")
 # PB3 and PB5 bypass the identical volume on different schedules. Under the
 # corrected model they differ by 261 (+/- 36) adults, a paired within-seed
 # contrast rather than a subtraction of the two levels shown here.
+# Orange is PB4, Reclamation's 2025 selection, on every figure in the talk.
+# The PB3/PB5 same-volume pair is picked out in white instead.
 vb <- read_csv(here("output", "reporting_values.csv"), show_col_types = FALSE) %>%
   filter(scenario != "NB") %>%
-  mutate(pair = scenario %in% c("PB3", "PB5"))
+  mutate(role = case_when(scenario == "PB4" ~ "sel",
+                          scenario %in% c("PB3", "PB5") ~ "pair",
+                          TRUE ~ "other"))
 
 p4 <- ggplot(vb, aes(volume_Mm3, gain_vs_NB)) +
   geom_smooth(method = "lm", se = FALSE, colour = GRID, linewidth = 0.9,
               linetype = "dashed", formula = y ~ x) +
-  geom_point(aes(colour = pair, size = pair)) +
-  geom_text_repel(aes(label = scenario, colour = pair), size = 6.8,
+  geom_point(aes(colour = role, size = role)) +
+  geom_text_repel(aes(label = scenario, colour = role), size = 6.8,
                   box.padding = 0.55, segment.colour = GRID, show.legend = FALSE) +
   # Sits in the empty upper-left rather than over the trend line: at the old
   # x = 21.4 the right edge of the label ran into PB4.
   annotate("text", x = 14.5, y = 2850,
-           label = "same volume,\ndifferent schedule:\n261 ± 36 adults apart",
+           label = "PB3 and PB5: same volume,\ndifferent schedule,\n261 ± 36 adults apart",
            colour = INK, size = 6.5, lineheight = 1.05, hjust = 0.5) +
-  scale_colour_manual(values = c(`TRUE` = HILITE, `FALSE` = SERIES), guide = "none") +
-  scale_size_manual(values = c(`TRUE` = 6.5, `FALSE` = 4), guide = "none") +
+  scale_colour_manual(values = c(sel = HILITE, pair = INK, other = SERIES), guide = "none") +
+  scale_size_manual(values = c(sel = 6.5, pair = 6.5, other = 4), guide = "none") +
   scale_x_continuous(limits = c(8, 54)) +
   scale_y_continuous(limits = c(0, 4300), labels = function(x) format(x, big.mark = ",")) +
   labs(x = "Bypass volume (million m³)",
@@ -342,9 +346,12 @@ movers <- bind_rows(rank_by_tdm, rank_by_met) %>%
   group_by(scenario, panel = rep(c("tdm", "met"), c(nrow(rank_by_tdm), nrow(rank_by_met)))) %>%
   summarise(span = max(rank) - min(rank), .groups = "drop") %>%
   filter(span >= 3) %>% pull(scenario) %>% unique()
+# PB4 is always drawn, in orange, as on every other figure; no bypass is the
+# reference grey; the other movers are plain blue.
+movers <- union(movers, "PB4")
 mover_cols <- setNames(rep(SERIES, length(movers)), movers)
 if ("NB"  %in% movers) mover_cols["NB"]  <- REF_FILL
-if ("PB6" %in% movers) mover_cols["PB6"] <- HILITE
+mover_cols["PB4"] <- HILITE
 mover_cols["stable"] <- DIM
 
 bump <- function(d, ylab) {
@@ -762,14 +769,18 @@ cooling <- by_alt %>%
          alt = factor(alt, levels = c("PB1", "PB2", "PB2b", "PB2c",
                                       "PB3", "PB4", "PB5", "PB6")))
 
+cooling <- cooling %>% mutate(sel = alt == "PB4")   # PB4 orange, as on every figure
+
 g9 <- ggplot(cooling, aes(Date, delta)) +
   geom_hline(yintercept = 0, colour = AXIS, linewidth = 0.5) +
-  geom_area(fill = SERIES, alpha = 0.8) +
-  geom_line(colour = SERIES, linewidth = 0.8) +
+  geom_area(aes(fill = sel), alpha = 0.8) +
+  geom_line(aes(colour = sel), linewidth = 0.8) +
+  scale_fill_manual(values = c(`TRUE` = HILITE, `FALSE` = SERIES), guide = "none") +
+  scale_colour_manual(values = c(`TRUE` = HILITE, `FALSE` = SERIES), guide = "none") +
   # Every panel gets its own axis lines and ticks; text only on the margins.
   facet_wrap(~ alt, nrow = 2, axes = "all", axis.labels = "margins") +
   scale_x_date(date_breaks = "1 month", date_labels = "%b") +
-  labs(x = NULL, y = "°C cooler than no bypass") +
+  labs(x = "Date", y = "°C cooler than no bypass") +
   theme_talk(base_size = 22, legend = "none") +
   theme(panel.spacing = unit(14, "pt"))
 
