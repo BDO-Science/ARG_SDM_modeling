@@ -1,29 +1,38 @@
 # app_data/2026
 
 The app's **2026 (draft)** analysis year reads from this folder. It holds the
-draft 2026 temperature deliverable run through the 2025 model.
+2026 temperature deliverable run through the 2025 model.
 
 ## What is here
 
 | File | From |
 |---|---|
-| `alt_key.rds`, `env_ext_list.rds`, `df_all.rds`, `observed_temps.rds`, `temperature_alternatives.xlsx` | `analysis/temperature_data.R` on `data_raw/TemperatureModelingResults_9-24-26.xlsx`, run on 2026-09-24 with `ARG_OBS_END = "2025-09-21"` |
+| `alt_key.rds`, `env_ext_list.rds`, `df_all.rds`, `observed_temps.rds`, `temperature_alternatives.xlsx` | `analysis/temperature_data.R` on `data_raw/TemperatureModelingResults_9-30-26.xlsx`, run on 2026-09-30 with `ARG_OBS_END = "2025-09-21"` and `ARG_ATSP_BASE = "41"` |
 | `results_full.rds` and the other model outputs | `SalmonCountR/precompute.R` with `ARG_APP_DATA_DIR` pointed here |
 
-The deliverable (V. Martinez, 24 Sep 2026, with the ARG ad hoc deck
-`DRAFT_WaterTemperatureModeling_9_24_26_ARGAdhoc.pptx`) is a draft with eight
-scenarios. It replaces the 23 Sep file, which had six and is kept in
-`archive/legacy_inputs/`. The deck's schedule chart is in
-`SalmonCountR/www/2026_bypass_schedules_draft.png` and shown on the About tab.
+The deliverable (30 Sep 2026) has ten scenarios. It replaces the 24 Sep file,
+which had eight and is kept in `archive/legacy_inputs/` with the 23 Sep one
+(six). It adds `PB5` and `PB6` and revises the temperatures of the other eight
+(by up to 1.1 °C on single days at Watt Avenue for `PB3`, under 0.5 °C for the
+rest). The schedules are in `data_raw/2026BypassModelingScenarios.xlsx`:
+descriptions for Scenarios 1–4 on `Sheet1`, daily bypass flow for Scenarios 1–6
+on `Timeseries`. The 24 Sep ARG ad hoc deck's schedule chart, which draws
+`PB1`–`PB4` only, is in `SalmonCountR/www/2026_bypass_schedules_draft.png` and
+shown on the About tab.
 
-| Code | Workbook label |
-|---|---|
-| `NB` | ATSP 41 - No Bypass |
-| `NB-38` | ATSP 38 - No Bypass |
-| `PB1` … `PB4` | ATSP 41 - Scenario 1 … Scenario 4 |
-| `PB1-38`, `PB2-38` | ATSP 38 - Scenario 1, Scenario 2 |
+| Code | Workbook label | Scenario |
+|---|---|---|
+| `NB` | `NBP` | No Bypass, ATSP 41 |
+| `NB-38` | `NBP - 38` | No Bypass, ATSP 38 |
+| `PB1` … `PB6` | `PB1` … `PB6` | Scenario 1 … Scenario 6, ATSP 41 |
+| `PB1-38`, `PB2-38` | `PB1-38`, `PB2-38` | Scenario 1, Scenario 2, ATSP 38 |
 
-## When the updated deliverable arrives
+This workbook labels its scenarios by code, where the earlier ones wrote them
+out (`ATSP 38 - Scenario 1`); the reader takes either. A code-style label does
+not name the base ATSP schedule, so `ARG_ATSP_BASE = "41"` records it in the
+key.
+
+## When an updated deliverable arrives
 
 Drop the new workbook in `data_raw/`, then from the repo root, in a fresh R
 session:
@@ -31,7 +40,8 @@ session:
 ```r
 Sys.setenv(ARG_TEMP_FILE    = "data_raw/<new file>.xlsx",
            ARG_APP_DATA_DIR = "SalmonCountR/app_data/2026",
-           ARG_OBS_END      = "2025-09-21")     # see below
+           ARG_OBS_END      = "2025-09-21",     # see below
+           ARG_ATSP_BASE    = "41")
 source("analysis/temperature_data.R")
 ```
 
@@ -43,23 +53,25 @@ Sys.setenv(ARG_APP_DATA_DIR = "SalmonCountR/app_data/2026")
 source("SalmonCountR/precompute.R")             # about 15 minutes
 ```
 
-`ARG_HYDRO_COST_2026` in `SalmonCountR/years.R` already lists all eight codes.
-If the new file uses other labels, add their codes there or the year shows as
+`ARG_HYDRO_COST_2026` in `SalmonCountR/years.R` lists all ten codes. If the new
+file uses other labels, add their codes there or the year shows as
 *(data not loaded)* and the banner says which alternative has no cost. Restart
 the app and pick **2026 (draft)** under Analysis year. Commit the folder.
 
 ## What is placeholder
 
 - **Hydropower costs and specifications** (`ARG_ALT_SPECS_2026` in `years.R`)
-  are Reclamation's draft 2026 valuation of Scenarios 1–4
-  (`docs/2026_hydropower_costs_draft.png`, 23 Sep 2026), on the 90% exceedance (per K. Thielen)
-  WY2026 operations forecast; the 50% case is recorded in the comments there.
-  S1–S4 in that table are `PB1`–`PB4` here (the cooling at Hazel Avenue starts
-  on each schedule's first bypass day). ATSP variants take their base
-  scenario's values, and No Bypass costs nothing under either schedule.
+  are Reclamation's 2026 valuation of `PB1`–`PB6`
+  (`docs/2026_hydropower_costs_draft.png`, received 30 Sep 2026), with
+  operations data from the `september_update.xlsx` forecast. It replaces the
+  23 Sep draft valuation of `PB1`–`PB4` (90% exceedance forecast, v1.4.1).
+  ATSP variants take their base scenario's values, as the table itself lists
+  them, and No Bypass costs nothing under either schedule.
   **The 2026 schedules are not the 2025 ones with the same code**: 2026 PB1 is
-  the 2025 PB2 schedule, 2026 PB2 is the 2025 PB4 schedule, and PB3 and PB4 are
-  new (500 cfs from Oct 28 and from Oct 15, to Nov 30). S5–S8 are TBD.
+  the 2025 PB2 schedule, 2026 PB2 the 2025 PB4 schedule and 2026 PB6 the 2025
+  PB2b schedule; PB3 and PB4 (500 cfs from Oct 28 and from Oct 15, to Nov 30)
+  and PB5 (250 cfs from Oct 21, 500 cfs from Oct 28, 250 cfs from Nov 11, to
+  Nov 30) are new.
 - **Objective weights** are the 2025 elicited set. They were elicited against
   2025's local swings, so they do not yet describe the global ranges below;
   re-elicit them in the Swing Weighting tab, which now presents those ranges.
@@ -67,8 +79,8 @@ the app and pick **2026 (draft)** under Analysis year. Commit the folder.
   global-scaling ranges B. Mahardja proposed in September 2026 as a starting
   point: Chinook 0–25,000, steelhead 0–61 days, hydropower $0–3 million. The
   2025 tab is unaffected and keeps its local scaling.
-- **Bypass volumes** are not in the deliverable (no `Scenario Summary` sheet), so
-  nothing here reports volume per alternative.
+- **Bypass volumes** are not in the temperature workbook (no `Scenario Summary`
+  sheet); the About tab takes them from the valuation table.
 
 ## Why the decision date is 2025-09-21
 

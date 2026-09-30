@@ -87,30 +87,46 @@ read_sheet_layout <- function(input_path, sheet) {
 # The ATSP suffix appears only when the workbook mixes schedules; the base
 # schedule (ARG_ATSP_BASE, default the most common) keeps the plain codes so
 # they line up with earlier years.
+#
+# A label may also be a code already, as in the 30 Sep 2026 deliverable:
+#   "NBP" -> NB    "NBP - 38" -> NB-38    "PB1" -> PB1    "PB1-38" -> PB1-38
+# There the suffix is the ATSP schedule and a label without one is on the base
+# schedule, which the label does not name: set ARG_ATSP_BASE to record it in
+# the key (it stays NA otherwise).
 alt_codes_from_labels <- function(labels) {
-  atsp <- str_match(labels, regex("ATSP\\s*(\\d+)", ignore_case = TRUE))[, 2]
+  short   <- str_match(labels, regex("^(NBP?|PB[A-Za-z0-9]+?)\\s*(?:[-–]\\s*(\\d+))?$", ignore_case = TRUE))
+  is_code <- !is.na(short[, 1])
+  atsp <- ifelse(is_code, short[, 3],
+                 str_match(labels, regex("ATSP\\s*(\\d+)", ignore_case = TRUE))[, 2])
   core <- str_trim(str_remove(labels, regex("^\\s*ATSP\\s*\\d+\\s*[-:–]\\s*", ignore_case = TRUE)))
   scen <- str_match(core, regex("^scenario\\s*(\\S+)$", ignore_case = TRUE))[, 2]
   code <- case_when(
+    is_code & str_detect(short[, 2], regex("^NB", ignore_case = TRUE)) ~ "NB",
+    is_code ~ str_replace(short[, 2], regex("^pb", ignore_case = TRUE), "PB"),
     str_detect(core, regex("^no\\s*bypass$", ignore_case = TRUE)) ~ "NB",
     !is.na(scen)                                                  ~ paste0("PB", scen),
     TRUE                                                          ~ make.names(core)
   )
-  schedules <- unique(na.omit(atsp))
+  base_env  <- Sys.getenv("ARG_ATSP_BASE", "")
+  schedules <- unique(na.omit(atsp[!is_code]))
   if (length(schedules) > 1) {
-    base <- Sys.getenv("ARG_ATSP_BASE", "")
+    base <- base_env
     if (!nzchar(base)) {
-      counts <- table(atsp)
+      counts <- table(atsp[!is_code])
       top    <- names(counts)[counts == max(counts)]
-      base   <- if (length(top) == 1) top else atsp[!is.na(atsp)][1]
+      base   <- if (length(top) == 1) top else atsp[!is_code & !is.na(atsp)][1]
     }
     if (!base %in% schedules) {
       stop("ARG_ATSP_BASE = ", base, " but the workbook has ATSP ",
            paste(schedules, collapse = ", "))
     }
-    code <- ifelse(!is.na(atsp) & atsp != base, paste0(code, "-", atsp), code)
+    code <- ifelse(!is_code & !is.na(atsp) & atsp != base, paste0(code, "-", atsp), code)
     message("ATSP schedules ", paste(schedules, collapse = ", "), " in the workbook; ",
             base, " keeps the plain codes.")
+  }
+  if (any(is_code)) {
+    code <- ifelse(is_code & !is.na(atsp), paste0(code, "-", atsp), code)
+    if (nzchar(base_env)) atsp[is_code & is.na(atsp)] <- base_env
   }
   if (anyDuplicated(code)) {
     stop("Scenario labels map to duplicate codes: ",

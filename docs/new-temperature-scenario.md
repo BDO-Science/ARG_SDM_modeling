@@ -46,7 +46,7 @@ The reader **discovers the scenarios from the labels in row 1**, so a workbook
 can carry any number of scenarios, in any order, and adding one is a data
 change. Both deliverables so far read this way: the published 2025 file,
 `data_raw/SDM Power Bypass Temperature Modeling Results.xlsx`, and the 2026
-draft, `data_raw/TemperatureModelingResults_9-24-26.xlsx`.
+one, `data_raw/TemperatureModelingResults_9-30-26.xlsx`.
 
 **One sheet per meteorological year**, named exactly `2011`, `2014`, `2017`,
 `2020`. Other sheets (`Scenario Summary`, `Flow`, `Averaged All Years`) are
@@ -77,8 +77,12 @@ On each of those sheets:
 the workbook mixes schedules, the base schedule keeps the plain codes so they
 line up with earlier years, and the others get a suffix: `ATSP 38 - No Bypass`
 becomes `NB-38`. The base is the most common schedule in the file; set
-`ARG_ATSP_BASE` (for example `"41"`) to choose it explicitly. The mapping is
-printed when the script runs and saved as `alt_key.rds` (see step 3).
+`ARG_ATSP_BASE` (for example `"41"`) to choose it explicitly. A label can also
+be a code already, as in the 30 Sep 2026 file: `NBP` becomes `NB`, `NBP - 38`
+becomes `NB-38`, and `PB1` and `PB1-38` are kept. There the suffix is the ATSP
+schedule, and `ARG_ATSP_BASE` records the schedule of the labels without one.
+The mapping is printed when the script runs and saved as `alt_key.rds` (see
+step 3).
 
 `temperature_data.R` checks all of this before it does anything else and stops
 with a plain message if something is off: a missing sheet, a block without both
