@@ -107,10 +107,11 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                  tabPanel("About",
                           fluidRow(
                             column(12,
-                                   h3("Author & Contact Information"),
+                                   h3("Contact Information"),
                                    tags$ul(
-                                     tags$li(strong("Author:"), "Alexander Vaisvil"),
-                                     tags$li(strong("Email:"), tags$a(href = "mailto:avaisvil@usbr.gov", "avaisvil@usbr.gov")),
+                                     tags$li(strong("Contacts:"),
+                                             "Lillian McCormick (", tags$a(href = "mailto:lmccormick@usbr.gov", "lmccormick@usbr.gov"), ") or ",
+                                             "Lisa H. Elliott (", tags$a(href = "mailto:lelliott@usbr.gov", "lelliott@usbr.gov"), ")"),
                                      tags$li(strong("Institution/Organization:"), "U.S. Bureau of Reclamation"),
                                      tags$li(strong("GitHub Repository:"), tags$a(href = "https://github.com/BDO-Science/ARG_SDM_modeling", "https://github.com/BDO-Science/ARG_SDM_modeling")),
                                      tags$li(strong("Date Last Updated:"), format(file.info("app.R")$mtime, "%B %d, %Y"))

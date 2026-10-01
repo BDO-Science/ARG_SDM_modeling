@@ -72,16 +72,19 @@ the app and pick **2026** under Analysis year. Commit the folder.
   release leaves No Bypass on Sep 28, the day the ATSP 38 runs do, and sits
   between the ATSP 41 and ATSP 38 runs into mid-October; its bypass cooling
   then arrives about Oct 24, three days after `PB2`'s. That early cooling is
-  why `PB5` scores 50.25 steelhead days against `PB2`'s 46.25. Ask the
-  temperature modellers which ATSP or target schedule `PB5` was run on.
+  why `PB5` scores 50.25 steelhead days against `PB2`'s 46.25. Decision
+  (1 Oct 2026): `PB5` is used as delivered. If the temperature modellers
+  later say it was run on a different ATSP or target schedule, re-run it.
 
-## Inputs still to be settled
+## Inputs
 
 - **Hydropower costs and specifications** (`ARG_ALT_SPECS_2026` in `years.R`)
   are Reclamation's 2026 valuation of `PB1`–`PB6`
   (`docs/2026_hydropower_costs.png`, received 30 Sep 2026), with
-  operations data from the `september_update.xlsx` forecast. It replaces the
-  23 Sep draft valuation of `PB1`–`PB4` (90% exceedance forecast, v1.4.1).
+  operations data from the `september_update.xlsx` forecast, which K. Thielen
+  confirmed (1 Oct 2026) is the updated 90% exceedance outlook with observed
+  data and projections through at least Nov 30. It replaces the 23 Sep
+  valuation of `PB1`–`PB4` on the earlier 90% forecast (v1.4.1).
   ATSP variants take their base scenario's values, as the table itself lists
   them, and No Bypass costs nothing under either schedule.
   **The 2026 schedules are not the 2025 ones with the same code**: 2026 PB1 is

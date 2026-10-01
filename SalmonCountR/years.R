@@ -121,10 +121,13 @@ ARG_ALT_SPECS_2025 <- data.frame(
 # PB3, PB4 and PB5 are new. SalmonCountR/www/2026_bypass_schedules.png draws
 # all six from the Timeseries sheet (analysis/bypass_schedules_2026.R).
 #
-# Operations data: the september_update.xlsx forecast. This replaces the 23 Sep
-# draft valuation of PB1-PB4, which was run on the Sep50 and Sep90 WY2026 draft
-# forecasts and used here at 90% exceedance per K. Thielen (losses $291,767,
-# $193,870, $300,183, $427,567; v1.4.1). Bypass volumes are unchanged.
+# Operations data: the september_update.xlsx forecast, which K. Thielen
+# confirmed (1 Oct 2026) is the updated 90% exceedance outlook, with observed
+# data and projections through at least Nov 30, for the final modelling. Its
+# losses sit near the earlier 50% case because of the updated data, not
+# because of a change of exceedance. This replaces the 23 Sep valuation of
+# PB1-PB4 on the Sep90 WY2026 forecast (losses $291,767, $193,870, $300,183,
+# $427,567; v1.4.1). Bypass volumes are unchanged.
 # Loss: 2025 hourly DA LMP at WAPA's node (WAPAMEEA3_ACT_ASR_APND). CO2: SGIP
 # SIGNAL MOER v2.0, BANC 2025.
 #
@@ -222,7 +225,7 @@ ARG_YEARS <- list(
     # The deliverable models the fall of 2026, and that is what the Temperature
     # Explorer shows, even though the population model projects from 2025.
     temperature_year      = 2026,
-    hydro_cost_note       = "2026 valuation (Reclamation, 30 Sep 2026) on the September update of the operations forecast; ATSP 38 variants carry their base scenario's values. Note the 2026 schedules differ from the 2025 alternatives with the same code.",
+    hydro_cost_note       = "2026 valuation (Reclamation, 30 Sep 2026) on the September update of the 90% exceedance operations outlook; ATSP 38 variants carry their base scenario's values. Note the 2026 schedules differ from the 2025 alternatives with the same code.",
     # Shown on the About tab under the alternatives table; file in SalmonCountR/www/.
     schedule_image        = "2026_bypass_schedules.png",
     schedule_caption      = "Daily bypass flow for PB1-PB6 (Reclamation, 30 Sep 2026). The ATSP 38 variants follow the same schedules as PB1 and PB2; No Bypass has none.",

@@ -5,7 +5,7 @@ on GitHub; `main` is the latest):
 
 ```
 git pull
-git checkout v1.5.1        # or stay on main
+git checkout v1.5.2        # or stay on main
 ```
 
 Then, in a fresh R session, from the repo root:
