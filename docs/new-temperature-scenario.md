@@ -272,8 +272,9 @@ meant to run on a scenario folder.
   `ARG_FLOW_CFS` for `precompute.R` (the 2026 run uses 1500, K = 35,171).
   Calibration always uses 1,000 cfs. Declare the same flow as
   `reference_flow` in the year's `years.R` entry. The app's flow slider
-  starts there and rescales the results for other flows; it does not rerun
-  the model.
+  starts there and rescales the results for other flows in proportion to K;
+  it does not rerun the model. For a flow you will report, run precompute at
+  that flow instead.
 
 ## If something goes wrong
 

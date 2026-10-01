@@ -133,7 +133,7 @@ between result sets; see [Analysis years](#analysis-years).
 |---|---|
 | **About** | Background, the nine alternatives and their volumes and costs, model components, references. |
 | **Temperature Explorer** | Daily temperature by alternative at Watt or Hazel Avenue, for October–December or the full first projection year, weighted across met years. Summary statistics table. |
-| **Compare Alternatives** | Reweight the precomputed projections by TDM model and met year, and rescale for a downstream flow (500–5,000 cfs, default 1,000). Nothing runs until **Run Comparison** is clicked. Time series, boxplots of the last *N* years, and a summary table with CSV export. |
+| **Compare Alternatives** | Reweight the precomputed projections by TDM model and met year, and rescale for a downstream flow (500–5,000 cfs, starting at the year's modelled flow: 1,500 for 2026, 1,000 for 2025). Nothing runs until **Run Comparison** is clicked. Time series, boxplots of the last *N* years, and a summary table with CSV export. |
 | **Swing Weighting** | Rank and score three hypothetical extreme alternatives to derive objective weights, then send them to Decision Support. |
 | **Decision Support** | Equal or manual objective weights → overall weighted score, per-objective contributions, the consequence table, and trade-off plots. Uses the Compare Alternatives settings once a comparison has been run. |
 
@@ -141,9 +141,12 @@ How flow works in the app: each analysis year's projections are run at one
 spawning flow, its `reference_flow` in `years.R`: 1,000 cfs for 2025 (K = 33,185)
 and 1,500 cfs for 2026 (K = 35,171; `ARG_FLOW_CFS = 1500` in `precompute.R`).
 Calibration always uses 1,000 cfs. The flow slider starts at the year's
-reference flow; any other flow rescales those results for the change in
-capacity after the fact. It does not rerun the model, and temperatures stay as
-modelled.
+reference flow; any other flow rescales those results in proportion to the
+change in capacity (spawners × K at the new flow ÷ K at the reference flow). It
+does not rerun the model, and temperatures stay as modelled. The proportional
+rescale was checked against a full re-run: 2026 rescaled from 1,000 to
+1,500 cfs matches the 1,500 cfs run within 3% in every year (median 0.1% after
+2045), because the model's Beverton-Holt equilibrium scales with K.
 
 ### Analysis years
 
