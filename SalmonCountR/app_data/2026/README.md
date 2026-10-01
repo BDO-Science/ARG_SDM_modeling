@@ -8,7 +8,7 @@ temperature deliverable run through the 2025 model.
 | File | From |
 |---|---|
 | `alt_key.rds`, `env_ext_list.rds`, `df_all.rds`, `observed_temps.rds`, `temperature_alternatives.xlsx` | `analysis/temperature_data.R` on `data_raw/TemperatureModelingResults_9-30-26.xlsx`, run on 2026-09-30 with `ARG_OBS_END = "2025-09-21"` and `ARG_ATSP_BASE = "41"` |
-| `results_full.rds` and the other model outputs, and `data_vintage.rds` (the "Data refreshed" stamp the app shows) | `SalmonCountR/precompute.R` with `ARG_APP_DATA_DIR` pointed here |
+| `results_full.rds` and the other model outputs, and `data_vintage.rds` (the "Data refreshed" stamp the app shows) | `SalmonCountR/precompute.R` with `ARG_APP_DATA_DIR` pointed here and `ARG_FLOW_CFS = "1500"`, run on 2026-10-01: projections at 1,500 cfs spawning capacity (K = 35,171), calibration at 1,000 cfs as always |
 
 The deliverable (30 Sep 2026) has ten scenarios. It replaces the 24 Sep file,
 which had eight and is kept in `archive/legacy_inputs/` with the 23 Sep one
@@ -49,8 +49,9 @@ Check the printed code mapping (`NB-38`, `PB1-38`, `PB2-38` for the ATSP 38
 scenarios). Then, in another fresh session:
 
 ```r
-Sys.setenv(ARG_APP_DATA_DIR = "SalmonCountR/app_data/2026")
-source("SalmonCountR/precompute.R")             # about 15 minutes
+Sys.setenv(ARG_APP_DATA_DIR = "SalmonCountR/app_data/2026",
+           ARG_FLOW_CFS     = "1500")             # 2026 projections run at 1,500 cfs
+source("SalmonCountR/precompute.R")             # about 20 minutes
 ```
 
 `ARG_HYDRO_COST_2026` in `SalmonCountR/years.R` lists all ten codes. If the new

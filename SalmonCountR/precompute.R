@@ -1047,6 +1047,17 @@ K_at_1000 <- approx(
 
 cat(sprintf("Baseline carrying capacity at 1,000 cfs: K = %.0f spawners\n", K_at_1000))
 
+# Spawning flow for the FORECASTS (ARG_FLOW_CFS, default 1000 = the published
+# run). Calibration always uses K at 1,000 cfs, so the calibrated SAR and
+# rearing survival do not move with it; only the projections' capacity does.
+# The year's entry in years.R must declare the same reference_flow, which the
+# app's flow slider starts at and rescales from.
+.arg_flow <- suppressWarnings(as.numeric(Sys.getenv("ARG_FLOW_CFS", "1000")))
+if (is.na(.arg_flow) || .arg_flow <= 0) stop("ARG_FLOW_CFS must be a positive flow in cfs")
+K_forecast <- approx(instream_pre$flow_cfs, instream_pre$K_spawners, xout = .arg_flow, rule = 2)$y
+cat(sprintf("Forecast carrying capacity at %s cfs: K = %.0f spawners\n",
+            format(.arg_flow, big.mark = ","), K_forecast))
+
 # ---- 31.3 Define Base Life-Cycle Parameters ----
 base_P <- list(
   female_fraction = 0.5,
@@ -1118,7 +1129,7 @@ base_P_list <- calib_results %>%
         female_fraction = base_P$female_fraction,
         fec = base_P$fec,
         S0 = base_P$S0,
-        K_spawners = base_P$K_spawners,
+        K_spawners = K_forecast,   # forecasts run at ARG_FLOW_CFS; see 31.3
         SAR_mean = SARv,
         SAR_sd = base_P$SAR_sd,
         lag_probs = base_P$lag_probs,
@@ -1379,6 +1390,7 @@ if (normalizePath(.arg_data_dir, winslash = "/") !=
                         modified = file.mtime(file.path(.arg_data_dir, "env_ext_list.rds")),
                         bytes    = as.integer(file.size(file.path(.arg_data_dir, "env_ext_list.rds")))),
     downloaded = NULL,
+    flow_cfs   = .arg_flow,
     git_commit = tryCatch(system2("git", c("rev-parse", "--short", "HEAD"), stdout = TRUE, stderr = FALSE)[1],
                           error = function(e) NA_character_),
     note       = "Written by SalmonCountR/precompute.R"

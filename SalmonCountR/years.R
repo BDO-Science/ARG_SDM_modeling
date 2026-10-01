@@ -200,6 +200,8 @@ ARG_YEARS <- list(
     alt_specs             = ARG_ALT_SPECS_2025,
     first_projection_year = 2025,
     temperature_year      = 2025,
+    # Spawning flow the projections were run at (K from the habitat curve).
+    reference_flow        = 1000,
     # No objective_ranges: the published analysis scales locally, and stays so.
     note                  = "Published analysis. Elicited weights from the 2025 SDM workshop."
   ),
@@ -222,6 +224,10 @@ ARG_YEARS <- list(
     # 2025-09-21 so that the first projection year carries the scenario
     # temperatures. See app_data/2026/README.md for what a true 2026 start needs.
     first_projection_year = 2025,
+    # Spawning flow the projections were run at: precompute.R with
+    # ARG_FLOW_CFS = 1500 (K = 35,171 spawners; 1,000 cfs gives 33,185).
+    # Calibration still uses 1,000 cfs. The flow slider starts here.
+    reference_flow        = 1500,
     # The deliverable models the fall of 2026, and that is what the Temperature
     # Explorer shows, even though the population model projects from 2025.
     temperature_year      = 2026,
@@ -232,6 +238,12 @@ ARG_YEARS <- list(
     note                  = "The 30 Sep 2026 temperature deliverable (ten scenarios) run through the 2025 model. Objective weights start at the 2025 elicited set; hydropower costs are the 30 Sep 2026 valuation."
   )
 )
+
+#' The spawning flow a year's projections were run at (cfs). Years that predate
+#' the setting were run at 1,000 cfs.
+arg_reference_flow <- function(cfg) {
+  if (!is.null(cfg$reference_flow)) cfg$reference_flow else 1000
+}
 
 #' The calendar year a year's temperature deliverable models, for the
 #' Temperature Explorer. Falls back to the first projection year, which is what

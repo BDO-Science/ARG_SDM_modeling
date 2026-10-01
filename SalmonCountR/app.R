@@ -181,7 +181,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    tags$ul(
                                      tags$li(HTML("<strong>Egg Production:</strong> Eggs = Spawners × 0.5 (female fraction) × S<sub>pre</sub> × 5,522 (fecundity)")),
                                      tags$li(HTML("<strong>Density Dependence:</strong> Beverton-Holt at fry stage: dd = 0.347 / (1 + Redds / K)")),
-                                     tags$li(HTML("<strong>Carrying Capacity:</strong> K = 33,185 redds at the 1,000 cfs baseline (flow-dependent via slider)")),
+                                     tags$li(HTML("<strong>Carrying Capacity:</strong> K from the flow-habitat curve: 33,185 at 1,000 cfs (2025 projections and all calibration), 35,171 at 1,500 cfs (2026 projections); other flows via the slider")),
                                      tags$li(HTML("<strong>Fry Production:</strong> Fry = Eggs × S<sub>TDM</sub> × dd")),
                                      tags$li(HTML("<strong>Smolt Production:</strong> Smolts = Fry × rear_surv (calibrated at 0.5428)")),
                                      tags$li(HTML("<strong>Non-American River Survival:</strong> SAR = 0.00268 (calibrated value representing 0.27% survival from the Sacramento River to returning adults)")),
@@ -354,8 +354,12 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                               hr(),
                               # ★★★★★★★★★★★
                               h4("Flow and Capacity"),
+                              # Starts at the year's reference flow (years.R); the
+                              # server resets it on a year switch.
                               sliderInput("cmp_flow", "Set Downstream Flow (cfs)",
-                                          min = 500, max = 5000, value = 1000, step = 100),
+                                          min = 500, max = 5000, step = 100,
+                                          value = arg_reference_flow(arg_year_cfg(ARG_DEFAULT_YEAR))),
+                              uiOutput("flow_note"),
                               hr(),
                               # ★★★★★★★★★★
                               
@@ -599,6 +603,18 @@ server <- function(input, output, session) {
     updateSliderInput(session, "w_hydro",     value = unname(w["hydro"]))
   }, ignoreInit = TRUE)
 
+  # The flow slider starts at the flow the year was modelled at.
+  observeEvent(active_year(), {
+    updateSliderInput(session, "cmp_flow", value = arg_reference_flow(year_cfg()))
+  }, ignoreInit = TRUE)
+
+  output$flow_note <- renderUI({
+    rf <- arg_reference_flow(year_cfg())
+    helpText(paste0("The ", year_cfg()$label, " projections were modelled at ",
+                    format(rf, big.mark = ","), " cfs. Other flows rescale those results for the ",
+                    "change in spawning capacity only; temperatures stay as modelled."))
+  })
+
   # Temperature Explorer period labels name the year actually plotted.
   observeEvent(active_year(), {
     fy <- arg_temperature_year(year_cfg())
@@ -737,9 +753,9 @@ server <- function(input, output, session) {
     final_spawners <- rep(0, n_years)
     years_vec <- sort(unique(forecast_data$year))[1:n_years]
     
-    # Apply density-dependent scaling based on K change
-    # The default K at 1500 cfs (from the slider default)
-    base_K <- dat$get_K_spawners(1000)   # was 1500 — now matches both slider default AND precompute
+    # Apply density-dependent scaling based on K change, relative to the flow
+    # the year's projections were actually run at (reference_flow in years.R).
+    base_K <- dat$get_K_spawners(arg_reference_flow(dat$cfg))
     K_scalar <- K_spawners / base_K
     
     for (i in seq_along(alts)) {

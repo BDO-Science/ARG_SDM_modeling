@@ -137,9 +137,13 @@ between result sets; see [Analysis years](#analysis-years).
 | **Swing Weighting** | Rank and score three hypothetical extreme alternatives to derive objective weights, then send them to Decision Support. |
 | **Decision Support** | Equal or manual objective weights → overall weighted score, per-objective contributions, the consequence table, and trade-off plots. Uses the Compare Alternatives settings once a comparison has been run. |
 
-How flow works in the app: the projections are run at a fixed 1,000 cfs spawning
-capacity (K = 33,185 redds). The flow slider rescales those results for the change in
-capacity after the fact; it does not rerun the model.
+How flow works in the app: each analysis year's projections are run at one
+spawning flow, its `reference_flow` in `years.R`: 1,000 cfs for 2025 (K = 33,185)
+and 1,500 cfs for 2026 (K = 35,171; `ARG_FLOW_CFS = 1500` in `precompute.R`).
+Calibration always uses 1,000 cfs. The flow slider starts at the year's
+reference flow; any other flow rescales those results for the change in
+capacity after the fact. It does not rerun the model, and temperatures stay as
+modelled.
 
 ### Analysis years
 

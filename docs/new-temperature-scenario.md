@@ -267,9 +267,13 @@ meant to run on a scenario folder.
 
 - **Leap years.** Matching by day of year shifts the seasonal pattern by one day
   in leap years of the projection.
-- **Capacity is fixed at 1,000 cfs.** Spawning capacity (K = 33,185 redds) is held
-  at the 1,000 cfs reference flow for every scenario. The app's flow slider
-  rescales the results afterwards; it does not rerun the model.
+- **Capacity is fixed at one flow per run.** Spawning capacity is held at the
+  run's flow for every scenario: 1,000 cfs (K = 33,185) unless you set
+  `ARG_FLOW_CFS` for `precompute.R` (the 2026 run uses 1500, K = 35,171).
+  Calibration always uses 1,000 cfs. Declare the same flow as
+  `reference_flow` in the year's `years.R` entry. The app's flow slider
+  starts there and rescales the results for other flows; it does not rerun
+  the model.
 
 ## If something goes wrong
 
