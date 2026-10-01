@@ -40,17 +40,22 @@ sched <- sched %>%
 p <- ggplot(filter(sched, cfs > 0)) +
   geom_rect(aes(xmin = Date, xmax = Date + 1, ymin = 0, ymax = cfs),
             fill = arg_pal(1, begin = 0.35)) +
-  facet_wrap(~ strip, ncol = 3) +
-  scale_x_date(breaks = as.Date(c("2026-10-15", "2026-11-01", "2026-11-15")),
+  facet_wrap(~ strip, ncol = 3, axes = "all") +   # x and y axis on every panel
+  scale_x_date(breaks = as.Date(c("2026-10-15", "2026-11-01", "2026-11-15", "2026-12-01")),
                labels = function(d) sub(" 0", " ", format(d, "%b %d")),
                limits = as.Date(c("2026-10-15", "2026-12-01")),
                expand = expansion(mult = 0.02)) +
   scale_y_continuous(breaks = c(0, 250, 500), limits = c(0, 520),
                      expand = expansion(mult = c(0, 0.02))) +
-  labs(x = NULL, y = "Bypass flow (cfs)") +
-  theme_arg(base_size = 13) +
-  theme(panel.grid.major.x = element_blank(),
-        panel.spacing = unit(14, "pt"))
+  labs(x = "Date (2026)", y = "Bypass flow (cfs)") +
+  theme_arg(base_size = 13, border = FALSE) +
+  theme(axis.line         = element_line(colour = "black", linewidth = 0.6),
+        axis.ticks        = element_line(colour = "black", linewidth = 0.6),
+        axis.ticks.length = unit(5, "pt"),
+        panel.grid.major.x = element_blank(),
+        panel.spacing.x = unit(34, "pt"),
+        panel.spacing.y = unit(16, "pt"),
+        plot.margin = margin(6, 22, 6, 6))
 
 ggsave(here("SalmonCountR", "www", "2026_bypass_schedules.png"), p,
-       width = 10, height = 5, dpi = 180)
+       width = 10, height = 5.6, dpi = 180)

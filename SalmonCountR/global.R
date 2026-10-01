@@ -19,8 +19,9 @@ library(tidyverse); library(lubridate)
 source(file.path(.arg_boot_dir, "functions.R"))
 source(file.path(.arg_boot_dir, "years.R"))   # registry -- read its header first
 
-# Startup loads below are the DEFAULT analysis year, unchanged from before the
-# year selector existed. They are what functions.R reads out of the global
+# Startup loads below are the 2025 analysis in the flat app_data/, unchanged
+# from before the year selector existed, whatever year the app opens on
+# (ARG_DEFAULT_YEAR). They are what functions.R reads out of the global
 # environment, so they stay. Anything the app itself reads now comes from a
 # per-session bundle (see load_year_bundle) and follows the selector instead.
 

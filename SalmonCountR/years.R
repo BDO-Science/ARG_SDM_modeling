@@ -237,7 +237,8 @@ arg_temperature_year <- function(cfg) {
   if (!is.null(cfg$temperature_year)) cfg$temperature_year else cfg$first_projection_year
 }
 
-ARG_DEFAULT_YEAR <- "2025"
+# The year the app opens on: the current decision year. 2025 stays selectable.
+ARG_DEFAULT_YEAR <- "2026"
 
 arg_year_ids <- function() names(ARG_YEARS)
 

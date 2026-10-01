@@ -21,6 +21,25 @@ normalize_weights <- function(weights) {
   setNames(rep(1 / length(weights), length(weights)), names(weights))
 }
 
+# One look for every plot in the app: black x and y axis lines with ticks, bold
+# black axis text and titles, horizontal and vertical major grid kept light.
+theme_app <- function(base_size = 16, legend = "right") {
+  theme_minimal(base_size = base_size) +
+    theme(
+      axis.line         = element_line(colour = "black", linewidth = 0.6),
+      axis.ticks        = element_line(colour = "black", linewidth = 0.6),
+      axis.ticks.length = unit(5, "pt"),
+      axis.text         = element_text(face = "bold", colour = "black", size = rel(0.9)),
+      axis.title        = element_text(face = "bold", colour = "black"),
+      plot.title        = element_text(face = "bold", colour = "black"),
+      legend.title      = element_text(face = "bold", colour = "black"),
+      legend.text       = element_text(colour = "black"),
+      panel.grid.minor  = element_blank(),
+      panel.grid.major  = element_line(colour = "grey90", linewidth = 0.4),
+      legend.position   = legend
+    )
+}
+
 # Objective scaling (local min-max or a year's fixed global ranges) is
 # arg_scale_objective() in years.R; see OBJECTIVE SCALING there.
 
@@ -830,8 +849,7 @@ server <- function(input, output, session) {
       labs(title = paste("Temperature Comparison at", input$temp_site),
            subtitle = "Weighted averages based on climatology weights",
            y = "Temperature (°C)", x = "Date") +
-      theme_minimal(base_size = 14) +
-      theme(legend.position = "bottom")
+      theme_app(base_size = 14, legend = "bottom")
   })
   
   # Temperature statistics table - reuses temp_base_data() so no redundant scan
@@ -954,8 +972,7 @@ server <- function(input, output, session) {
       scale_color_viridis_d(name = "Alternative") +
       labs(title = "Comparison of Weighted Alternatives",
            x = "Year", y = "Forecasted Spawner Abundance") +
-      theme_minimal(base_size = 16) +
-      theme(legend.position = "bottom")
+      theme_app(base_size = 16, legend = "bottom")
   })
   
   output$cmp_box_plot <- renderPlot({
@@ -970,7 +987,7 @@ server <- function(input, output, session) {
       scale_y_continuous(labels = comma) +
       labs(title = paste0("Spawner Distribution: Last ", input$last_n, " Years"),
            x = "Alternative", y = "Forecasted Spawner Abundance") +
-      theme_minimal(base_size = 16)
+      theme_app(base_size = 16)
   })
   
   output$cmp_boxplot_stats <- renderTable({
@@ -1133,11 +1150,11 @@ server <- function(input, output, session) {
       mutate(objective = str_remove(objective, "_norm")) %>%
       ggplot(aes(x = scenario, y = score, fill = objective)) +
       geom_col(position = "dodge") +
-      scale_y_continuous(limits = c(0, 1)) +
+      scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0, 0.03))) +
       scale_fill_viridis_d(name = "Objective") +
       labs(title = "Normalized Performance Scores by Objective",
            x = "Alternative", y = "Normalized Score (0-1)") +
-      theme_minimal(base_size = 16)
+      theme_app(base_size = 16)
   })
   
   output$tradeoff_plot <- renderPlot({
@@ -1151,7 +1168,7 @@ server <- function(input, output, session) {
       labs(title = "Trade-off: Hydropower vs. Chinook Performance",
            x = "Hydropower Score (Normalized)",
            y = "Chinook Score (Normalized)") +
-      theme_minimal(base_size = 16)
+      theme_app(base_size = 16)
   })
   
   output$weights_table <- renderTable({
@@ -1174,9 +1191,9 @@ server <- function(input, output, session) {
     ggplot(scores, aes(x = scenario, y = overall_score, fill = scenario)) +
       geom_col() + geom_text(aes(label = signif(overall_score,4), vjust = -0.5)) +
       scale_fill_viridis_d(guide = "none") +
-      scale_y_continuous(limits = c(0, 1)) +
-      labs(title = "Overall Performance Scores", y = "Total Weighted Score") +
-      theme_minimal(base_size = 14)
+      scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0, 0.06))) +
+      labs(title = "Overall Performance Scores", x = "Alternative", y = "Total Weighted Score") +
+      theme_app(base_size = 14)
   })
   
   # ADDED: Stacked bar plot for score contribution
@@ -1196,12 +1213,12 @@ server <- function(input, output, session) {
     
     ggplot(df, aes(x = scenario, y = contribution, fill = objective)) +
       geom_col(position = "stack") +
+      scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
       scale_fill_viridis_d(name = "Objective") +
       labs(title = "Contribution to Score by Objective",
            x = "Management Alternative",
            y = "Weighted Score Contribution") +
-      theme_minimal(base_size = 16) +
-      theme(legend.position = "bottom")
+      theme_app(base_size = 16, legend = "bottom")
   })
   # Validation for rankings
   output$swing_validation <- renderUI({
@@ -1328,10 +1345,11 @@ server <- function(input, output, session) {
       geom_col() +
       geom_text(aes(label = `Weight %`), vjust = -0.5, size = 5) +
       scale_fill_viridis_d(guide = "none") +
-      scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
+      scale_y_continuous(limits = c(0, 1), labels = scales::percent,
+                         expand = expansion(mult = c(0, 0.03))) +
       labs(title = "Calculated Objective Weights from Swing Weighting",
            y = "Weight", x = NULL) +
-      theme_minimal(base_size = 14)
+      theme_app(base_size = 14)
   })
   
   # Apply weights to the main analysis
