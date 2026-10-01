@@ -387,6 +387,15 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                    
                                    hr(),
                                    h4("Objective Ranges"),
+                                   # Shown only for a year that declares global
+                                   # ranges (years.R, objective_ranges); the
+                                   # server toggles it on a year switch.
+                                   div(id = "scaling_box",
+                                       radioButtons("scaling_mode", "Objective scaling:",
+                                                    choices = c("Global (fixed ranges)" = "global",
+                                                                "Local (worst and best of this year's alternatives)" = "local"),
+                                                    selected = "global", inline = TRUE),
+                                       helpText("Decision Support uses the same scaling. Weights belong to the ranges they were elicited against, so score the alternatives again after switching.")),
                                    uiOutput("scaling_note_swing"),
                                    tableOutput("swing_ranges_table"),
                                    
@@ -401,7 +410,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                      column(4,
                                             wellPanel(
                                               h5("Alternative 1: Best Chinook"),
-                                              numericInput("rank_chinook", "Rank (1-3):", value = 1, min = 1, max = 3, step = 1),
+                                              numericInput("rank_chinook", "Rank (1-3):", value = 2, min = 1, max = 3, step = 1),
                                               numericInput("score_chinook", "Score (0-100):", value = 80, min = 0, max = 100, step = 1)
                                             )
                                      ),
@@ -415,7 +424,7 @@ ui <- navbarPage("Lower American River Power Bypass Decision Support",
                                      column(4,
                                             wellPanel(
                                               h5("Alternative 3: Best Hydropower"),
-                                              numericInput("rank_hydropower", "Rank (1-3):", value = 2, min = 1, max = 3, step = 1),
+                                              numericInput("rank_hydropower", "Rank (1-3):", value = 1, min = 1, max = 3, step = 1),
                                               numericInput("score_hydropower", "Score (0-100):", value = 100, min = 0, max = 100, step = 1)
                                             )
                                      )
@@ -501,6 +510,28 @@ server <- function(input, output, session) {
   B <- reactive(load_year_bundle(active_year()))
 
   year_cfg <- reactive(arg_year_cfg(active_year()))
+
+  # ---- Objective scaling in force -------------------------------------------
+  # A year that declares global ranges (objective_ranges in years.R) scales on
+  # them, or, switched to local on the Swing Weighting tab, on the worst and
+  # best of its own alternatives (arg_local_ranges). One switch drives the
+  # swing table, the hypothetical alternatives and Decision Support, so the
+  # weights are always applied on the ranges they were elicited against. A
+  # year without objective_ranges (2025) has no switch: active_ranges() is NULL
+  # and it keeps its published local path in performance_data_full().
+  scaling_local <- reactive({
+    !is.null(arg_objective_ranges(year_cfg())) && identical(input$scaling_mode, "local")
+  })
+
+  active_ranges <- reactive({
+    if (scaling_local()) arg_local_ranges(req(B())) else arg_objective_ranges(year_cfg())
+  })
+
+  # Each year opens on its declared scaling.
+  observeEvent(active_year(), {
+    shinyjs::toggle("scaling_box", condition = !is.null(arg_objective_ranges(year_cfg())))
+    updateRadioButtons(session, "scaling_mode", selected = "global")
+  })
 
   output$year_status <- renderUI({
     y <- active_year()
@@ -996,13 +1027,15 @@ server <- function(input, output, session) {
                          paste(joined$scenario[is.na(joined$hydro_raw)], collapse = ", "))))
 
     # Scaling follows the year (see OBJECTIVE SCALING in years.R).
-    #   global: each objective on its declared fixed range, clamped.
-    #   local:  Chinook on the year's FIXED bounds spanning all alternatives
-    #           and all three TDM models, so the scale does not move when the
-    #           user changes the TDM weights (B. Mahardja's fix); steelhead
-    #           and hydropower min-max within the set, since they do not vary
-    #           with TDM weighting.
-    rng <- arg_objective_ranges(year_cfg())
+    #   a year with objective_ranges: each objective on a fixed range, clamped
+    #           -- its declared global range, or its local one when switched
+    #           (active_ranges() above).
+    #   a year without (2025): Chinook on the year's FIXED bounds spanning all
+    #           alternatives and all three TDM models, so the scale does not
+    #           move when the user changes the TDM weights (B. Mahardja's fix);
+    #           steelhead and hydropower min-max within the set, since they do
+    #           not vary with TDM weighting.
+    rng <- active_ranges()
     sb  <- B()$salmon_bounds
     chinook_range <- if (!is.null(rng)) rng$chinook else if (!is.null(sb)) unname(sb[c("lo", "hi")]) else NULL
     joined %>%
@@ -1056,8 +1089,14 @@ server <- function(input, output, session) {
     )
   })
 
-  output$scaling_note_ds    <- renderUI(tags$p(em(arg_scaling_note(year_cfg()))))
-  output$scaling_note_swing <- renderUI(tags$p(em(arg_scaling_note(year_cfg()))))
+  scaling_note <- reactive({
+    arg_scaling_note(year_cfg(), local = if (scaling_local()) active_ranges() else NULL)
+  })
+  output$scaling_note_ds <- renderUI(tags$p(em(
+    scaling_note(),
+    if (!is.null(arg_objective_ranges(year_cfg())))
+      " Switch between global and local scaling on the Swing Weighting tab.")))
+  output$scaling_note_swing <- renderUI(tags$p(em(scaling_note())))
   
   objective_weights <- reactive({
     if (input$weight_method == "equal") {
@@ -1201,13 +1240,14 @@ server <- function(input, output, session) {
     }
   })
   
-  # The swing each objective is scored over: the year's fixed ranges when it
-  # scales globally, otherwise the worst and best of the alternatives shown.
-  # The hypothetical alternatives below are built from the same ends, so the
-  # weights elicited here describe the swings Decision Support actually uses.
+  # The swing each objective is scored over: the ranges in force for a year
+  # that declares them (global, or local when switched), otherwise the worst
+  # and best of the alternatives shown. The hypothetical alternatives below are
+  # built from the same ends, so the weights elicited here describe the swings
+  # Decision Support actually uses.
   swing_ends <- reactive({
     perf_data <- performance_data_full()
-    rng <- arg_objective_ranges(year_cfg())
+    rng <- active_ranges()
     if (!is.null(rng)) {
       list(chinook   = c(worst = rng$chinook[1],   best = rng$chinook[2]),
            steelhead = c(worst = rng$steelhead[1], best = rng$steelhead[2]),

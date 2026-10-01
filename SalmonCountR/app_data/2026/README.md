@@ -1,14 +1,14 @@
 # app_data/2026
 
-The app's **2026 (draft)** analysis year reads from this folder. It holds the
-2026 temperature deliverable run through the 2025 model.
+The app's **2026** analysis year reads from this folder. It holds the 2026
+temperature deliverable run through the 2025 model.
 
 ## What is here
 
 | File | From |
 |---|---|
 | `alt_key.rds`, `env_ext_list.rds`, `df_all.rds`, `observed_temps.rds`, `temperature_alternatives.xlsx` | `analysis/temperature_data.R` on `data_raw/TemperatureModelingResults_9-30-26.xlsx`, run on 2026-09-30 with `ARG_OBS_END = "2025-09-21"` and `ARG_ATSP_BASE = "41"` |
-| `results_full.rds` and the other model outputs | `SalmonCountR/precompute.R` with `ARG_APP_DATA_DIR` pointed here |
+| `results_full.rds` and the other model outputs, and `data_vintage.rds` (the "Data refreshed" stamp the app shows) | `SalmonCountR/precompute.R` with `ARG_APP_DATA_DIR` pointed here |
 
 The deliverable (30 Sep 2026) has ten scenarios. It replaces the 24 Sep file,
 which had eight and is kept in `archive/legacy_inputs/` with the 23 Sep one
@@ -16,9 +16,9 @@ which had eight and is kept in `archive/legacy_inputs/` with the 23 Sep one
 (by up to 1.1 °C on single days at Watt Avenue for `PB3`, under 0.5 °C for the
 rest). The schedules are in `data_raw/2026BypassModelingScenarios.xlsx`:
 descriptions for Scenarios 1–4 on `Sheet1`, daily bypass flow for Scenarios 1–6
-on `Timeseries`. The 24 Sep ARG ad hoc deck's schedule chart, which draws
-`PB1`–`PB4` only, is in `SalmonCountR/www/2026_bypass_schedules_draft.png` and
-shown on the About tab.
+on `Timeseries`. `analysis/bypass_schedules_2026.R` draws all six from that
+sheet into `SalmonCountR/www/2026_bypass_schedules.png`, shown on the About
+tab.
 
 | Code | Workbook label | Scenario |
 |---|---|---|
@@ -56,13 +56,30 @@ source("SalmonCountR/precompute.R")             # about 15 minutes
 `ARG_HYDRO_COST_2026` in `SalmonCountR/years.R` lists all ten codes. If the new
 file uses other labels, add their codes there or the year shows as
 *(data not loaded)* and the banner says which alternative has no cost. Restart
-the app and pick **2026 (draft)** under Analysis year. Commit the folder.
+the app and pick **2026** under Analysis year. Commit the folder.
 
-## What is placeholder
+## Checked against the deliverable (1 Oct 2026)
+
+- The app's series equals the workbook for every run, site and day it covers.
+- The Timeseries sheet's schedules match the valuation table's descriptions,
+  and their volumes agree to 0.03%.
+- The temperatures follow the schedules: each scenario leaves No Bypass the day
+  before its first bypass day, and scenarios with the same schedule up to a date
+  agree up to it (`PB3` and No Bypass to Oct 26; `PB6` and `PB1` to Nov 13,
+  within 0.4 °C).
+- **`PB5` is the exception, and it is in the workbook, not in this pipeline.**
+  Its schedule is `PB2`'s until Nov 7, but in all four met years its Folsom
+  release leaves No Bypass on Sep 28, the day the ATSP 38 runs do, and sits
+  between the ATSP 41 and ATSP 38 runs into mid-October; its bypass cooling
+  then arrives about Oct 24, three days after `PB2`'s. That early cooling is
+  why `PB5` scores 50.25 steelhead days against `PB2`'s 46.25. Ask the
+  temperature modellers which ATSP or target schedule `PB5` was run on.
+
+## Inputs still to be settled
 
 - **Hydropower costs and specifications** (`ARG_ALT_SPECS_2026` in `years.R`)
   are Reclamation's 2026 valuation of `PB1`–`PB6`
-  (`docs/2026_hydropower_costs_draft.png`, received 30 Sep 2026), with
+  (`docs/2026_hydropower_costs.png`, received 30 Sep 2026), with
   operations data from the `september_update.xlsx` forecast. It replaces the
   23 Sep draft valuation of `PB1`–`PB4` (90% exceedance forecast, v1.4.1).
   ATSP variants take their base scenario's values, as the table itself lists
@@ -78,7 +95,9 @@ the app and pick **2026 (draft)** under Analysis year. Commit the folder.
 - **Objective ranges** (`ARG_OBJECTIVE_RANGES_2026` in `years.R`) are the
   global-scaling ranges B. Mahardja proposed in September 2026 as a starting
   point: Chinook 0–25,000, steelhead 0–61 days, hydropower $0–3 million. The
-  2025 tab is unaffected and keeps its local scaling.
+  Swing Weighting tab can switch 2026 to local scaling (the worst and best of
+  its ten alternatives) for comparison; Decision Support follows the switch.
+  The 2025 tab is unaffected and keeps its local scaling.
 - **Bypass volumes** are not in the temperature workbook (no `Scenario Summary`
   sheet); the About tab takes them from the valuation table.
 

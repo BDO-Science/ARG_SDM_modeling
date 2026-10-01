@@ -111,15 +111,15 @@ ARG_ALT_SPECS_2025 <- data.frame(
   stringsAsFactors = FALSE
 )
 
-# 2026: Reclamation's valuation of PB1-PB6 (docs/2026_hydropower_costs_draft.png,
+# 2026: Reclamation's valuation of PB1-PB6 (docs/2026_hydropower_costs.png,
 # received 30 Sep 2026), which uses this year's alt_key codes and lists the
 # ATSP 38 variants with their base scenario's values. The schedules are in
 # data_raw/2026BypassModelingScenarios.xlsx (Timeseries sheet, daily cfs) and
-# agree with the table's descriptions. NOTE the 2026 schedules are not the 2025
-# ones with the same code: 2026 PB1 is the 2025 PB2 schedule, 2026 PB2 the 2025
-# PB4 schedule and 2026 PB6 the 2025 PB2b schedule; PB3, PB4 and PB5 are new.
-# SalmonCountR/www/2026_bypass_schedules_draft.png (24 Sep 2026 ARG ad hoc
-# deck) draws PB1-PB4 only.
+# agree with the table's descriptions and, to 0.03%, its volumes. NOTE the 2026
+# schedules are not the 2025 ones with the same code: 2026 PB1 is the 2025 PB2
+# schedule, 2026 PB2 the 2025 PB4 schedule and 2026 PB6 the 2025 PB2b schedule;
+# PB3, PB4 and PB5 are new. SalmonCountR/www/2026_bypass_schedules.png draws
+# all six from the Timeseries sheet (analysis/bypass_schedules_2026.R).
 #
 # Operations data: the september_update.xlsx forecast. This replaces the 23 Sep
 # draft valuation of PB1-PB4, which was run on the Sep50 and Sep90 WY2026 draft
@@ -175,6 +175,13 @@ ARG_HYDRO_COST_2026 <- stats::setNames(ARG_ALT_SPECS_2026$loss, ARG_ALT_SPECS_20
 # Ranges are c(lo, hi) in the objective's raw units: Chinook adult index,
 # steelhead days below 18.3 C in Oct-Nov (at most 61), hydropower replacement
 # cost in $ (lower is better; the scale is inverted for it).
+#
+# A year with `objective_ranges` can also be SWITCHED to local scaling in the
+# app (Swing Weighting tab), to see what the fixed ranges do to the ranking.
+# Its local ranges are arg_local_ranges(): the worst and best of the year's
+# alternatives at the default weighting. The switch drives the swing table,
+# the hypothetical alternatives and Decision Support together, because swing
+# weights only mean something against the ranges they were elicited on.
 ARG_OBJECTIVE_RANGES_2026 <- list(
   chinook   = c(0, 25000),
   steelhead = c(0, 61),
@@ -194,17 +201,18 @@ ARG_YEARS <- list(
     note                  = "Published analysis. Elicited weights from the 2025 SDM workshop."
   ),
   "2026" = list(
-    label                 = "2026 (draft)",
+    label                 = "2026",
     dir                   = file.path("app_data", "2026"),
     # Weights carried forward from 2025 as a starting point. Replace when the
-    # 2026 elicitation is done -- these are placeholders, not results.
+    # 2026 elicitation is done -- these are not 2026 results.
     default_weights       = c(chinook = 0.40, steelhead = 0.10, hydro = 0.50),
     hydro_cost            = ARG_HYDRO_COST_2026,
     alt_specs             = ARG_ALT_SPECS_2026,
     # Global scaling on the ranges B. Mahardja proposed in September 2026 as a
     # starting point (salmon 0-25,000; hydro $0-3M; steelhead the full Oct-Nov
     # window). The 2025 weights above were elicited against LOCAL swings, so
-    # they are only placeholders here until re-elicited against these ranges.
+    # they are only a starting point here until re-elicited against these
+    # ranges. The app can switch this year to local scaling (see above).
     objective_ranges      = ARG_OBJECTIVE_RANGES_2026,
     # The 2026 temperatures are run through the 2025 model: calibration ends in
     # 2024 and the projection starts in 2025, with the decision date held at
@@ -216,9 +224,9 @@ ARG_YEARS <- list(
     temperature_year      = 2026,
     hydro_cost_note       = "2026 valuation (Reclamation, 30 Sep 2026) on the September update of the operations forecast; ATSP 38 variants carry their base scenario's values. Note the 2026 schedules differ from the 2025 alternatives with the same code.",
     # Shown on the About tab under the alternatives table; file in SalmonCountR/www/.
-    schedule_image        = "2026_bypass_schedules_draft.png",
-    schedule_caption      = "Draft bypass schedules for Scenarios 1-4, which are PB1-PB4 (ARG ad hoc meeting, 24 Sep 2026). PB5 and PB6 were added on 30 Sep and are not drawn; their schedules are in the table above. The ATSP 38 variants follow the same schedules.",
-    note                  = "The 30 Sep 2026 temperature deliverable (ten scenarios) run through the 2025 model. Objective weights are placeholders carried over from 2025; hydropower costs are the 30 Sep 2026 valuation."
+    schedule_image        = "2026_bypass_schedules.png",
+    schedule_caption      = "Daily bypass flow for PB1-PB6 (Reclamation, 30 Sep 2026). The ATSP 38 variants follow the same schedules as PB1 and PB2; No Bypass has none.",
+    note                  = "The 30 Sep 2026 temperature deliverable (ten scenarios) run through the 2025 model. Objective weights start at the 2025 elicited set; hydropower costs are the 30 Sep 2026 valuation."
   )
 )
 
@@ -270,25 +278,50 @@ arg_scale_objective <- function(x, range = NULL, lower_better = FALSE) {
     if (!is.finite(lo) || !is.finite(hi) || hi == lo) return(rep(0.5, length(x)))
   } else {
     lo <- range[1]; hi <- range[2]
+    # A local range collapses when every alternative ties on the objective.
+    if (hi == lo) return(rep(0.5, length(x)))
   }
   s <- (x - lo) / (hi - lo)
   if (lower_better) s <- 1 - s
   pmin(pmax(s, 0), 1)
 }
 
-#' One line saying how a year's objectives are scaled, for the app.
-arg_scaling_note <- function(cfg) {
+#' Local ranges for a loaded year that normally scales globally: the worst and
+#' best of its alternatives, as c(lo, hi) per objective like objective_ranges.
+#' Chinook and steelhead are taken at the default weighting precompute.R used
+#' (the year's swing_ranges.rds holds the same numbers), so the ranges stay put
+#' when a user changes the TDM or met-year weights; a value that then falls
+#' outside is clamped, as with the global ranges.
+arg_local_ranges <- function(bundle) {
+  list(
+    chinook   = range(bundle$swing_scenario_results$spawner_metric, na.rm = TRUE),
+    steelhead = range(bundle$steelhead_scenario_results$steelhead_score, na.rm = TRUE),
+    hydro     = range(bundle$cfg$hydro_cost[bundle$alt_codes], na.rm = TRUE)
+  )
+}
+
+#' One line saying how a year's objectives are scaled, for the app. `local` is
+#' the result of arg_local_ranges() when a globally scaled year has been
+#' switched to local scaling, NULL otherwise.
+arg_scaling_note <- function(cfg, local = NULL) {
   r <- arg_objective_ranges(cfg)
   if (is.null(r)) {
     return(paste0("Objectives are scaled locally: 0 is the worst and 1 the best of the ",
                   "alternatives in the ", cfg$label, " analysis."))
   }
-  fmt <- function(x) format(x, big.mark = ",", scientific = FALSE, trim = TRUE)
-  paste0("Objectives are scaled on fixed (global) ranges for ", cfg$label, ": Chinook ",
-         fmt(r$chinook[1]), "-", fmt(r$chinook[2]),
-         " adults; steelhead ", r$steelhead[1], "-", r$steelhead[2], " days below 18.3 °C; ",
-         "hydropower $", fmt(r$hydro[1]), "-$", fmt(r$hydro[2]), " (lower is better). ",
-         "Values outside a range are clamped.")
+  fmt <- function(x) format(round(x), big.mark = ",", scientific = FALSE, trim = TRUE)
+  ranges <- function(r) paste0(
+    "Chinook ", fmt(r$chinook[1]), "-", fmt(r$chinook[2]),
+    " adults; steelhead ", round(r$steelhead[1], 2), "-", round(r$steelhead[2], 2),
+    " days below 18.3 °C; hydropower $", fmt(r$hydro[1]), "-$", fmt(r$hydro[2]),
+    " (lower is better). ")
+  if (!is.null(local)) {
+    return(paste0("Objectives are scaled locally for ", cfg$label, ": 0 is the worst and 1 the ",
+                  "best of this year's alternatives at the default model weighting. ",
+                  ranges(local), "Values outside a range are clamped."))
+  }
+  paste0("Objectives are scaled on fixed (global) ranges for ", cfg$label, ": ",
+         ranges(r), "Values outside a range are clamped.")
 }
 
 #' Which required files a year is missing. character(0) when the year is ready.

@@ -1369,6 +1369,20 @@ if (normalizePath(.arg_data_dir, winslash = "/") !=
     normalizePath(.arg_app_data_flat, winslash = "/")) {
   file.copy(file.path(.arg_app_data_flat, "american_river_instream.rds"),
             .arg_data_dir, overwrite = TRUE)
+  # Provenance stamp the app shows beside the year ("Data refreshed ..."). The
+  # flat folder's stamp is written by analysis/refresh_data_year.R instead.
+  saveRDS(list(
+    refreshed  = Sys.time(),
+    applied    = TRUE,
+    sources    = tibble(source   = "water_temp",
+                        file     = "env_ext_list.rds",
+                        modified = file.mtime(file.path(.arg_data_dir, "env_ext_list.rds")),
+                        bytes    = as.integer(file.size(file.path(.arg_data_dir, "env_ext_list.rds")))),
+    downloaded = NULL,
+    git_commit = tryCatch(system2("git", c("rev-parse", "--short", "HEAD"), stdout = TRUE, stderr = FALSE)[1],
+                          error = function(e) NA_character_),
+    note       = "Written by SalmonCountR/precompute.R"
+  ), file.path(.arg_data_dir, "data_vintage.rds"))
 }
 cat(sprintf("Outputs written to %s\n", .arg_data_dir))
 

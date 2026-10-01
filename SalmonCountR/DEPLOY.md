@@ -1,6 +1,14 @@
 # Deploying SalmonCountR to shinyapps.io
 
-**The short version.** In a fresh R session, from the repo root:
+**The short version.** Get the release you want to deploy (the tags are listed
+on GitHub; `main` is the latest):
+
+```
+git pull
+git checkout v1.5.0        # or stay on main
+```
+
+Then, in a fresh R session, from the repo root:
 
 ```r
 source("SalmonCountR/deploy.R")
@@ -8,8 +16,10 @@ arg_deploy(account = "reclamation-bdo-science")
 ```
 
 That is the whole thing. No files need to be moved, renamed or rearranged
-first. `arg_deploy()` checks the bundle before uploading and refuses to deploy
-if the app does not build.
+first, and nothing needs to be re-run: the model results are in the repo.
+`arg_deploy()` checks the bundle before uploading and refuses to deploy if the
+app does not build. Afterwards, open the app and check that both entries under
+**Analysis year** load.
 
 ---
 
@@ -91,8 +101,7 @@ source. It is now excluded.
 
 **3. Bundle size.** 16 of `app_data`'s 25 MB were `precompute.R` intermediates
 that no runtime code reads (`sim_future.rds` alone is 13 MB). The deployed
-bundle was 24 files, 9.25 MB (checked 2026-09-21), before `alt_key.rds` and the
-2026 year folder were added.
+bundle is 35 files, 14.3 MB with the 2026 year folder (checked 2026-10-01).
 
 Analysis-year folders (`app_data/<year>/`) are handled differently: only the
 files the app reads for a year (`ARG_YEAR_FILES` in `years.R`, plus

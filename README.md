@@ -88,8 +88,8 @@ read by `precompute.R` and the app; nothing should count alternatives or take
 `%% 9` any more. The published 2025 analysis has 36 runs: 9 alternatives (NB,
 PB1, PB2, PB2b, PB2c, PB3, PB4, PB5, PB6) × 4 met years (2011, 2014, 2017, 2020),
 so `env` 1–9 are 2011, 10–18 are 2014, 19–27 are 2017 and 28–36 are 2020. The
-2026 draft has 24 runs from 6 alternatives, two of them on a second ATSP schedule
-(`NB-38`), and grows when the deliverable does.
+2026 analysis has 40 runs from 10 alternatives, three of them on a second ATSP
+schedule (`NB-38`, `PB1-38`, `PB2-38`).
 
 **Weights.** The three egg-mortality (TDM) models are combined with elicited
 weights: 0.51 Bratovich et al. 2020 ("Water Forum", `exp_WF`), 0.24 Bartholow &
@@ -151,10 +151,10 @@ are registered in `ARG_YEARS` in `SalmonCountR/years.R`, each pointing at a fold
 | Entry | Folder | State |
 |---|---|---|
 | `2025` (default) | `SalmonCountR/app_data/` | The published analysis |
-| `2026` | `SalmonCountR/app_data/2026/` | Draft: the 30 Sep 2026 temperature deliverable (ten scenarios) run through the 2025 model, with the 30 Sep 2026 hydropower valuation and placeholder weights. See its [README](SalmonCountR/app_data/2026/README.md) |
+| `2026` | `SalmonCountR/app_data/2026/` | The 30 Sep 2026 temperature deliverable (ten scenarios) run through the 2025 model, with the 30 Sep 2026 hydropower valuation. Its weights start at the 2025 elicited set. See its [README](SalmonCountR/app_data/2026/README.md) |
 
 Each entry names the calendar year its deliverable models (`temperature_year`,
-2026 for the draft), which the Temperature Explorer shows, separately from the
+2026 for the `2026` entry), which the Temperature Explorer shows, separately from the
 year the population model projects from (`first_projection_year`, 2025 for both
 until the calibration is extended). The About tab describes whichever year is
 selected.
@@ -166,6 +166,14 @@ declared in `years.R` (`ARG_OBJECTIVE_RANGES_2026`: Chinook 0–25,000 adults,
 steelhead 0–61 days, hydropower $0–3 million), so its scores stay comparable as
 alternatives are added; the app says which scaling is in use on both tabs. The
 2026 ranges and weights are starting points, not elicited values.
+
+A year with global ranges can be **switched to local scaling** on the Swing
+Weighting tab, to see what the fixed ranges do to the ranking. Its local ranges
+are the worst and best of its own alternatives at the default model weighting
+(`arg_local_ranges()` in `years.R`). The one switch drives the swing table, the
+hypothetical alternatives and Decision Support together, because swing weights
+only mean something against the ranges they were elicited on; re-score after
+switching. 2025 has no switch.
 
 A folder counts as loaded once it holds the eight files in `ARG_YEAR_FILES` and
 every alternative in its `alt_key.rds` has a hydropower cost in `years.R`. The
